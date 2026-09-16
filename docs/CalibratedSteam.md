@@ -15,15 +15,20 @@ from **Extensions > Plugins > Open**. Both entry points provide a return address
 **Return to settings** leaves without saving, and a successful **Save calibration**
 returns to the calling settings page. Validation or save errors keep the form open.
 
-The settings page uses compact **General**, **Pitchers & Auto**, **Calibration**,
-**Instructions**, and **Glossary** tabs. General contains scale weight mode, starting pitcher selection and steam
-flow. The summary separates configured choices from calibration readiness and
+The settings page uses compact **Pitchers & Auto**, **Calibration**,
+**Instructions**, and **Glossary** tabs. Calibration keeps its flow/default,
+target-temperature note and one global scale weight mode together. The summary separates configured choices from calibration readiness and
 updates as the draft changes. Configured S, M, L and Auto choices have green
 badges; missing choices and calibration readiness remain separate text. Save is
-required to persist changes. Both Flow
-inputs edit the same `referenceFlow`. In Single flow, changing it clears the old
+required to persist changes. There is one visible flow/default control. In Single flow, changing it clears the old
 measured time. In Multiple flows, it is the default Auto flow; changing it within
 the measured range preserves all readings.
+
+The page also displays the installed extension version. **Check & update
+extension** uses Decaid's normal updater. Compatible updates install during the
+check and preserve saved settings; a future update that adds permissions is
+shown for explicit approval. Because Decaid's update route checks all managed
+plugins together, the button may also update other GitHub-backed extensions.
 
 Pitchers & Auto places empty-scale tare beside the pitcher rows. Each **Set from
 scale** button fills its own field without focusing it first, and reports success
@@ -39,12 +44,10 @@ tab and manual-values section containing the first invalid setting.
    usual milk per drink and the Small/Medium pitcher normally used for one drink.
    Damian's existing heuristic needs all three pitcher weights and gross scale
    weight. Auto is not offered until these inputs are valid; it is opt-in.
-3. Choose a starting selection from the configured sizes (and Auto, if ready).
-   With no configured pitchers, the selector says **Configure Pitchers & Auto
-   first**. Configuring the first pitcher selects it automatically; adding other
-   pitchers preserves that selection. You can change it in General before saving.
-   Streamline remembers subsequent choices separately and falls back to the saved
-   starting choice if the previously selected pitcher is removed.
+3. In Calibration, choose **Gross** or **Tared** once. This global choice applies
+   to single- and multiple-flow calculations. The supporting skin owns and
+   remembers the current pitcher preset; the plugin no longer has a separate
+   starting-pitcher setting.
 4. Choose **Single flow** or **Multiple flows** in Calibration (details below),
    then follow **Guided calibration** for each reading:
    tare the empty scale, choose a configured pitcher, place it with cold milk on
@@ -242,8 +245,10 @@ missing pitcher weights are 0. Automatic detection requires all three weights,
 `singleDrinkGrams`, `singleDrinkPitcher` and gross mode. Saving manual-only settings
 requires at least one pitcher and the calibration, without Auto-specific inputs.
 Settings and API fields consistently use pitcher terminology: `smallPitcherGrams`,
-`mediumPitcherGrams`, `largePitcherGrams`, `singleDrinkPitcher`, `defaultPitcher`,
-`pitcher`, `pitcherGrams` and `pitcherSource`.
+`mediumPitcherGrams`, `largePitcherGrams`, `singleDrinkPitcher`, `pitcher`,
+`pitcherGrams` and `pitcherSource`. Skins should remember their current pitcher
+selection themselves and fall back to the first `availablePitchers` entry if a
+remembered selection is no longer available.
 
 Open the form as a normal page rather than an iframe. Supply the calling skin's
 settings address using `?returnTo=` plus a URL-encoded absolute URL. The form
@@ -411,8 +416,8 @@ when updating inside the same Decaid installation. No native application changes
 or fork-specific APK are required. The plugin is maintained independently of Decaid;
 Decaid's maintainers do not own this repository or its release lifecycle.
 
-The companion Streamline integration lives in `pponce/streamline-js` on
-`feature/calibrated-steam-timer`. Other skins can use the API documented here without
+The companion Streamline integration is maintained on the `main` branch of
+`pponce/streamline-js` and distributed through that fork's releases. Other skins can use the API documented here without
 copying the calculations or calibration page.
 
 ## Runtime verification before release

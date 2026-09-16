@@ -4,7 +4,7 @@ import { calculate, validateSettings } from '../src/core.mjs';
 import { proposedFlows, flowCalibration } from '../src/flow-calibration.mjs';
 
 const base = { smallPitcherGrams: 150, mediumPitcherGrams: 0, largePitcherGrams: 0, autoDetect: false,
-  weightMode: 'gross', defaultPitcher: 'small', referenceFlow: 1.5, referenceMilkGrams: 200, referenceSeconds: 40 };
+  weightMode: 'gross', referenceFlow: 1.5, referenceMilkGrams: 200, referenceSeconds: 40 };
 const input = flow => ({ pitcher: 'small', flow, machineState: 'idle', stopAtTemperature: 0,
   samples: [800, 400, 0].map(ageMs => ({ ageMs, weightGrams: 350 })) });
 const readings = [{ flow: 0.4, milkGrams: 200, seconds: 40 }, { flow: 2.5, milkGrams: 100, seconds: 5 }];
@@ -21,6 +21,12 @@ test('two readings interpolate seconds per gram, honor endpoints, and never extr
   assert.equal(calculate(multi(readings), input(1.45)).durationSeconds, 25);
   assert.equal(calculate(multi(readings), input(1.45)).workflowPatch.steamSettings.flow, 1.45);
   for (const flow of [0.3, 2.6, '1.5', NaN]) assert.throws(() => calculate(multi(readings), input(flow)), e => e.code === 'flow_out_of_range');
+});
+test('one global tared mode applies to multiple-flow calculations', () => {
+  const result = calculate({ ...multi(readings), weightMode: 'tared' }, { ...input(1.45), samples: [800, 400, 0].map(ageMs => ({ ageMs, weightGrams: 200 })) });
+  assert.equal(result.milkGrams, 200);
+  assert.equal(result.durationSeconds, 25);
+  assert.equal(result.pitcherSource, 'tared');
 });
 test('three readings interpolate only the adjacent segment, including exact middle measurements', () => {
   const settings = multi([readings[0], { flow: 1.4, milkGrams: 200, seconds: 18 }, readings[1]]);

@@ -57,9 +57,6 @@ globalThis.createPlugin = function createPlugin() {
     onLoad(values = {}) {
       settings = configured(values);
       if (settings.referenceFlow === 0) settings.referenceFlow = defaults.referenceFlow;
-      if (values.autoDetect === undefined && !availablePitchers(settings).includes(settings.defaultPitcher)) {
-        settings.defaultPitcher = configuredPitchers(settings)[0] ?? 'small';
-      }
       loaded = true;
     },
     onUnload() {

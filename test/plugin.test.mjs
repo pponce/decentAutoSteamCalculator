@@ -115,7 +115,7 @@ test('status advertises only configured pitcher choices and Auto is opt-in', () 
   assert.deepEqual(fresh.availablePitchers, []);
   assert.equal(fresh.settings.autoDetect, false);
   assert.equal(fresh.settings.singleDrinkGrams, 0);
-  const partial = call(plugin({ ...valid, autoDetect: false, smallPitcherGrams: 0, largePitcherGrams: 0, defaultPitcher: 'medium', singleDrinkGrams: 0 }), 'status').json;
+  const partial = call(plugin({ ...valid, autoDetect: false, smallPitcherGrams: 0, largePitcherGrams: 0, singleDrinkGrams: 0 }), 'status').json;
   assert.equal(partial.ready, true);
   assert.deepEqual(partial.availablePitchers, ['medium']);
 });
@@ -126,10 +126,10 @@ test('fresh and previously unset calibration flow default to 0.4 ml/s', () => {
 });
 
 
-test('removed calibration fields are absent from schema and ignored on upgrade', () => {
-  const status = call(plugin({ ...valid, maxSeconds: 20, referenceSteamTemperature: 0 }), 'status').json;
+test('removed settings are absent from schema and ignored on upgrade', () => {
+  const status = call(plugin({ ...valid, maxSeconds: 20, referenceSteamTemperature: 0, defaultPitcher: 'medium' }), 'status').json;
   assert.equal(status.ready, true);
-  for (const key of ['maxSeconds', 'referenceSteamTemperature']) {
+  for (const key of ['maxSeconds', 'referenceSteamTemperature', 'defaultPitcher']) {
     assert.equal(Object.hasOwn(status.schema, key), false);
     assert.equal(Object.hasOwn(status.settings, key), false);
   }

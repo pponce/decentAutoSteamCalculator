@@ -63,6 +63,8 @@ Select **Open settings**:
 - Enter at least one empty Small, Medium or Large pitcher weight, manually or
   using **Tare empty scale** and **Set from scale**.
 - Optionally enable Auto pitcher selection and complete its required settings.
+- In **Calibration**, choose one **Scale weight mode**. It applies to both
+  single-flow and multiple-flow calculations.
 - Choose single-flow or multiple-flow calibration. Record the **actual milk-only
   weight for every reading**, manually or with guided calibration.
 - Select **Save calibration**.
@@ -88,9 +90,11 @@ The skin and plugin update independently:
 - **Skin:** use **Check for Skin Updates** in the Decaid settings dashboard.
   Installations made using `pponce/streamline-js` follow its published releases.
   Pushing commits alone does not update a release-installed skin.
-- **Calculator:** use Decaid's plugin update controls to check for new commits
-  on `pponce/decentAutoSteamCalculator`'s `main` branch. The calculator does not
-  need a new GitHub release for each update.
+- **Calculator:** its settings page displays the installed version and provides
+  **Check & update extension**. Decaid checks all GitHub-backed extensions and
+  automatically installs compatible updates while preserving saved settings.
+  An update that adds permissions requires explicit approval. Branch installs
+  follow new commits on `pponce/decentAutoSteamCalculator`'s `main` branch.
 
 If you previously installed the skin from a branch or a ZIP URL, install it once
 using `pponce/streamline-js` in the dashboard to switch to release updates.

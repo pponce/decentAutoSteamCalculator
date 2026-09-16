@@ -34,6 +34,9 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   range.append(minimum.wrapper, maximum.wrapper, count.wrapper);
   const recommendation = make('p', 'Choose 3 or 4 readings for a wider range or a better estimate between measured flows.'); recommendation.className = 'full-width'; range.append(recommendation);
   const flowSlot = make('div'); config.append(flowSlot);
+  const weightMode = field('weightMode');
+  controls.push(weightMode);
+  config.append(labels.weightMode);
   const temperature = field('targetTemperatureC');
   controls.push(temperature);
   config.append(labels.targetTemperatureC);

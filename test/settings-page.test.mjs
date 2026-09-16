@@ -5,10 +5,10 @@ import vm from 'node:vm';
 
 const source = readFileSync(new URL('../plugin.js', import.meta.url), 'utf8');
 const partial = { autoDetect: false, smallPitcherGrams: 0, mediumPitcherGrams: 220, largePitcherGrams: 0,
-  defaultPitcher: 'medium', referenceMilkGrams: 150, referenceSeconds: 25,
+  weightMode: 'gross', referenceMilkGrams: 150, referenceSeconds: 25,
   referenceFlow: 1.5 };
 
-async function page(settings = partial, failSave = false, guidedRun = false) {
+async function page(settings = partial, failSave = false, guidedRun = false, updateVersion = null) {
   const runtime = vm.createContext({});
   vm.runInContext(source, runtime);
   const plugin = runtime.createPlugin();
@@ -41,17 +41,25 @@ async function page(settings = partial, failSave = false, guidedRun = false) {
       this.handlers[event] = async (...args) => { await previous?.(...args); return handler(...args); };
     }
   }
-  const ids = Object.fromEntries(['settings', 'status', 'save', 'return-settings', 'settings-tabs', 'configuration-summary'].map(id => [id, new Element(id === 'settings' ? 'form' : id)]));
+  const ids = Object.fromEntries(['settings', 'status', 'save', 'return-settings', 'settings-tabs', 'configuration-summary', 'extension-version', 'check-extension-update', 'approve-extension-update', 'extension-update-status'].map(id => [id, new Element(id === 'settings' ? 'form' : id.includes('update') ? 'button' : id)]));
   ids.settings.elements = { namedItem: key => fields[key] };
   const navigations = [];
   const calls = [];
   const calibrationCalls = [];
   const savedSettings = [];
   let session = null;
+  const managedPlugin = { id: 'calibrated-steam.reaplugin', version: '0.11.0', source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: 'main', lastError: null }, pendingUpdate: null };
   const returnTo = 'http://localhost:43210/?page=settings';
   const document = { referrer: '', getElementById: id => ids[id], createElement: tag => new Element(tag) };
   const fetch = async (url, options = {}) => {
     const endpoint = url.split('/').at(-1);
+    if (url === '/api/v1/plugins') return { ok: true, text: async () => JSON.stringify([managedPlugin]) };
+    if (url === '/api/v1/plugins/update') {
+      calls.push('update');
+      if (updateVersion) managedPlugin.version = updateVersion;
+      return { ok: true, text: async () => JSON.stringify({ message: 'Plugin update check complete' }) };
+    }
+    if (url.endsWith('/update/approve')) return { ok: true, text: async () => JSON.stringify({ version: managedPlugin.version }) };
     calls.push(endpoint);
     if (endpoint === 'calibration' && guidedRun) {
       const body = JSON.parse(options.body); calibrationCalls.push(body);
@@ -84,16 +92,17 @@ async function page(settings = partial, failSave = false, guidedRun = false) {
     change: () => ids.settings.handlers.change(), submit: () => ids.settings.handlers.submit({ preventDefault() {} }) };
 }
 
-test('standalone form exposes only configured starting pitchers and a working return link', async () => {
+test('standalone form removes starting selection and keeps one visible calibration flow', async () => {
   const p = await page();
-  assert.deepEqual(p.fields.defaultPitcher.children.map(option => option.value), ['medium']);
+  assert.equal(p.fields.defaultPitcher, undefined);
   assert.equal(p.ids['automatic-fields'].hidden, true);
   assert.equal(p.fields.singleDrinkGrams.required, false);
   assert.equal(p.ids['return-settings'].href, p.returnTo);
   assert.equal(p.fields.referenceSteamTemperature, undefined);
   assert.equal(p.fields.maxSeconds, undefined);
-  assert.equal(p.fields.referenceFlow.min, '0.4');
-  assert.equal(p.fields.referenceFlow.max, '2.5');
+  assert.equal(p.fields.referenceFlow.type, 'hidden');
+  assert.equal(p.ids['calibration-flow'].min, '0.4');
+  assert.equal(p.ids['calibration-flow'].max, '2.5');
   await p.submit();
   assert.deepEqual(p.calls, ['status', 'validate', 'settings']);
   assert.deepEqual(p.navigations, [p.returnTo]);
@@ -106,7 +115,6 @@ test('enabling Auto reveals required fields and incomplete Auto cannot save or n
   assert.equal(p.ids['automatic-fields'].hidden, false);
   assert.equal(p.fields.singleDrinkGrams.required, true);
   assert.equal(p.fields.singleDrinkPitcher.required, true);
-  assert.ok(!p.fields.defaultPitcher.children.some(option => option.value === 'auto'));
   await p.submit();
   assert.deepEqual(p.calls, ['status']);
   assert.deepEqual(p.navigations, []);
@@ -136,7 +144,6 @@ test('tare waits for zero before capturing a stable empty pitcher weight', async
   for (let i = 0; i < 12; i++) p.scale(155.5);
   await set.handlers.click();
   assert.equal(p.fields.smallPitcherGrams.value, '155.5');
-  assert.ok(p.fields.defaultPitcher.children.some(option => option.value === 'small'));
   assert.ok(p.calls.includes('tare'));
 });
 
@@ -168,7 +175,7 @@ test('guided form starts and stops, fills measured values, and saves back to set
   assert.equal(p.calibrationCalls[0].pitcher, 'medium');
   assert.equal(p.calibrationCalls[0].flow, 1.5);
   assert.equal(p.ids.save.disabled, true);
-  assert.equal(p.fields.referenceFlow.disabled, true);
+  assert.equal(p.ids['calibration-flow'].disabled, true);
   assert.equal(p.buttons('Start steam')[0].disabled, false);
   await p.buttons('Start steam')[0].handlers.click();
   assert.equal(p.buttons('Start steam')[0].disabled, true);
@@ -202,8 +209,8 @@ test('Return to settings cancels an active guided run before navigating', async 
 
 test('compact tabs group settings and reveal invalid calibration fields on save', async () => {
   const p = await page({ ...partial, referenceSeconds: 0 });
-  assert.equal(p.ids['panel-general'].hidden, false);
-  assert.equal(p.ids['panel-pitchers'].hidden, true);
+  assert.equal(p.ids['panel-general'], undefined);
+  assert.equal(p.ids['panel-pitchers'].hidden, false);
   await p.ids['tab-pitchers'].handlers.click();
   assert.equal(p.ids['panel-pitchers'].hidden, false);
   assert.equal(p.fields.autoDetect.closest('fieldset'), p.fields.singleDrinkGrams.closest('fieldset'));
@@ -211,11 +218,13 @@ test('compact tabs group settings and reveal invalid calibration fields on save'
   assert.match(p.ids['configuration-summary'].textContent, /setup required/);
   await p.submit();
   assert.equal(p.ids['panel-calibration'].hidden, false);
+  assert.equal(p.fields.weightMode.closest('fieldset'), p.fields.targetTemperatureC.closest('fieldset'));
+  assert.equal(p.ids['calibration-flow'].closest('fieldset'), p.fields.weightMode.closest('fieldset'));
   assert.equal(p.fields.referenceSeconds.closest('details').open, true);
   assert.equal(p.fields.referenceSeconds.focused, true);
 });
 
-test('both Flow inputs edit one saved value and clear the previous calibration time', async () => {
+test('the visible calibration flow edits the hidden saved value and clears the previous time', async () => {
   const p = await page();
   const mirror = p.ids['calibration-flow'];
   mirror.value = '0.4'; await mirror.handlers.input();
@@ -299,21 +308,11 @@ test('changing default flow preserves multiple measurements and editing a readin
   assert.equal(JSON.parse(p.savedSettings[0].flowReadings)[0].seconds, 45);
 });
 
-test('empty starting pitcher explains setup and selects the first configured pitcher only once', async () => {
-  const p = await page({});
-  assert.equal(p.fields.defaultPitcher.disabled, true);
-  assert.match(p.fields.defaultPitcher.children[0].textContent, /Pitchers & Auto/);
-  p.fields.mediumPitcherGrams.value = '220'; await p.change();
-  assert.equal(p.fields.defaultPitcher.value, 'medium');
-  p.fields.smallPitcherGrams.value = '150'; await p.change();
-  assert.equal(p.fields.defaultPitcher.value, 'medium');
-  p.fields.defaultPitcher.value = 'small'; await p.change();
-  p.fields.largePitcherGrams.value = '300'; await p.change();
-  assert.equal(p.fields.defaultPitcher.value, 'small');
-  for (const size of ['small', 'medium', 'large']) p.fields[size + 'PitcherGrams'].value = '';
-  await p.change();
-  p.fields.largePitcherGrams.value = '300'; await p.change();
-  assert.equal(p.fields.defaultPitcher.value, 'large');
+test('legacy starting-pitcher settings are discarded when saving', async () => {
+  const p = await page({ ...partial, defaultPitcher: 'medium' });
+  assert.equal(p.fields.defaultPitcher, undefined);
+  await p.submit();
+  assert.equal(Object.hasOwn(p.savedSettings[0], 'defaultPitcher'), false);
 });
 
 test('single calibration reopens compactly with its actual measured milk weight', async () => {
@@ -396,7 +395,17 @@ test('instructions and glossary are navigable tabs with calibration field guidan
   assert.match(p.ids['panel-glossary'].textContent, /Calibration milk weight/);
   assert.match(p.ids['panel-glossary'].textContent, /note only/i);
   await p.ids['tab-glossary'].handlers.keydown({ key: 'ArrowRight', preventDefault() {} });
-  assert.equal(p.ids['panel-general'].hidden, false);
+  assert.equal(p.ids['panel-pitchers'].hidden, false);
+});
+
+test('settings page displays its version and checks for managed extension updates', async () => {
+  const p = await page(partial, false, false, '0.12.0');
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.11.0');
+  assert.equal(p.ids['check-extension-update'].disabled, false);
+  await p.ids['check-extension-update'].handlers.click();
+  assert.ok(p.calls.includes('update'));
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.0');
+  assert.match(p.ids['extension-update-status'].textContent, /Updated to version 0\.12\.0/);
 });
 
 test('temperature note can be changed without reopening or overwriting a saved reading', async () => {

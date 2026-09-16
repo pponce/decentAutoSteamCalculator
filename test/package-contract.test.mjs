@@ -14,7 +14,7 @@ test('repository root is a directly installable Decaid plugin with a stable iden
   const runtime = vm.createContext({});
   vm.runInContext(readFileSync(new URL('plugin.js', root), 'utf8'), runtime);
   const plugin = runtime.createPlugin();
-  plugin.onLoad({ mediumPitcherGrams: 220, defaultPitcher: 'medium', referenceMilkGrams: 158, referenceSeconds: 25, referenceFlow: 0.4 });
+  plugin.onLoad({ mediumPitcherGrams: 220, referenceMilkGrams: 158, referenceSeconds: 25, referenceFlow: 0.4 });
   const status = JSON.parse(plugin.__httpRequestHandler({ endpoint: 'status', method: 'GET' }).body);
   assert.equal(status.apiVersion, 4);
   assert.equal(status.ready, true);

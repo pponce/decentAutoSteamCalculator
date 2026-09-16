@@ -113,7 +113,7 @@ test('bad request shapes and unknown pitcher values fail without producing a dur
 
 
 test('one configured pitcher is sufficient without automatic detection', () => {
-  const partial = { ...settings, autoDetect: false, defaultPitcher: 'medium', smallPitcherGrams: 0, largePitcherGrams: 0, singleDrinkGrams: 0, singleDrinkPitcher: '' };
+  const partial = { ...settings, autoDetect: false, smallPitcherGrams: 0, largePitcherGrams: 0, singleDrinkGrams: 0, singleDrinkPitcher: '' };
   assert.deepEqual(validateSettings(partial), []);
   assert.deepEqual(availablePitchers(partial), ['medium']);
   assert.equal(calculate(partial, request(400, { pitcher: 'medium' })).milkGrams, 180);
@@ -121,10 +121,9 @@ test('one configured pitcher is sufficient without automatic detection', () => {
   throwsCode(() => calculate(partial, request(400)), 'pitcher_not_configured');
 });
 
-test('saving requires a pitcher and a configured starting choice', () => {
+test('saving requires at least one configured pitcher', () => {
   assert.ok(validateSettings({ ...settings, autoDetect: false, smallPitcherGrams: 0, mediumPitcherGrams: 0, largePitcherGrams: 0 }).some(e => e.field === 'pitchers'));
-  assert.ok(validateSettings({ ...settings, autoDetect: false, defaultPitcher: 'large', largePitcherGrams: 0 }).some(e => e.field === 'defaultPitcher'));
-  assert.ok(validateSettings({ ...settings, autoDetect: false, defaultPitcher: 'auto' }).some(e => e.field === 'defaultPitcher'));
+  assert.deepEqual(validateSettings({ ...settings, autoDetect: false, defaultPitcher: 'removed-legacy-value' }), []);
 });
 
 test('automatic detection is explicit and requires its inputs and all heuristic weights', () => {
@@ -148,7 +147,7 @@ test('calibration flow accepts 0.4 through 2.5 ml/s, including both endpoints', 
 
 test('low milk errors name the manually selected or inferred pitcher concisely', () => {
   const settings = { autoDetect: true, smallPitcherGrams: 150, mediumPitcherGrams: 400, largePitcherGrams: 500,
-    singleDrinkGrams: 100, singleDrinkPitcher: 'small', weightMode: 'gross', defaultPitcher: 'small',
+    singleDrinkGrams: 100, singleDrinkPitcher: 'small', weightMode: 'gross',
     referenceMilkGrams: 150, referenceSeconds: 25, referenceFlow: 0.4 };
   for (const pitcher of ['medium', 'auto']) {
     assert.throws(() => calculate(settings, { pitcher, machineState: 'idle', stopAtTemperature: 0,

@@ -51,9 +51,6 @@ export function validateSettings(settings) {
     if (configuredPitchers(settings).length !== 3) errors.push({ field: 'pitchers', message: 'Automatic detection requires all three pitcher weights for Damian’s detection thresholds.' });
     if (settings.weightMode !== 'gross') errors.push({ field: 'weightMode', message: 'Automatic pitcher detection requires gross weight (pitcher plus milk).' });
   }
-  if (settings.defaultPitcher !== undefined && configuredPitchers(settings).length && !availablePitchers(settings).includes(settings.defaultPitcher)) {
-    errors.push({ field: 'defaultPitcher', message: 'Choose a configured starting pitcher selection.' });
-  }
   return errors;
 }
 
