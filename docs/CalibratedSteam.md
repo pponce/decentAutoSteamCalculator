@@ -17,9 +17,10 @@ returns to the calling settings page. Validation or save errors keep the form op
 
 The settings page uses compact **Pitchers & Auto**, **Calibration**,
 **Instructions**, and **Glossary** tabs. Calibration keeps its flow/default,
-target-temperature note and one global scale weight mode together. The summary separates configured choices from calibration readiness and
-updates as the draft changes. Configured S, M, L and Auto choices have green
-badges; missing choices and calibration readiness remain separate text. Save is
+target-temperature note and one global scale weight mode together. The compact
+summary shares the tab row and updates as the draft changes. It always shows S,
+M, L and Auto: available choices are green and unavailable choices are red, with
+the current set flow shown to their right. Save is
 required to persist changes. There is one visible flow/default control. In Single flow, changing it clears the old
 measured time. In Multiple flows, it is the default Auto flow; changing it within
 the measured range preserves all readings.

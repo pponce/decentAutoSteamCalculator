@@ -50,7 +50,7 @@ async function page(settings = partial, failSave = false, guidedRun = false, upd
   const calibrationCalls = [];
   const savedSettings = [];
   let session = null;
-  const managedPlugin = { id: 'calibrated-steam.reaplugin', version: '0.11.1', source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: 'main', lastError: null }, pendingUpdate: null };
+  const managedPlugin = { id: 'calibrated-steam.reaplugin', version: '0.11.2', source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: 'main', lastError: null }, pendingUpdate: null };
   const returnTo = 'http://localhost:43210/?page=settings';
   const document = { referrer: '', getElementById: id => ids[id], createElement: tag => new Element(tag) };
   const fetch = async (url, options = {}) => {
@@ -213,13 +213,15 @@ test('Return to settings cancels an active guided run before navigating', async 
 
 test('compact tabs group settings and reveal invalid calibration fields on save', async () => {
   const p = await page({ ...partial, referenceSeconds: 0 });
+  assert.match(source, /<div id="settings-toolbar"><nav id="settings-tabs"[\s\S]*<p id="configuration-summary"/);
   assert.equal(p.ids['panel-general'], undefined);
   assert.equal(p.ids['panel-pitchers'].hidden, false);
   await p.ids['tab-pitchers'].handlers.click();
   assert.equal(p.ids['panel-pitchers'].hidden, false);
   assert.equal(p.fields.autoDetect.closest('fieldset'), p.fields.singleDrinkGrams.closest('fieldset'));
-  assert.match(p.ids['configuration-summary'].textContent, /Configured: M/);
-  assert.match(p.ids['configuration-summary'].textContent, /setup required/);
+  assert.deepEqual(p.ids['configuration-summary'].children.filter(child => child.className === 'configured-pitcher').map(child => child.textContent), ['M']);
+  assert.deepEqual(p.ids['configuration-summary'].children.filter(child => child.className === 'unconfigured-pitcher').map(child => child.textContent), ['S', 'L', 'Auto']);
+  assert.match(p.ids['configuration-summary'].textContent, /Set flow: 1\.5 ml\/s/);
   await p.submit();
   assert.equal(p.ids['panel-calibration'].hidden, false);
   assert.equal(p.fields.weightMode.closest('fieldset'), p.fields.targetTemperatureC.closest('fieldset'));
@@ -237,7 +239,7 @@ test('the visible calibration flow edits the hidden saved value and clears the p
   p.fields.referenceFlow.value = '0.8';
   await p.ids.settings.handlers.input({ target: p.fields.referenceFlow });
   assert.equal(mirror.value, '0.8');
-  assert.match(p.ids['configuration-summary'].textContent, /setup required/);
+  assert.match(p.ids['configuration-summary'].textContent, /Set flow: 0\.8 ml\/s/);
 });
 
 test('a blocked milk capture explains the missing tare beside its own button', async () => {
@@ -404,7 +406,7 @@ test('instructions and glossary are navigable tabs with calibration field guidan
 
 test('settings page displays its version and checks for managed extension updates', async () => {
   const p = await page(partial, false, false, '0.12.0');
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.11.1');
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.11.2');
   assert.equal(p.ids['check-extension-update'].textContent, 'Check & Update');
   assert.equal(p.ids['check-extension-update'].disabled, false);
   await p.ids['check-extension-update'].handlers.click();
@@ -520,22 +522,27 @@ test('changing single calibration flow clears the previous milk measurement', as
   assert.equal(p.fields.referenceSeconds.value, '');
 });
 
-test('configured pitcher badges follow valid choices and keep calibration readiness separate', async () => {
+test('pitcher badges show every choice in configured or unconfigured colors', async () => {
   const p = await page({ ...partial, referenceSeconds: 0 });
-  const badges = () => p.ids['configuration-summary'].children.filter(child => child.className === 'configured-pitcher').map(child => child.textContent);
-  assert.deepEqual(badges(), ['M']);
-  assert.match(p.ids['configuration-summary'].textContent, /setup required/);
+  const configured = () => p.ids['configuration-summary'].children.filter(child => child.className === 'configured-pitcher').map(child => child.textContent);
+  const unconfigured = () => p.ids['configuration-summary'].children.filter(child => child.className === 'unconfigured-pitcher').map(child => child.textContent);
+  assert.deepEqual(configured(), ['M']);
+  assert.deepEqual(unconfigured(), ['S', 'L', 'Auto']);
+  assert.doesNotMatch(p.ids['configuration-summary'].textContent, /Configured|Not configured|Calibration|ready|setup required/);
   p.fields.smallPitcherGrams.value = '150';
   p.fields.largePitcherGrams.value = '300';
   p.fields.autoDetect.checked = true;
   await p.change();
-  assert.deepEqual(badges(), ['S', 'M', 'L']);
+  assert.deepEqual(configured(), ['S', 'M', 'L']);
+  assert.deepEqual(unconfigured(), ['Auto']);
   p.fields.singleDrinkGrams.value = '160';
   p.fields.singleDrinkPitcher.value = 'small';
   await p.change();
-  assert.deepEqual(badges(), ['S', 'M', 'L', 'Auto']);
+  assert.deepEqual(configured(), ['S', 'M', 'L', 'Auto']);
+  assert.deepEqual(unconfigured(), []);
   p.fields.autoDetect.checked = false;
   p.fields.smallPitcherGrams.value = '';
   await p.change();
-  assert.deepEqual(badges(), ['M', 'L']);
+  assert.deepEqual(configured(), ['M', 'L']);
+  assert.deepEqual(unconfigured(), ['S', 'Auto']);
 });
