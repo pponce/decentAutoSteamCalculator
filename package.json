@@ -1,0 +1,16 @@
+{
+  "name": "decent-auto-steam-calculator",
+  "version": "0.10.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs && node --test test/*.test.mjs"
+  },
+  "description": "Independent Auto Steam Calculator plugin for Decaid",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pponce/decentAutoSteamCalculator.git"
+  }
+}
