@@ -24,9 +24,12 @@ required to persist changes. There is one visible flow/default control. In Singl
 measured time. In Multiple flows, it is the default Auto flow; changing it within
 the measured range preserves all readings.
 
-The page also displays the installed extension version. **Check & update
-extension** uses Decaid's normal updater. Compatible updates install during the
-check and preserve saved settings; a future update that adds permissions is
+The page also displays the installed extension version. A compact **Check &
+Update** button shares the top header with the return control and title, leaving
+the settings area free for configuration. It uses Decaid's normal updater.
+Compatible updates install during the check and preserve saved settings; results
+and errors open in a dialog. A GitHub 403 reports the remaining minutes until
+the unauthenticated API limit resets. A future update that adds permissions is
 shown for explicit approval. Because Decaid's update route checks all managed
 plugins together, the button may also update other GitHub-backed extensions.
 

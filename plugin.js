@@ -1,7 +1,7 @@
 /* Calibrated Steam Timer. GPL-3.0-only. Inspired by Damian / Damian-AU, DSx2. */
 (function () {
 "use strict";
-const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.11.0","apiVersion":1,"permissions":["api","events.machine"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for single- and multiple-flow calculations. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"targetTemperatureC":{"type":"number","label":"Target calibration temperature (°C)","description":"Optional milk-temperature note only. It does not control the heater, stop steam or adjust calculated time. Aim for this same temperature for every reading. Update it and repeat the readings if you calibrate at a different temperature.","default":0},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow / default (ml/s)","description":"Fixed flow for single calibration, or default flow within the multiple-calibration range (0.4–2.5 ml/s).","default":0.4},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"calibrationMode":{"type":"enum","label":"Calibration type","values":["single","multiple"],"default":"single","description":"Single flow is fixed. Multiple flows interpolate between 2–4 measured calibrations."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Managed by the Calibration page. JSON readings with flow, milkGrams and seconds."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}}]};
+const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.11.1","apiVersion":1,"permissions":["api","events.machine"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for single- and multiple-flow calculations. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"targetTemperatureC":{"type":"number","label":"Target calibration temperature (°C)","description":"Optional milk-temperature note only. It does not control the heater, stop steam or adjust calculated time. Aim for this same temperature for every reading. Update it and repeat the readings if you calibrate at a different temperature.","default":0},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow / default (ml/s)","description":"Fixed flow for single calibration, or default flow within the multiple-calibration range (0.4–2.5 ml/s).","default":0.4},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"calibrationMode":{"type":"enum","label":"Calibration type","values":["single","multiple"],"default":"single","description":"Single flow is fixed. Multiple flows interpolate between 2–4 measured calibrations."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Managed by the Calibration page. JSON readings with flow, milkGrams and seconds."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}}]};
 function readFlowReadings(settings) {
   try {
     if (typeof settings.flowReadings !== 'string' || settings.flowReadings.length > 4096) return null;
@@ -765,6 +765,10 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
   const checkUpdate = document.getElementById('check-extension-update');
   const approveUpdate = document.getElementById('approve-extension-update');
   const updateStatus = document.getElementById('extension-update-status');
+  const updateDialog = document.getElementById('extension-update-dialog');
+  const updateDialogTitle = document.getElementById('extension-update-dialog-title');
+  const updateDialogMessage = document.getElementById('extension-update-dialog-message');
+  const updateDialogClose = document.getElementById('extension-update-dialog-close');
   back.href = resolveReturnUrl(window.location.href, document.referrer);
   form.noValidate = true;
   let schema = {}, guided = null, loaded = false, flowValue = null, flowPlan = null, installedVersion = '';
@@ -802,10 +806,34 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     const plugins = await request('/api/v1/plugins');
     return Array.isArray(plugins) ? plugins.find(plugin => plugin.id === 'calibrated-steam.reaplugin') : null;
   }
+  function showUpdateDialog(title, message) {
+    updateDialogTitle.textContent = title;
+    updateDialogMessage.textContent = message;
+    updateStatus.textContent = title + ': ' + message;
+    updateDialog.hidden = false;
+    updateDialogClose.focus();
+  }
+  function closeUpdateDialog() { updateDialog.hidden = true; }
+  updateDialogClose.addEventListener('click', closeUpdateDialog);
+  updateDialog.addEventListener('click', event => { if (event.target === updateDialog) closeUpdateDialog(); });
+  async function updateFailureMessage(error) {
+    const message = error?.message || String(error || 'The update failed.');
+    if (!/\b403\b/.test(message)) return message;
+    try {
+      const response = await fetch('https://api.github.com/rate_limit', { headers: { accept: 'application/vnd.github+json' } });
+      const data = await response.json();
+      const reset = Number(data?.resources?.core?.reset);
+      if (Number.isFinite(reset)) {
+        const minutes = Math.max(1, Math.ceil((reset * 1000 - Date.now()) / 60000));
+        return "GitHub's unauthenticated update limit has been reached. Try again in " + minutes + ' minute' + (minutes === 1 ? '' : 's') + '.';
+      }
+    } catch {}
+    return "GitHub's unauthenticated update limit has been reached. Try again in about 60 minutes.";
+  }
   function paintUpdateState(plugin) {
     const version = plugin?.version || installedVersion;
     extensionVersion.textContent = 'Version ' + version;
-    approveUpdate.hidden = true;
+    checkUpdate.hidden = false; approveUpdate.hidden = true;
     if (!plugin) {
       checkUpdate.disabled = true;
       updateStatus.textContent = 'Extension update controls are unavailable in this Decaid version.';
@@ -821,7 +849,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       const added = plugin.pendingUpdate.addedPermissions || [];
       updateStatus.textContent = 'Version ' + plugin.pendingUpdate.version + ' needs approval' + (added.length ? ' because it adds: ' + added.join(', ') : '') + '.';
       approveUpdate.textContent = 'Approve and update to ' + plugin.pendingUpdate.version;
-      approveUpdate.hidden = false;
+      checkUpdate.hidden = true; approveUpdate.hidden = false;
       return;
     }
     if (plugin.source?.lastError) {
@@ -839,22 +867,27 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
   }
   checkUpdate.addEventListener('click', async () => {
     checkUpdate.disabled = true; approveUpdate.hidden = true;
+    checkUpdate.textContent = 'Checking…';
     updateStatus.textContent = 'Checking all GitHub-backed extensions… Compatible updates install automatically.';
     try {
       const before = installedVersion;
       await request('/api/v1/plugins/update', { method: 'POST' });
       const plugin = await refreshUpdateState();
-      if (plugin?.version && plugin.version !== before) {
+      if (plugin?.source?.lastError) {
+        showUpdateDialog('Update failed', await updateFailureMessage(plugin.source.lastError));
+      } else if (plugin?.version && plugin.version !== before) {
         installedVersion = plugin.version;
         extensionVersion.textContent = 'Version ' + plugin.version;
-        updateStatus.textContent = 'Updated to version ' + plugin.version + '. Reopen this page to load the updated interface.';
+        showUpdateDialog('Extension updated', 'Updated to version ' + plugin.version + '. Reopen this page to load the updated interface.');
+      } else if (plugin?.pendingUpdate) {
+        showUpdateDialog('Approval required', updateStatus.textContent);
       } else if (plugin && !plugin.pendingUpdate && !plugin.source?.lastError) {
-        updateStatus.textContent = 'Version ' + installedVersion + ' is up to date.';
+        showUpdateDialog('Extension is up to date', 'Version ' + installedVersion + ' is the latest available version.');
       }
     } catch (error) {
-      updateStatus.textContent = error.message;
+      showUpdateDialog('Update failed', await updateFailureMessage(error));
     } finally {
-      checkUpdate.disabled = false;
+      checkUpdate.textContent = 'Check & Update'; checkUpdate.disabled = false;
     }
   });
   approveUpdate.addEventListener('click', async () => {
@@ -866,10 +899,10 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       if (plugin?.version) {
         installedVersion = plugin.version;
         extensionVersion.textContent = 'Version ' + plugin.version;
-        updateStatus.textContent = 'Updated to version ' + plugin.version + '. Reopen this page to load the updated interface.';
+        showUpdateDialog('Extension updated', 'Updated to version ' + plugin.version + '. Reopen this page to load the updated interface.');
       }
     } catch (error) {
-      updateStatus.textContent = error.message;
+      showUpdateDialog('Update failed', await updateFailureMessage(error));
     } finally {
       approveUpdate.disabled = false; checkUpdate.disabled = false;
     }
@@ -1022,12 +1055,13 @@ function settingsPage() {
 <style>
 :root{color-scheme:light dark;--bg:#f3f5f9;--surface:#fff;--text:#26334a;--muted:#526179;--border:#ccd5e2;--accent:#385a92;--notice:#eef3fb;--configured-bg:#def4e4;--configured-text:#24533a;font:14px/1.45 system-ui,sans-serif}
 @media(prefers-color-scheme:dark){:root{--bg:#172132;--surface:#202b3e;--text:#e4eaf4;--muted:#b6c1d4;--border:#465166;--accent:#456faf;--notice:#2c3c55;--configured-bg:#234136;--configured-text:#bde4ca}}
-*{box-sizing:border-box}body{max-width:940px;margin:auto;padding:16px;background:var(--bg);color:var(--text)}header{display:flex;gap:14px;align-items:center;flex-wrap:wrap}h1{font-size:22px;font-weight:600;margin:0}h2{font-size:16px;margin:0}p{margin:10px 0}button,a,input,select{touch-action:manipulation}button,input,select{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;min-height:44px}input,select{font-size:16px;min-width:0;width:100%}input[type=checkbox]{width:24px;height:24px;min-height:24px;accent-color:var(--accent)}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}a{color:var(--accent)}#return-settings{display:inline-block;padding:10px 14px;min-height:44px;text-decoration:none;border:1px solid var(--border);border-radius:8px;background:var(--surface)}#extension-version{color:var(--muted)}.extension-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0}.extension-tools p{margin:0;color:var(--muted)}#configuration-summary{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--muted);margin:12px 0}.configured-pitcher{display:inline-block;background:var(--configured-bg);color:var(--configured-text);padding:5px 10px;border-radius:7px}#settings-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#settings-tabs [aria-selected=true],button[aria-pressed=true],#save{background:var(--accent);color:#fff;border-color:transparent}[hidden]{display:none!important}fieldset{border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:14px;margin:0 0 14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}legend{font-size:16px;font-weight:600;padding:0 5px}.field{display:grid;gap:6px;align-content:start}.field label{font-weight:500}.field small{color:var(--muted)}.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;grid-column:1/-1}.pitcher-field{grid-column:1/-1;grid-template-columns:95px minmax(90px,1fr) auto;align-items:center;border-top:1px solid var(--border);padding-top:12px}.pitcher-field small{grid-column:2/-1}.pitcher-field .capture-button{grid-column:3;grid-row:1}.pitcher-field .capture-result{grid-column:1/-1;margin:0}.full-width{grid-column:1/-1}.scale-tools{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}.scale-tools p{margin:0}.local-status{background:var(--notice);padding:9px 11px;border-radius:6px;overflow-wrap:anywhere}.guided-calibration{display:block}.calibration-actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.calibration-timer{font-size:28px;font-variant-numeric:tabular-nums}.calibration-flow{max-width:220px;margin-bottom:12px}.guided-step{padding:12px 0;border-top:1px solid var(--border)}#status{min-height:1.5em;overflow-wrap:anywhere}.save-row{display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap}footer{font-size:12px;color:var(--muted);margin-top:14px}details{margin-top:12px}summary{cursor:pointer;min-height:44px;padding:10px 0}
+*{box-sizing:border-box}body{max-width:940px;margin:auto;padding:16px;background:var(--bg);color:var(--text)}header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center}h1{font-size:22px;font-weight:600;margin:0}h2{font-size:16px;margin:0}p{margin:10px 0}button,a,input,select{touch-action:manipulation}button,input,select{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;min-height:44px}input,select{font-size:16px;min-width:0;width:100%}input[type=checkbox]{width:24px;height:24px;min-height:24px;accent-color:var(--accent)}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}a{color:var(--accent)}#return-settings{display:inline-block;padding:10px 14px;min-height:44px;text-decoration:none;border:1px solid var(--border);border-radius:8px;background:var(--surface)}.extension-title{min-width:0}.extension-title h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#extension-version{display:block;color:var(--muted)}.extension-actions{display:flex;gap:8px;justify-content:flex-end}.extension-actions button{white-space:nowrap}.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.update-dialog{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.55)}.update-dialog-card{width:min(460px,100%);padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:0 12px 40px rgba(0,0,0,.35)}.update-dialog-card p{color:var(--muted);overflow-wrap:anywhere}.update-dialog-card button{float:right;min-width:80px;background:var(--accent);color:#fff;border-color:transparent}#configuration-summary{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--muted);margin:12px 0}.configured-pitcher{display:inline-block;background:var(--configured-bg);color:var(--configured-text);padding:5px 10px;border-radius:7px}#settings-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#settings-tabs [aria-selected=true],button[aria-pressed=true],#save{background:var(--accent);color:#fff;border-color:transparent}[hidden]{display:none!important}fieldset{border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:14px;margin:0 0 14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}legend{font-size:16px;font-weight:600;padding:0 5px}.field{display:grid;gap:6px;align-content:start}.field label{font-weight:500}.field small{color:var(--muted)}.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;grid-column:1/-1}.pitcher-field{grid-column:1/-1;grid-template-columns:95px minmax(90px,1fr) auto;align-items:center;border-top:1px solid var(--border);padding-top:12px}.pitcher-field small{grid-column:2/-1}.pitcher-field .capture-button{grid-column:3;grid-row:1}.pitcher-field .capture-result{grid-column:1/-1;margin:0}.full-width{grid-column:1/-1}.scale-tools{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}.scale-tools p{margin:0}.local-status{background:var(--notice);padding:9px 11px;border-radius:6px;overflow-wrap:anywhere}.guided-calibration{display:block}.calibration-actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.calibration-timer{font-size:28px;font-variant-numeric:tabular-nums}.calibration-flow{max-width:220px;margin-bottom:12px}.guided-step{padding:12px 0;border-top:1px solid var(--border)}#status{min-height:1.5em;overflow-wrap:anywhere}.save-row{display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap}footer{font-size:12px;color:var(--muted);margin-top:14px}details{margin-top:12px}summary{cursor:pointer;min-height:44px;padding:10px 0}
 .help-section{padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);margin-bottom:12px}.help-section p{margin-bottom:0}.glossary{margin:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}.glossary dt{font-weight:600;margin-top:14px}.glossary dt:first-child{margin-top:0}.glossary dd{margin:4px 0 12px;color:var(--muted)}#flow-review .scale-tools{padding:8px 0}
-@media(max-width:480px){body{padding:12px}fieldset,.field-grid{grid-template-columns:1fr}.pitcher-field{grid-template-columns:65px minmax(60px,1fr)}.pitcher-field .capture-button{grid-column:2;grid-row:auto}.pitcher-field small{grid-column:1/-1}}
+@media(max-width:480px){body{padding:12px}header{gap:8px}h1{font-size:18px}#return-settings,.extension-actions button{padding:8px;font-size:13px}fieldset,.field-grid{grid-template-columns:1fr}.pitcher-field{grid-template-columns:65px minmax(60px,1fr)}.pitcher-field .capture-button{grid-column:2;grid-row:auto}.pitcher-field small{grid-column:1/-1}}
 </style></head><body>
-<header><a id="return-settings" href="/api/v1/plugins/settings.reaplugin/ui">← Settings</a><h1>Auto Steam Calculator</h1><span id="extension-version">Version …</span></header>
-<div class="extension-tools"><button id="check-extension-update" type="button" disabled>Check &amp; update extension</button><button id="approve-extension-update" type="button" hidden>Approve update</button><p id="extension-update-status" role="status" aria-live="polite">Loading update status…</p></div>
+<header><a id="return-settings" href="/api/v1/plugins/settings.reaplugin/ui">← Settings</a><div class="extension-title"><h1>Auto Steam Calculator</h1><span id="extension-version">Version …</span></div><div class="extension-actions"><button id="check-extension-update" type="button" disabled>Check &amp; Update</button><button id="approve-extension-update" type="button" hidden>Approve Update</button></div></header>
+<p id="extension-update-status" class="visually-hidden" role="status" aria-live="polite">Loading update status…</p>
+<div id="extension-update-dialog" class="update-dialog" hidden><section class="update-dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="extension-update-dialog-title" aria-describedby="extension-update-dialog-message"><h2 id="extension-update-dialog-title">Extension update</h2><p id="extension-update-dialog-message"></p><button id="extension-update-dialog-close" type="button">OK</button></section></div>
 <p id="configuration-summary" role="status" aria-live="polite">Loading configuration…</p>
 <nav id="settings-tabs" role="tablist" aria-label="Auto Steam settings"></nav>
 <form id="settings" novalidate></form>

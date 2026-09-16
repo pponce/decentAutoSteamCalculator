@@ -91,9 +91,10 @@ The skin and plugin update independently:
   Installations made using `pponce/streamline-js` follow its published releases.
   Pushing commits alone does not update a release-installed skin.
 - **Calculator:** its settings page displays the installed version and provides
-  **Check & update extension**. Decaid checks all GitHub-backed extensions and
+  a compact **Check & Update** button in the top-right header. Decaid checks all GitHub-backed extensions and
   automatically installs compatible updates while preserving saved settings.
-  An update that adds permissions requires explicit approval. Branch installs
+  Results and failures open in a dialog. A GitHub 403 reports how many minutes
+  remain before the unauthenticated API limit resets. An update that adds permissions requires explicit approval. Branch installs
   follow new commits on `pponce/decentAutoSteamCalculator`'s `main` branch.
 
 If you previously installed the skin from a branch or a ZIP URL, install it once

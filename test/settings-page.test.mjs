@@ -8,7 +8,7 @@ const partial = { autoDetect: false, smallPitcherGrams: 0, mediumPitcherGrams: 2
   weightMode: 'gross', referenceMilkGrams: 150, referenceSeconds: 25,
   referenceFlow: 1.5 };
 
-async function page(settings = partial, failSave = false, guidedRun = false, updateVersion = null) {
+async function page(settings = partial, failSave = false, guidedRun = false, updateVersion = null, updateError = null) {
   const runtime = vm.createContext({});
   vm.runInContext(source, runtime);
   const plugin = runtime.createPlugin();
@@ -41,22 +41,26 @@ async function page(settings = partial, failSave = false, guidedRun = false, upd
       this.handlers[event] = async (...args) => { await previous?.(...args); return handler(...args); };
     }
   }
-  const ids = Object.fromEntries(['settings', 'status', 'save', 'return-settings', 'settings-tabs', 'configuration-summary', 'extension-version', 'check-extension-update', 'approve-extension-update', 'extension-update-status'].map(id => [id, new Element(id === 'settings' ? 'form' : id.includes('update') ? 'button' : id)]));
+  const ids = Object.fromEntries(['settings', 'status', 'save', 'return-settings', 'settings-tabs', 'configuration-summary', 'extension-version', 'check-extension-update', 'approve-extension-update', 'extension-update-status', 'extension-update-dialog', 'extension-update-dialog-title', 'extension-update-dialog-message', 'extension-update-dialog-close'].map(id => [id, new Element(id === 'settings' ? 'form' : id.endsWith('close') || id.includes('check-') || id.includes('approve-') ? 'button' : id)]));
+  ids['extension-update-dialog'].hidden = true;
+  ids['check-extension-update'].textContent = 'Check & Update';
   ids.settings.elements = { namedItem: key => fields[key] };
   const navigations = [];
   const calls = [];
   const calibrationCalls = [];
   const savedSettings = [];
   let session = null;
-  const managedPlugin = { id: 'calibrated-steam.reaplugin', version: '0.11.0', source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: 'main', lastError: null }, pendingUpdate: null };
+  const managedPlugin = { id: 'calibrated-steam.reaplugin', version: '0.11.1', source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: 'main', lastError: null }, pendingUpdate: null };
   const returnTo = 'http://localhost:43210/?page=settings';
   const document = { referrer: '', getElementById: id => ids[id], createElement: tag => new Element(tag) };
   const fetch = async (url, options = {}) => {
     const endpoint = url.split('/').at(-1);
+    if (url === 'https://api.github.com/rate_limit') return { ok: true, json: async () => ({ resources: { core: { reset: Math.ceil((time + 600000) / 1000) } } }) };
     if (url === '/api/v1/plugins') return { ok: true, text: async () => JSON.stringify([managedPlugin]) };
     if (url === '/api/v1/plugins/update') {
       calls.push('update');
-      if (updateVersion) managedPlugin.version = updateVersion;
+      managedPlugin.source.lastError = updateError;
+      if (updateVersion && !updateError) managedPlugin.version = updateVersion;
       return { ok: true, text: async () => JSON.stringify({ message: 'Plugin update check complete' }) };
     }
     if (url.endsWith('/update/approve')) return { ok: true, text: async () => JSON.stringify({ version: managedPlugin.version }) };
@@ -400,12 +404,24 @@ test('instructions and glossary are navigable tabs with calibration field guidan
 
 test('settings page displays its version and checks for managed extension updates', async () => {
   const p = await page(partial, false, false, '0.12.0');
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.11.0');
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.11.1');
+  assert.equal(p.ids['check-extension-update'].textContent, 'Check & Update');
   assert.equal(p.ids['check-extension-update'].disabled, false);
   await p.ids['check-extension-update'].handlers.click();
   assert.ok(p.calls.includes('update'));
   assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.0');
-  assert.match(p.ids['extension-update-status'].textContent, /Updated to version 0\.12\.0/);
+  assert.equal(p.ids['extension-update-dialog'].hidden, false);
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /Updated to version 0\.12\.0/);
+});
+
+test('GitHub 403 update failures open a rate-limit dialog with retry minutes', async () => {
+  const p = await page(partial, false, false, null, 'Exception: Failed to resolve pponce/decentAutoSteamCalculator@main: 403');
+  await p.ids['check-extension-update'].handlers.click();
+  assert.equal(p.ids['extension-update-dialog'].hidden, false);
+  assert.equal(p.ids['extension-update-dialog-title'].textContent, 'Update failed');
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);
+  await p.ids['extension-update-dialog-close'].handlers.click();
+  assert.equal(p.ids['extension-update-dialog'].hidden, true);
 });
 
 test('temperature note can be changed without reopening or overwriting a saved reading', async () => {
