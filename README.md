@@ -49,6 +49,11 @@ remains `calibrated-steam.reaplugin`. Decaid preserves settings and enablement w
 updating that ID within the same application installation. Separate app installs
 have separate settings.
 
+For that existing-installation case, use the native **Install Plugin → GitHub
+Branch** route above once, even though the calculator is already listed. This
+attaches the new repository as its update source. The skin's install button is
+shown only when the calculator is missing.
+
 ### 3. Configure and test
 
 - Enter at least one empty Small, Medium or Large pitcher weight, manually or
