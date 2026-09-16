@@ -14,96 +14,86 @@ These instructions target the official Android Decaid v0.8.6 release or newer.
 No custom APK, Java installation or application rebuild is needed. Internet
 access is needed to install and update; calculation and settings run locally.
 
-### 1. Install the supporting Streamline skin
+### 1. Open the Decaid settings dashboard
+
+Keep Decaid running and open this address in a browser:
+
+[http://localhost:8080/api/v1/plugins/settings.reaplugin/ui](http://localhost:8080/api/v1/plugins/settings.reaplugin/ui)
+
+`localhost` works when browsing on the tablet itself. If it does not work—or
+you are using another device on the same network—replace `localhost` with the
+tablet's IP address.
+
+### 2. Install the supporting Streamline skin
 
 The official Streamline skin does not yet include these Auto steam controls.
-Open Decaid's skin selector and choose **Install skin → GitHub Branch**:
+In the dashboard's **Install Skin** field, enter:
 
-| Field | Value |
-| --- | --- |
-| Repository | `pponce/streamline-js` |
-| Branch | `feature/calibrated-steam-timer` |
+```text
+pponce/streamline-js
+```
 
-Install, then select **Streamline.js — Auto Steam**. Its ID is
-`pponce.streamline-auto-steam`, so it can coexist with the official Streamline
-skin. This identity is for the test fork and should not be included in a future
-upstream Streamline contribution.
+Click **Install** and wait for it to finish. This installs the latest published
+skin release; no branch selection or manual ZIP download is needed.
 
-### 2. Install and enable the calculator
+### 3. Select the skin inside the Decaid app
 
-In that skin, open **Settings → Extensions → Auto Steam Calculator**:
+Return to the Decaid app. Go to **Settings → Skin** and select
+**Streamline.js — Auto Steam**.
 
-1. Select **Install Auto Steam Calculator**. This uses Decaid's GitHub branch
-   installer for this repository's `main` branch.
-2. Select **Enable Auto Steam Calculator** if it is not already enabled.
-3. Select **Open settings** to configure pitchers and calibration.
+Its ID is `pponce.streamline-auto-steam`, so it can coexist with official
+Streamline. This identity is for the test fork and should not be included in a
+future upstream Streamline contribution.
 
-Alternatively, use Decaid's native **Plugins** screen → **Install Plugin → GitHub
-Branch**, with repository `pponce/decentAutoSteamCalculator` and branch `main`.
-Enable the plugin after installation. A GitHub release is not needed for this
-branch-based installation.
+### 4. Install and enable the calculator
 
-If the calculator was already bundled in your experimental app, installing from
-this repository replaces it with the independently tracked version. The plugin ID
-remains `calibrated-steam.reaplugin`. Decaid preserves settings and enablement when
-updating that ID within the same application installation. Separate app installs
-have separate settings.
+In the new skin, go to **Settings → Extensions → Auto Steam Calculator**.
+Select **Install Auto Steam Calculator**, wait for installation, then turn on
+**Enable Auto Steam Calculator**.
 
-For that existing-installation case, use the native **Install Plugin → GitHub
-Branch** route above once, even though the calculator is already listed. This
-attaches the new repository as its update source. The skin's install button is
-shown only when the calculator is missing.
+Use this installation button inside the skin. The browser dashboard's separate
+**Install Plugin (coming soon)** section is not needed. The skin uses Decaid's
+existing GitHub branch installer for `pponce/decentAutoSteamCalculator`,
+branch `main`.
 
-### 3. Configure and test
+### 5. Set it up
+
+Select **Open settings**:
 
 - Enter at least one empty Small, Medium or Large pitcher weight, manually or
   using **Tare empty scale** and **Set from scale**.
 - Optionally enable Auto pitcher selection and complete its required settings.
-- Choose single or multiple flow calibration. Record the **actual milk-only
+- Choose single-flow or multiple-flow calibration. Record the **actual milk-only
   weight for every reading**, manually or with guided calibration.
-- Save, return to the shot page, select **Auto**, put the filled pitcher on the
-  scale, and tap its pitcher preset to calculate. Start steam normally afterward.
+- Select **Save calibration**.
+
+### 6. Test it
+
+Return to the main shot page and tap the Steam heading to select **Auto**.
+Place the filled pitcher on the scale, then tap its pitcher preset to calculate
+the steaming time. Review the calculated time and start steaming normally.
 
 Single-flow Auto fixes the calibrated flow. Multiple-flow Auto permits adjustment
-within the measured range and recalculates time from the current milk weight.
-Manual Flow and Time remain available. Off prompts recalculation between drinks;
-it is not a hard start interlock and a physical start may produce a brief burst.
+within the measured range; after changing flow, tap the pitcher preset again to
+calculate from the current milk weight. Manual Flow and Time remain available.
+Off prompts recalculation between drinks; it is not a hard start interlock and
+a physical start may produce a brief burst.
 
 See the [full setup and skin-developer guide](docs/CalibratedSteam.md).
 
 ## Updates
 
-Decaid records the GitHub branch source and checks it through its normal plugin
-update mechanism. In the Plugins screen, check for updates to fetch new commits.
-The skin and plugin update independently. Use Decaid's skin update controls for
-the Streamline fork. Branch installs follow development commits; no release tag
-needs to be created for each test update.
+The skin and plugin update independently:
 
-## API installation alternative
+- **Skin:** use **Check for Skin Updates** in the Decaid settings dashboard.
+  Installations made using `pponce/streamline-js` follow its published releases.
+  Pushing commits alone does not update a release-installed skin.
+- **Calculator:** use Decaid's plugin update controls to check for new commits
+  on `pponce/decentAutoSteamCalculator`'s `main` branch. The calculator does not
+  need a new GitHub release for each update.
 
-From a computer on the tablet's network, replace `TABLET_IP` with its address.
-Use Decaid's configured API port if it differs from 8080:
-
-```bash
-curl --fail-with-body -X POST http://TABLET_IP:8080/api/v1/webui/skins/install/github-branch \
-  -H 'Content-Type: application/json' \
-  -d '{"repo":"pponce/streamline-js","branch":"feature/calibrated-steam-timer"}'
-
-curl --fail-with-body -X PUT http://TABLET_IP:8080/api/v1/webui/skins/default \
-  -H 'Content-Type: application/json' \
-  -d '{"skinId":"pponce.streamline-auto-steam"}'
-
-curl --fail-with-body -X POST http://TABLET_IP:8080/api/v1/plugins/install/github-branch \
-  -H 'Content-Type: application/json' \
-  -d '{"repo":"pponce/decentAutoSteamCalculator","branch":"main"}'
-
-curl --fail-with-body -X POST \
-  http://TABLET_IP:8080/api/v1/plugins/calibrated-steam.reaplugin/enable
-```
-
-Then open the selected skin in Decaid and configure the calculator. Decaid handles
-package installation, permissions, settings and updates; the skin does not download
-or execute code directly from GitHub.
+If you previously installed the skin from a branch or a ZIP URL, install it once
+using `pponce/streamline-js` in the dashboard to switch to release updates.
 
 ## Development
 
