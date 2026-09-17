@@ -3,7 +3,7 @@
   "name": "Auto Steam Calculator",
   "author": "pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)",
   "description": "Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "apiVersion": 1,
   "permissions": [
     "api",
@@ -55,9 +55,19 @@
       ],
       "default": "gross"
     },
+    "temperatureUnit": {
+      "type": "enum",
+      "label": "Temperature unit",
+      "description": "Display preference for calibration targets. Saved calibration temperatures remain stored internally in Celsius.",
+      "values": [
+        "F",
+        "C"
+      ],
+      "default": "F"
+    },
     "targetTemperatureC": {
       "type": "number",
-      "label": "Target temp (°C) — required",
+      "label": "Target temp (°F) — required",
       "description": "Required target milk temperature for this calibration set. Readings are matched by target temperature and flow.",
       "default": 60
     },

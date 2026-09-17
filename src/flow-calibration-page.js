@@ -1,11 +1,12 @@
 function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow }, model) {
-  const { calibrationLibrary, partitionFlowReadings, multipleCalibrationRequirements, calibrationKey, validFlowReading } = model;
+  const { calibrationLibrary, partitionFlowReadings, multipleCalibrationRequirements, calibrationKey, validFlowReading,
+    temperatureToC, temperatureFromC, formatTemperature } = model;
   const make = (tag, text) => { const element = document.createElement(tag); if (text !== undefined) element.textContent = text; return element; };
   const panel = labels.referenceMilkGrams.closest('fieldset').parentElement;
   const manual = labels.referenceMilkGrams.closest('fieldset');
   const config = make('fieldset'); config.className = 'flow-setup';
-  const configGrid = make('div'); configGrid.className = 'field-grid full-width'; config.append(configGrid);
-  configGrid.append(labels.weightMode, labels.targetTemperatureC);
+  const configGrid = make('div'); configGrid.className = 'calibration-config-grid full-width'; config.append(configGrid);
+  configGrid.append(labels.weightMode, labels.temperatureUnit, labels.targetTemperatureC);
   const support = make('div'); support.className = 'field flow-support'; support.append(make('label', 'Flow support:'));
   const supportButtons = make('div'); supportButtons.className = 'calibration-actions'; support.append(supportButtons); configGrid.append(support);
   const single = make('button', 'Single'), multipleButton = make('button', 'Multiple');
@@ -35,6 +36,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const newRow = make('div'); newRow.className = 'calibration-actions'; panel.insertBefore(newRow, manual);
   const newCalibration = make('button', 'New calibration'); newCalibration.type = 'button'; newRow.append(newCalibration);
 
+  let displayedUnit = field('temperatureUnit').value || 'F';
   let readings = calibrationLibrary(settings()) || [];
   let openKey = null, draftFlow = NaN, draftTarget = NaN, guidedMode = true, locked = false;
   let guide = null, review = null, clearGuided = () => {}, measurementReady = false;
@@ -43,7 +45,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     return {
       flowReadings: field('flowReadings').value,
       calibrationMode: field('calibrationMode').value,
-      targetTemperatureC: Number(field('targetTemperatureC').value),
+      targetTemperatureC: temperatureToC(field('targetTemperatureC').value, field('temperatureUnit').value || 'F'),
       minimumFlow: Number(field('minimumFlow').value), maximumFlow: Number(field('maximumFlow').value),
       referenceFlow: Number(field('referenceFlow').value), referenceMilkGrams: Number(field('referenceMilkGrams').value),
       referenceSeconds: Number(field('referenceSeconds').value),
@@ -68,14 +70,14 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     updateChoices();
   }
   function setDefault(reading) {
-    field('targetTemperatureC').value = reading.targetTemperatureC;
+    field('targetTemperatureC').value = temperatureFromC(reading.targetTemperatureC, displayedUnit);
     field('referenceFlow').value = reading.flow;
     field('referenceMilkGrams').value = reading.milkGrams;
     field('referenceSeconds').value = reading.seconds;
     syncFlow(reading.flow, true); syncStored(); render();
   }
   function readingLabel(reading) {
-    return reading.flow.toFixed(1) + ' ml/s · ' + reading.targetTemperatureC.toFixed(1) + ' °C · ' + reading.milkGrams + ' g · ' + reading.seconds + ' s';
+    return reading.flow.toFixed(1) + ' ml/s · ' + formatTemperature(reading.targetTemperatureC, displayedUnit) + ' · ' + reading.milkGrams + ' g · ' + reading.seconds + ' s';
   }
   function rowFor(reading, allowDefault = true) {
     const wrapper = make('div'); wrapper.className = 'saved-calibration';
@@ -85,7 +87,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     const remove = make('button', 'Delete'); remove.type = 'button'; remove.addEventListener('click', () => {
       if (locked) return; readings = readings.filter(item => calibrationKey(item) !== calibrationKey(reading));
       if (openKey === calibrationKey(reading)) cancelEditor();
-      const remaining = readings.filter(item => same(item.targetTemperatureC, field('targetTemperatureC').value));
+      const remaining = readings.filter(item => same(item.targetTemperatureC, settings().targetTemperatureC));
       if (!defaultReading() && remaining.length) setDefault(remaining.sort((a, b) => a.flow - b.flow)[0]);
       else { syncStored(); render(); }
     }); row.append(remove);
@@ -110,7 +112,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   function openEditor(reading, flow, key) {
     if (locked) return;
     openKey = key || calibrationKey(reading); draftFlow = Number(reading?.flow ?? flow ?? field('referenceFlow').value);
-    draftTarget = Number(reading?.targetTemperatureC ?? field('targetTemperatureC').value);
+    draftTarget = Number(reading?.targetTemperatureC ?? settings().targetTemperatureC);
     field('referenceMilkGrams').value = reading?.milkGrams || '';
     field('referenceSeconds').value = reading?.seconds || '';
     editorFlow.value = draftFlow; measurementReady = false; clearGuided(); editor.hidden = false; render();
@@ -119,7 +121,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   function setMethod(guidedSelected) { guidedMode = guidedSelected; paintEditor(); }
   function paintEditor() {
     if (!openKey) return;
-    editorTitle.textContent = (openKey.startsWith('new:') ? 'New calibration · ' : 'Edit calibration · ') + draftFlow.toFixed(1) + ' ml/s · ' + draftTarget.toFixed(1) + ' °C';
+    editorTitle.textContent = (openKey.startsWith('new:') ? 'New calibration · ' : 'Edit calibration · ') + draftFlow.toFixed(1) + ' ml/s · ' + formatTemperature(draftTarget, displayedUnit);
     editorFlowLabel.hidden = !openKey.startsWith('new:'); editorFlow.disabled = locked;
     guidedButton.setAttribute('aria-pressed', String(guidedMode)); manualButton.setAttribute('aria-pressed', String(!guidedMode));
     if (guide && review) { guide.hidden = !guidedMode; review.hidden = guidedMode; review.open = true; }
@@ -148,7 +150,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
       others.hidden = true;
       note.textContent = 'Single uses only the calibration checked as Default.';
     } else {
-      main.append(make('p', 'Calibrations used for ' + Number(field('targetTemperatureC').value).toFixed(1) + ' °C within the selected range'));
+      main.append(make('p', 'Calibrations used for ' + formatTemperature(settings().targetTemperatureC, displayedUnit) + ' within the selected range'));
       active.forEach((reading, index) => { main.append(rowFor(reading, true)); if (index < active.length - 1) { const arrow = make('div', '↓'); arrow.className = 'reading-arrow'; main.append(arrow); } });
       const required = multipleCalibrationRequirements({ ...settings(), flowReadings: JSON.stringify(readings) });
       const min = Number(field('minimumFlow').value), max = Number(field('maximumFlow').value);
@@ -177,12 +179,25 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   editorCancel.addEventListener('click', cancelEditor); close.addEventListener('click', cancelEditor);
   guidedButton.addEventListener('click', () => setMethod(true)); manualButton.addEventListener('click', () => setMethod(false)); update.addEventListener('click', saveEditor);
   editorFlow.addEventListener('input', () => { draftFlow = Number(editorFlow.value); measurementReady = false; clearGuided(); paintEditor(); });
+  function applyTemperaturePresentation() {
+    labels.targetTemperatureC.children[0].textContent = 'Target temp (°' + displayedUnit + ') — required';
+    field('targetTemperatureC').min = displayedUnit === 'F' ? '32.2' : '0.1';
+    field('targetTemperatureC').max = displayedUnit === 'F' ? '212' : '100';
+    field('targetTemperatureC').step = '0.1';
+  }
+  field('temperatureUnit').addEventListener('change', () => {
+    const raw = field('targetTemperatureC').value.trim();
+    const canonical = raw === '' ? NaN : temperatureToC(raw, displayedUnit);
+    displayedUnit = field('temperatureUnit').value || 'F';
+    if (Number.isFinite(canonical)) field('targetTemperatureC').value = temperatureFromC(canonical, displayedUnit);
+    applyTemperaturePresentation(); render();
+  });
   for (const input of [field('targetTemperatureC'), field('minimumFlow'), field('maximumFlow')]) input.addEventListener('change', () => { cancelEditor(); render(); });
   form.addEventListener('input', event => { if (event.target === field('referenceMilkGrams') || event.target === field('referenceSeconds')) { measurementReady = false; paintEditor(); } });
-  syncStored(); render();
+  applyTemperaturePresentation(); syncStored(); render();
   return {
     currentFlow: () => draftFlow,
-    currentTargetLabel: () => draftTarget.toFixed(1) + ' °C',
+    currentTargetLabel: () => formatTemperature(draftTarget, displayedUnit),
     attach(guided, measured, flowLabel, clear) {
       guide = guided; review = measured; clearGuided = clear;
       flowLabel.hidden = true; methodHost.append(guided, measured); paintEditor();
@@ -197,8 +212,8 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     reveal() { render(); },
     assertCanSave() {
       if (openKey) throw Object.assign(new Error('Update or close the open calibration before saving.'), { field: 'flowReadings' });
-      const target = Number(field('targetTemperatureC').value);
-      if (!Number.isFinite(target) || target <= 0 || target > 100) throw Object.assign(new Error('Enter the required target milk temperature between 0 and 100 °C.'), { field: 'targetTemperatureC' });
+      const target = settings().targetTemperatureC;
+      if (!Number.isFinite(target) || target <= 0 || target > 100) throw Object.assign(new Error('Enter the required target milk temperature in the selected unit.'), { field: 'targetTemperatureC' });
       syncStored();
     },
   };

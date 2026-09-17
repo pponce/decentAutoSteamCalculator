@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { calculate, validateSettings } from '../src/core.mjs';
-import { calibrationLibrary, flowCalibration, multipleCalibrationRequirements, partitionFlowReadings, secondsPerGram } from '../src/flow-calibration.mjs';
+import { calibrationLibrary, flowCalibration, formatTemperature, multipleCalibrationRequirements, partitionFlowReadings,
+  secondsPerGram, temperatureFromC, temperatureToC } from '../src/flow-calibration.mjs';
 
 const base = { smallPitcherGrams: 150, mediumPitcherGrams: 0, largePitcherGrams: 0, autoDetect: false,
   weightMode: 'gross', calibrationMode: 'single', targetTemperatureC: 60, referenceFlow: 1.5,
@@ -18,6 +19,16 @@ test('single flow uses only the selected saved calibration', () => {
   assert.equal(calculate(settings, input(undefined)).durationSeconds, 40);
   assert.equal(flowCalibration(settings).adjustable, false);
   assert.throws(() => calculate(settings, input(0.8)), error => error.code === 'flow_out_of_range');
+});
+
+test('temperature display conversion round-trips while calibration storage stays Celsius', () => {
+  assert.equal(temperatureFromC(60, 'F'), 140);
+  assert.equal(temperatureToC(140, 'F'), 60);
+  assert.equal(temperatureFromC(60, 'C'), 60);
+  assert.equal(temperatureToC(60, 'C'), 60);
+  assert.equal(formatTemperature(60, 'F'), '140.0 °F');
+  assert.equal(formatTemperature(60, 'C'), '60.0 °C');
+  assert.equal(temperatureToC(temperatureFromC(60.1, 'F'), 'F'), 60.1);
 });
 
 test('legacy single settings become a preserved library reading at the migration target', () => {

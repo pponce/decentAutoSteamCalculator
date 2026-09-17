@@ -131,11 +131,14 @@ start blank and require the measured weight; guided calibration fills it from
 the scale after subtracting the selected pitcher. Each reading stores and uses
 its own actual weight. Editing a saved reading retains its measured values.
 
-**Target temp (°C)** is required and is stored in each reading. It does not set
-the steam heater or stop steam. It selects which readings belong to the active
-Multiple set, so readings at different target temperatures are never mixed.
-Current Decaid plugin settings do not expose the app's Celsius/Fahrenheit display
-preference, so the extension stores and displays this canonical value in Celsius.
+**Temperature unit** is a remembered display preference with Fahrenheit as the
+default. It sits immediately left of the required Target temp field. Switching
+between F and C converts the visible target, saved-calibration labels and guided
+instructions to the equivalent temperature. Every reading remains stored
+canonically in Celsius, so changing the display unit does not create a different
+calibration or alter its measured weight, time or flow. Target temperature does
+not set the steam heater or stop steam. It selects which readings belong to the
+active Multiple set, so readings at different target temperatures are never mixed.
 
 For each point, use the same pitcher,
 milk starting temperature, target temperature, heater setting and technique. Use
@@ -287,7 +290,8 @@ fields. `referenceFlow` is the fixed/default flow. `minimumFlow` and `maximumFlo
 select the active Multiple range; changing them does not delete readings.
 
 `referenceMilkGrams` and each reading's `milkGrams` store actual measured milk
-weight. `targetTemperatureC` is required for new saves and filters the active
+weight. `temperatureUnit` is `F` by default or `C` and affects display only.
+`targetTemperatureC` remains the canonical stored value, is required for new saves, and filters the active
 Multiple readings. It is not sent as a machine setting. Legacy single-flow data
 without a target is preserved at the migration target instead of being discarded.
 

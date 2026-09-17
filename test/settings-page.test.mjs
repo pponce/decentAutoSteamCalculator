@@ -38,7 +38,7 @@ async function page(settings = partial, { guided = false, updateVersion = null, 
   ids['extension-update-dialog'].hidden = true; ids['check-extension-update'].textContent = 'Check & Update';
   ids.settings.elements = { namedItem: key => fields[key] };
   const calls = [], savedSettings = [], calibrationCalls = [];
-  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.0', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
+  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.1', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
   let session = null;
   const fetch = async (url, options = {}) => {
     const endpoint = url.split('/').at(-1);
@@ -117,7 +117,7 @@ test('multiple mode separates out-of-range and different-temperature readings', 
   assert.doesNotMatch(p.ids['active-calibrations'].textContent, /0\.4 ml\/s|2\.4 ml\/s|55\.0 °C/);
   assert.match(p.ids['other-calibrations'].textContent, /0\.4 ml\/s/);
   assert.match(p.ids['other-calibrations'].textContent, /2\.4 ml\/s/);
-  assert.match(p.ids['other-calibrations'].textContent, /55\.0 °C/);
+  assert.match(p.ids['other-calibrations'].textContent, /131\.0 °F/);
   assert.equal(p.ids['other-calibrations'].open, undefined);
 });
 
@@ -150,7 +150,7 @@ test('capture arms calibration and physical machine start/stop completes timing 
   await p.buttons('Capture pitcher + milk (g)')[0].handlers.click();
   assert.equal(p.calibrationCalls[0].action, 'begin'); assert.equal(p.calibrationCalls[0].milkGrams, 230);
   assert.equal(p.buttons('Start steam').length, 0); assert.equal(p.buttons('Stop steam').length, 0);
-  assert.match(p.ids['calibration-editor'].textContent, /Start steam now/);
+  assert.match(p.ids['calibration-editor'].textContent, /Start steam now[\s\S]*140\.0 °F/);
   p.machineStart(); await p.heartbeat(); p.machineStop(); await p.heartbeat();
   assert.match(p.ids['calibration-editor'].textContent, /Need to try again/);
   assert.equal(p.fields.referenceSeconds.value, '25');
@@ -158,10 +158,34 @@ test('capture arms calibration and physical machine start/stop completes timing 
 
 test('instructions document matching, interpolation and physical calibration controls', async () => {
   const p = await page();
-  assert.match(p.ids['panel-instructions'].textContent, /every saved reading at the selected target temperature inside the selected range/);
+  assert.match(p.ids['panel-instructions'].textContent, /every saved reading at the equivalent target temperature inside the selected range/);
   assert.match(p.ids['panel-instructions'].textContent, /More matching readings improve/);
   assert.match(p.ids['panel-instructions'].textContent, /machine controls/);
   assert.match(p.ids['panel-glossary'].textContent, /outside the range are kept under Other saved calibrations/);
+});
+
+test('F is default and changing units converts every display without changing stored Celsius', async () => {
+  const p = await page();
+  assert.equal(p.fields.temperatureUnit.value, 'F');
+  assert.equal(p.fields.targetTemperatureC.value, '140');
+  assert.match(p.fields.targetTemperatureC.parent.children[0].textContent, /Target temp \(°F\)/);
+  assert.match(p.ids['active-calibrations'].textContent, /140\.0 °F/);
+  const grid = p.fields.temperatureUnit.parent.parent;
+  assert.equal(grid.children.indexOf(p.fields.targetTemperatureC.parent), grid.children.indexOf(p.fields.temperatureUnit.parent) + 1);
+
+  p.fields.temperatureUnit.value = 'C'; await p.fields.temperatureUnit.handlers.change();
+  assert.equal(p.fields.targetTemperatureC.value, '60');
+  assert.match(p.fields.targetTemperatureC.parent.children[0].textContent, /Target temp \(°C\)/);
+  assert.match(p.ids['active-calibrations'].textContent, /60\.0 °C/);
+
+  p.fields.temperatureUnit.value = 'F'; await p.fields.temperatureUnit.handlers.change();
+  assert.equal(p.fields.targetTemperatureC.value, '140');
+  assert.match(p.ids['active-calibrations'].textContent, /140\.0 °F/);
+  p.fields.temperatureUnit.value = 'C'; await p.fields.temperatureUnit.handlers.change();
+  await p.submit();
+  assert.equal(p.savedSettings[0].temperatureUnit, 'C');
+  assert.equal(p.savedSettings[0].targetTemperatureC, 60);
+  assert.equal(JSON.parse(p.savedSettings[0].flowReadings)[0].targetTemperatureC, 60);
 });
 
 test('the settings page requires a target temperature before saving', async () => {
@@ -174,7 +198,7 @@ test('the settings page requires a target temperature before saving', async () =
 
 test('Check & Update remains in the header and reports GitHub rate limits', async () => {
   const p = await page(partial, { updateError: 'failed 403' });
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.0');
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.1');
   await p.ids['check-extension-update'].handlers.click();
   assert.equal(p.ids['extension-update-dialog'].hidden, false);
   assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);

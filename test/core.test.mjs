@@ -71,7 +71,7 @@ test('rejects stale, too few, unordered, invalid and unstable readings', () => {
 test('rejects invalid configuration without silently substituting a calibration', () => {
   for (const invalid of [{ referenceMilkGrams: 0 }, { referenceSeconds: 0 },
     { referenceFlow: Infinity }, { smallPitcherGrams: -1 },
-    { weightMode: 'guess' }, { singleDrinkPitcher: 'large' },
+    { weightMode: 'guess' }, { temperatureUnit: 'K' }, { singleDrinkPitcher: 'large' },
     { referenceSeconds: '25' },
   ]) {
     assert.ok(validateSettings({ ...settings, ...invalid }).length);

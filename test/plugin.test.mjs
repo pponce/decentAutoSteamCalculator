@@ -33,6 +33,7 @@ test('built plugin runs without DOM, timers, network or other host capabilities'
 test('fresh installs expose configuration requirements, never invented working values', () => {
   const status = call(plugin({}), 'status');
   assert.equal(status.json.ready, false);
+  assert.equal(status.json.settings.temperatureUnit, 'F');
   assert.equal(status.json.settings.referenceSeconds, 0);
   assert.ok(status.json.errors.length > 0);
 });

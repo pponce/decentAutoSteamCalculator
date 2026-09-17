@@ -5,6 +5,25 @@ const MAX_READINGS = 100;
 const close = (a, b) => Math.abs(Number(a) - Number(b)) < 0.000001;
 const targetFor = settings => Number(settings.targetTemperatureC) > 0 ? Number(settings.targetTemperatureC) : 60;
 
+export function temperatureToC(value, unit = 'F') {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return NaN;
+  const celsius = unit === 'F' ? (number - 32) * 5 / 9 : number;
+  return Math.round(celsius * 10) / 10;
+}
+
+export function temperatureFromC(value, unit = 'F') {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return NaN;
+  const display = unit === 'F' ? number * 9 / 5 + 32 : number;
+  return Math.round(display * 10) / 10;
+}
+
+export function formatTemperature(valueC, unit = 'F') {
+  const value = temperatureFromC(valueC, unit);
+  return Number.isFinite(value) ? value.toFixed(1) + ' °' + unit : '—';
+}
+
 export function readFlowReadings(settings) {
   try {
     if (settings.flowReadings === undefined || settings.flowReadings === '') return [];

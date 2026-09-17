@@ -44,6 +44,7 @@ export function validateSettings(settings) {
   for (const key of ['smallPitcherGrams', 'mediumPitcherGrams', 'largePitcherGrams']) range(key, settings[key] === 0 ? 0 : 1, 3000);
   if (!configuredPitchers(settings).length) errors.push({ field: 'pitchers', message: 'Enter at least one empty pitcher weight (1–3000 g).' });
   if (!['gross', 'tared'].includes(settings.weightMode)) errors.push({ field: 'weightMode', message: 'Choose gross or tared scale weight.' });
+  if (!['F', 'C'].includes(settings.temperatureUnit ?? 'F')) errors.push({ field: 'temperatureUnit', message: 'Choose Fahrenheit or Celsius.' });
   if (typeof settings.autoDetect !== 'boolean') errors.push({ field: 'autoDetect', message: 'Choose whether to offer automatic pitcher detection.' });
   if (settings.autoDetect === true) {
     range('singleDrinkGrams', 10, 1000);
