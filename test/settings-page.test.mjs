@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL('../plugin.js', import.meta.url), 'utf8');
+const installedVersion = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8')).version;
+const nextVersion = installedVersion.replace(/^(\d+)\.(\d+)\.(\d+).*$/, (_, major, minor, patch) => `${major}.${minor}.${Number(patch) + 1}`);
 const settingsMockup = readFileSync(new URL('../assets/settings_mockup.html', import.meta.url), 'utf8');
 const saved = (flow, seconds, targetTemperatureC = 60) => ({ flow, targetTemperatureC, milkGrams: 160, seconds });
 const partial = { autoDetect: false, smallPitcherGrams: 150, mediumPitcherGrams: 220, largePitcherGrams: 0,
@@ -13,7 +15,7 @@ const partial = { autoDetect: false, smallPitcherGrams: 150, mediumPitcherGrams:
 
 async function page(settings = partial, {
   guided = false,
-  remoteVersion = '0.12.7',
+  remoteVersion = installedVersion,
   remotePermissions = ['api', 'events.machine'],
   checkError = null,
   updateError = null,
@@ -53,7 +55,7 @@ async function page(settings = partial, {
   } };
   const calls = [], savedSettings = [], calibrationCalls = [];
   const managed = {
-    id: 'calibrated-steam.reaplugin', version: '0.12.7', permissions: ['api', 'events.machine'],
+    id: 'calibrated-steam.reaplugin', version: installedVersion, permissions: ['api', 'events.machine'],
     source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: 'main', lastError: null }, pendingUpdate,
   };
   let session = null;
@@ -321,25 +323,25 @@ test('the settings page requires a target temperature before saving', async () =
 
 test('the header hides its update action when the installed extension is current', async () => {
   const p = await page();
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.7');
+  assert.equal(p.ids['extension-version'].textContent, 'Version ' + installedVersion);
   assert.equal(p.ids['check-extension-update'].hidden, true);
   assert.equal(p.ids['approve-extension-update'].hidden, true);
 });
 
 test('a newer branch version shows Update and updates only Auto Steam Calculator', async () => {
-  const p = await page(partial, { remoteVersion: '0.12.8' });
-  assert.equal(p.ids['extension-version'].textContent, 'Current 0.12.7 → New 0.12.8');
+  const p = await page(partial, { remoteVersion: nextVersion });
+  assert.equal(p.ids['extension-version'].textContent, 'Current ' + installedVersion + ' → New ' + nextVersion);
   assert.equal(p.ids['check-extension-update'].hidden, false);
   assert.equal(p.ids['check-extension-update'].textContent, 'Update');
   await p.ids['check-extension-update'].handlers.click();
   assert.ok(p.calls.includes('github-branch'));
   assert.equal(p.calls.includes('update'), false);
-  assert.match(p.ids['extension-update-dialog-message'].textContent, /Updated to version 0\.12\.8/);
+  assert.equal(p.ids['extension-update-dialog-message'].textContent, 'Updated to version ' + nextVersion + '. Reopen this page to load the updated interface.');
 });
 
 test('new permissions require a named approval before updating', async () => {
-  const p = await page(partial, { remoteVersion: '0.12.8', remotePermissions: ['api', 'events.machine', 'events.shots'] });
-  assert.equal(p.ids['extension-version'].textContent, 'Current 0.12.7 → New 0.12.8');
+  const p = await page(partial, { remoteVersion: nextVersion, remotePermissions: ['api', 'events.machine', 'events.shots'] });
+  assert.equal(p.ids['extension-version'].textContent, 'Current ' + installedVersion + ' → New ' + nextVersion);
   assert.equal(p.ids['approve-extension-update'].hidden, false);
   assert.equal(p.ids['approve-extension-update'].textContent, 'Approve & Update');
   await p.ids['approve-extension-update'].handlers.click();
@@ -361,7 +363,7 @@ test('a failed automatic check shows a compact Retry action', async () => {
 });
 
 test('an update failure still reports the GitHub rate-limit wait', async () => {
-  const p = await page(partial, { remoteVersion: '0.12.8', updateError: 'failed 403' });
+  const p = await page(partial, { remoteVersion: nextVersion, updateError: 'failed 403' });
   await p.ids['check-extension-update'].handlers.click();
   assert.equal(p.ids['extension-update-dialog'].hidden, false);
   assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);
