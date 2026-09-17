@@ -11,7 +11,14 @@ const partial = { autoDetect: false, smallPitcherGrams: 150, mediumPitcherGrams:
   referenceFlow: 1.5, minimumFlow: 0.4, maximumFlow: 2.5, calibrationMode: 'single',
   flowReadings: JSON.stringify([saved(1.5, 25)]) };
 
-async function page(settings = partial, { guided = false, updateVersion = null, updateError = null } = {}) {
+async function page(settings = partial, {
+  guided = false,
+  remoteVersion = '0.12.7',
+  remotePermissions = ['api', 'events.machine'],
+  checkError = null,
+  updateError = null,
+  pendingUpdate = null,
+} = {}) {
   const runtime = vm.createContext({}); vm.runInContext(source, runtime);
   const plugin = runtime.createPlugin(); plugin.onLoad(settings);
   const fields = {}, ids = {}; let time = 10000, socket; const timers = [];
@@ -33,10 +40,10 @@ async function page(settings = partial, { guided = false, updateVersion = null, 
     insertBefore(child, before) { const index = this.children.indexOf(before); if (child.parent) child.parent.children = child.parent.children.filter(item => item !== child); this.children.splice(index < 0 ? this.children.length : index, 0, child); child.parent = this; }
     addEventListener(event, handler) { const old = this.handlers[event]; this.handlers[event] = async (...args) => { await old?.(...args); return handler(...args); }; }
   }
-  for (const id of ['settings', 'status', 'save', 'return-settings', 'settings-tabs', 'configuration-summary', 'extension-version', 'check-extension-update', 'approve-extension-update', 'extension-update-status', 'extension-update-dialog', 'extension-update-dialog-title', 'extension-update-dialog-message', 'extension-update-dialog-close']) {
+  for (const id of ['settings', 'status', 'save', 'return-settings', 'settings-tabs', 'configuration-summary', 'extension-version', 'check-extension-update', 'approve-extension-update', 'extension-update-status', 'extension-update-dialog', 'extension-update-dialog-title', 'extension-update-dialog-message', 'extension-update-dialog-close', 'extension-update-dialog-confirm']) {
     ids[id] = new Element(id === 'settings' ? 'form' : /close|check-|approve-/.test(id) ? 'button' : 'div'); ids[id].id = id;
   }
-  ids['extension-update-dialog'].hidden = true; ids['check-extension-update'].textContent = 'Check & Update';
+  ids['extension-update-dialog'].hidden = true; ids['check-extension-update'].textContent = 'Update';
   ids.settings.elements = { namedItem: key => {
     const input = fields[key];
     for (let element = input; element; element = element.parent) {
@@ -45,12 +52,29 @@ async function page(settings = partial, { guided = false, updateVersion = null, 
     return null;
   } };
   const calls = [], savedSettings = [], calibrationCalls = [];
-  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.6', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
+  const managed = {
+    id: 'calibrated-steam.reaplugin', version: '0.12.7', permissions: ['api', 'events.machine'],
+    source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: 'main', lastError: null }, pendingUpdate,
+  };
   let session = null;
   const fetch = async (url, options = {}) => {
     const endpoint = url.split('/').at(-1);
     if (url === '/api/v1/plugins') return { ok: true, text: async () => JSON.stringify([managed]) };
-    if (url === '/api/v1/plugins/update') { managed.source.lastError = updateError; if (updateVersion) managed.version = updateVersion; return { ok: true, text: async () => '{}' }; }
+    if (url === 'https://raw.githubusercontent.com/pponce/decentAutoSteamCalculator/main/manifest.json') {
+      return checkError
+        ? { ok: false, status: 403, statusText: 'Forbidden', text: async () => JSON.stringify({ error: checkError }) }
+        : { ok: true, status: 200, statusText: 'OK', text: async () => JSON.stringify({ id: 'calibrated-steam.reaplugin', version: remoteVersion, permissions: remotePermissions }) };
+    }
+    if (url === '/api/v1/plugins/install/github-branch') {
+      calls.push('github-branch');
+      if (updateError) return { ok: false, status: 403, statusText: 'Forbidden', text: async () => JSON.stringify({ error: updateError }) };
+      managed.version = remoteVersion;
+      return { ok: true, text: async () => JSON.stringify({ id: managed.id, version: managed.version }) };
+    }
+    if (url === '/api/v1/plugins/calibrated-steam.reaplugin/update/approve') {
+      calls.push('approve'); managed.version = pendingUpdate?.version || remoteVersion; managed.pendingUpdate = null;
+      return { ok: true, text: async () => JSON.stringify({ id: managed.id, version: managed.version }) };
+    }
     if (url === 'https://api.github.com/rate_limit') return { ok: true, json: async () => ({ resources: { core: { reset: Math.ceil((time + 600000) / 1000) } } }) };
     calls.push(endpoint);
     if (endpoint === 'calibration' && guided) {
@@ -293,9 +317,48 @@ test('the settings page requires a target temperature before saving', async () =
   assert.equal(p.fields.targetTemperatureC.focused, true);
 });
 
-test('Check & Update remains in the header and reports GitHub rate limits', async () => {
-  const p = await page(partial, { updateError: 'failed 403' });
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.6');
+test('the header hides its update action when the installed extension is current', async () => {
+  const p = await page();
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.7');
+  assert.equal(p.ids['check-extension-update'].hidden, true);
+  assert.equal(p.ids['approve-extension-update'].hidden, true);
+});
+
+test('a newer branch version shows Update and updates only Auto Steam Calculator', async () => {
+  const p = await page(partial, { remoteVersion: '0.12.8' });
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.7 · 0.12.8 available');
+  assert.equal(p.ids['check-extension-update'].hidden, false);
+  assert.equal(p.ids['check-extension-update'].textContent, 'Update');
+  await p.ids['check-extension-update'].handlers.click();
+  assert.ok(p.calls.includes('github-branch'));
+  assert.equal(p.calls.includes('update'), false);
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /Updated to version 0\.12\.8/);
+});
+
+test('new permissions require a named approval before updating', async () => {
+  const p = await page(partial, { remoteVersion: '0.12.8', remotePermissions: ['api', 'events.machine', 'events.shots'] });
+  assert.equal(p.ids['approve-extension-update'].hidden, false);
+  assert.equal(p.ids['approve-extension-update'].textContent, 'Approve & Update');
+  await p.ids['approve-extension-update'].handlers.click();
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /events\.shots/);
+  assert.equal(p.calls.includes('github-branch'), false);
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.ok(p.calls.includes('github-branch'));
+});
+
+test('a failed automatic check shows a compact Retry action', async () => {
+  const p = await page(partial, { checkError: 'rate limited' });
+  assert.equal(p.ids['check-extension-update'].hidden, false);
+  assert.equal(p.ids['check-extension-update'].textContent, 'Unable to check · Retry');
+  assert.match(p.ids['extension-update-status'].textContent, /Unable to check/);
+  assert.equal(p.ids['extension-update-dialog'].hidden, true);
+  await p.ids['check-extension-update'].handlers.click();
+  assert.equal(p.ids['extension-update-dialog'].hidden, false);
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);
+});
+
+test('an update failure still reports the GitHub rate-limit wait', async () => {
+  const p = await page(partial, { remoteVersion: '0.12.8', updateError: 'failed 403' });
   await p.ids['check-extension-update'].handlers.click();
   assert.equal(p.ids['extension-update-dialog'].hidden, false);
   assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);
@@ -305,7 +368,7 @@ test('stored settings mockup tracks the current temperature and calibration UX',
   const script = settingsMockup.match(/<script>([\s\S]*)<\/script>/)?.[1];
   assert.ok(script);
   assert.doesNotThrow(() => new vm.Script(script));
-  assert.match(settingsMockup, /Version 0\.12\.6/);
+  assert.match(settingsMockup, /Version 0\.12\.7/);
   assert.match(settingsMockup, /id="steam-mock-temperature-unit"/);
   assert.match(settingsMockup, /Target temp \(°F\) — required/);
   assert.match(settingsMockup, /id="steam-mock-target-temp"[^>]*value="140"/);

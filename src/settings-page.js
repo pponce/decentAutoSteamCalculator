@@ -14,9 +14,11 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
   const updateDialogTitle = document.getElementById('extension-update-dialog-title');
   const updateDialogMessage = document.getElementById('extension-update-dialog-message');
   const updateDialogClose = document.getElementById('extension-update-dialog-close');
+  const updateDialogConfirm = document.getElementById('extension-update-dialog-confirm');
   back.href = resolveReturnUrl(window.location.href, document.referrer);
   form.noValidate = true;
   let schema = {}, guided = null, loaded = false, flowValue = null, flowPlan = null, installedVersion = '';
+  let currentPlugin = null, updateCandidate = null, updateDialogAction = null;
   const panels = {}, tabButtons = {}, labels = {}, fieldPanels = {};
   const tabDefinitions = [['pitchers', 'Pitchers & Auto'], ['calibration', 'Calibration'], ['instructions', 'Instructions'], ['glossary', 'Glossary']];
   const make = (tag, text) => { const element = document.createElement(tag); if (text) element.textContent = text; return element; };
@@ -54,16 +56,25 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     const plugins = await request('/api/v1/plugins');
     return Array.isArray(plugins) ? plugins.find(plugin => plugin.id === 'calibrated-steam.reaplugin') : null;
   }
-  function showUpdateDialog(title, message) {
+  function showUpdateDialog(title, message, confirmLabel = '', action = null) {
     updateDialogTitle.textContent = title;
     updateDialogMessage.textContent = message;
     updateStatus.textContent = title + ': ' + message;
+    updateDialogAction = action;
+    updateDialogConfirm.hidden = !action;
+    updateDialogConfirm.textContent = confirmLabel;
+    updateDialogClose.textContent = action ? 'Cancel' : 'OK';
     updateDialog.hidden = false;
-    updateDialogClose.focus();
+    (action ? updateDialogConfirm : updateDialogClose).focus();
   }
-  function closeUpdateDialog() { updateDialog.hidden = true; }
+  function closeUpdateDialog() { updateDialog.hidden = true; updateDialogAction = null; }
   updateDialogClose.addEventListener('click', closeUpdateDialog);
   updateDialog.addEventListener('click', event => { if (event.target === updateDialog) closeUpdateDialog(); });
+  updateDialogConfirm.addEventListener('click', async () => {
+    const action = updateDialogAction;
+    closeUpdateDialog();
+    if (action) await action();
+  });
   async function updateFailureMessage(error) {
     const message = error?.message || String(error || 'The update failed.');
     if (!/\b403\b/.test(message)) return message;
@@ -78,82 +89,135 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     } catch {}
     return "GitHub's unauthenticated update limit has been reached. Try again in about 60 minutes.";
   }
-  function paintUpdateState(plugin) {
+  function compareVersions(left, right) {
+    const parse = value => {
+      const match = String(value || '').trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/);
+      return match ? { core: match.slice(1, 4).map(Number), prerelease: match[4] || '' } : null;
+    };
+    const a = parse(left), b = parse(right);
+    if (!a || !b) throw new Error('The extension returned an invalid version.');
+    for (let index = 0; index < 3; index += 1) if (a.core[index] !== b.core[index]) return a.core[index] < b.core[index] ? -1 : 1;
+    if (a.prerelease === b.prerelease) return 0;
+    if (!a.prerelease || !b.prerelease) return a.prerelease ? -1 : 1;
+    return a.prerelease < b.prerelease ? -1 : 1;
+  }
+  function branchManifestUrl(plugin) {
+    const source = plugin?.source;
+    const repo = String(source?.repo || '');
+    const branch = String(source?.branch || '');
+    const parts = repo.split('/');
+    if (source?.kind !== 'github_branch' || parts.length !== 2 || parts.some(part => !/^[A-Za-z0-9_.-]+$/.test(part)) || !/^[A-Za-z0-9_.\/-]+$/.test(branch)) return null;
+    return 'https://raw.githubusercontent.com/' + parts.map(encodeURIComponent).join('/') + '/' + branch.split('/').map(encodeURIComponent).join('/') + '/manifest.json';
+  }
+  async function branchManifest(plugin) {
+    const url = branchManifestUrl(plugin);
+    if (!url) throw new Error('Automatic update checks require a GitHub branch installation.');
+    const response = await fetch(url, { cache: 'no-store' });
+    const text = await response.text();
+    let manifest;
+    try { manifest = text ? JSON.parse(text) : {}; } catch { manifest = {}; }
+    if (!response.ok) throw new Error('GitHub returned ' + response.status + ' ' + response.statusText + '.');
+    if (manifest.id !== 'calibrated-steam.reaplugin' || !manifest.version) throw new Error('GitHub returned an invalid Auto Steam Calculator manifest.');
+    return manifest;
+  }
+  function paintUpdateState(plugin, { manifest = null, error = null, checking = false } = {}) {
+    currentPlugin = plugin;
     const version = plugin?.version || installedVersion;
     extensionVersion.textContent = 'Version ' + version;
-    checkUpdate.hidden = false; approveUpdate.hidden = true;
+    checkUpdate.hidden = true; approveUpdate.hidden = true;
+    checkUpdate.disabled = false; approveUpdate.disabled = false;
+    updateCandidate = null;
     if (!plugin) {
-      checkUpdate.disabled = true;
-      updateStatus.textContent = 'Extension update controls are unavailable in this Decaid version.';
+      checkUpdate.textContent = 'Unable to check · Retry'; checkUpdate.hidden = false;
+      updateStatus.textContent = 'Unable to check for extension updates. Select Retry.';
       return;
     }
-    const managed = ['github_release', 'github_branch'].includes(plugin.source?.kind);
-    checkUpdate.disabled = !managed;
-    if (!managed) {
-      updateStatus.textContent = 'Install this extension from its GitHub release or branch to enable updates.';
+    if (plugin.source?.kind !== 'github_branch') {
+      updateStatus.textContent = 'Install this extension from its GitHub branch to enable updates.';
       return;
     }
     if (plugin.pendingUpdate) {
       const added = plugin.pendingUpdate.addedPermissions || [];
+      updateCandidate = { pending: true, version: plugin.pendingUpdate.version, addedPermissions: added };
+      extensionVersion.textContent += ' · ' + plugin.pendingUpdate.version + ' available';
       updateStatus.textContent = 'Version ' + plugin.pendingUpdate.version + ' needs approval' + (added.length ? ' because it adds: ' + added.join(', ') : '') + '.';
-      approveUpdate.textContent = 'Approve and update to ' + plugin.pendingUpdate.version;
-      checkUpdate.hidden = true; approveUpdate.hidden = false;
+      approveUpdate.textContent = 'Approve & Update'; approveUpdate.hidden = false;
       return;
     }
-    if (plugin.source?.lastError) {
-      updateStatus.textContent = 'Last update check failed: ' + plugin.source.lastError;
+    if (checking) {
+      updateStatus.textContent = 'Checking for extension updates…';
       return;
     }
-    updateStatus.textContent = 'Decaid can check all GitHub-backed extensions and install compatible updates while preserving saved settings.';
+    if (error) {
+      checkUpdate.textContent = 'Unable to check · Retry'; checkUpdate.hidden = false;
+      updateStatus.textContent = 'Unable to check for extension updates: ' + (error.message || error) + ' Select Retry.';
+      return;
+    }
+    if (manifest && compareVersions(version, manifest.version) < 0) {
+      const installedPermissions = new Set(plugin.permissions || []);
+      const addedPermissions = (manifest.permissions || []).filter(permission => !installedPermissions.has(permission));
+      updateCandidate = { pending: false, version: manifest.version, addedPermissions };
+      extensionVersion.textContent += ' · ' + manifest.version + ' available';
+      updateStatus.textContent = 'Version ' + manifest.version + ' is available' + (addedPermissions.length ? ' and adds: ' + addedPermissions.join(', ') : '') + '.';
+      const button = addedPermissions.length ? approveUpdate : checkUpdate;
+      button.textContent = addedPermissions.length ? 'Approve & Update' : 'Update';
+      button.hidden = false;
+      return;
+    }
+    updateStatus.textContent = 'Version ' + version + ' is up to date.';
   }
-  async function refreshUpdateState() {
+  async function refreshUpdateState(showFailure = false) {
     try {
-      const plugin = await pluginRecord(); paintUpdateState(plugin); return plugin;
-    } catch {
-      paintUpdateState(null); return null;
+      const plugin = await pluginRecord();
+      if (!plugin) { paintUpdateState(null); return null; }
+      paintUpdateState(plugin, { checking: !plugin.pendingUpdate });
+      if (plugin.pendingUpdate) return plugin;
+      try { paintUpdateState(plugin, { manifest: await branchManifest(plugin) }); }
+      catch (error) {
+        paintUpdateState(plugin, { error });
+        if (showFailure) showUpdateDialog('Unable to check for updates', await updateFailureMessage(error));
+      }
+      return plugin;
+    } catch (error) {
+      paintUpdateState(null, { error });
+      if (showFailure) showUpdateDialog('Unable to check for updates', await updateFailureMessage(error));
+      return null;
     }
   }
-  checkUpdate.addEventListener('click', async () => {
-    checkUpdate.disabled = true; approveUpdate.hidden = true;
-    checkUpdate.textContent = 'Checking…';
-    updateStatus.textContent = 'Checking all GitHub-backed extensions… Compatible updates install automatically.';
+  async function installAvailableUpdate() {
+    if (!updateCandidate || !currentPlugin) return;
+    checkUpdate.disabled = true; approveUpdate.disabled = true;
+    updateStatus.textContent = 'Updating Auto Steam Calculator…';
     try {
       const before = installedVersion;
-      await request('/api/v1/plugins/update', { method: 'POST' });
-      const plugin = await refreshUpdateState();
-      if (plugin?.source?.lastError) {
-        showUpdateDialog('Update failed', await updateFailureMessage(plugin.source.lastError));
-      } else if (plugin?.version && plugin.version !== before) {
+      if (updateCandidate.pending) {
+        await request('/api/v1/plugins/calibrated-steam.reaplugin/update/approve', { method: 'POST' });
+      } else {
+        await request('/api/v1/plugins/install/github-branch', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ repo: currentPlugin.source.repo, branch: currentPlugin.source.branch || 'main' })
+        });
+      }
+      const plugin = await pluginRecord();
+      if (plugin?.version && plugin.version !== before) {
         installedVersion = plugin.version;
-        extensionVersion.textContent = 'Version ' + plugin.version;
+        paintUpdateState(plugin, { manifest: { id: plugin.id, version: plugin.version, permissions: plugin.permissions || [] } });
         showUpdateDialog('Extension updated', 'Updated to version ' + plugin.version + '. Reopen this page to load the updated interface.');
-      } else if (plugin?.pendingUpdate) {
-        showUpdateDialog('Approval required', updateStatus.textContent);
-      } else if (plugin && !plugin.pendingUpdate && !plugin.source?.lastError) {
-        showUpdateDialog('Extension is up to date', 'Version ' + installedVersion + ' is the latest available version.');
+      } else {
+        throw new Error('Decaid did not install the available version.');
       }
     } catch (error) {
       showUpdateDialog('Update failed', await updateFailureMessage(error));
+      paintUpdateState(currentPlugin, { manifest: updateCandidate.pending ? null : { id: 'calibrated-steam.reaplugin', version: updateCandidate.version, permissions: [...(currentPlugin.permissions || []), ...updateCandidate.addedPermissions] } });
     } finally {
-      checkUpdate.textContent = 'Check & Update'; checkUpdate.disabled = false;
+      checkUpdate.disabled = false; approveUpdate.disabled = false;
     }
-  });
-  approveUpdate.addEventListener('click', async () => {
-    approveUpdate.disabled = true; checkUpdate.disabled = true;
-    updateStatus.textContent = 'Installing the approved update…';
-    try {
-      await request('/api/v1/plugins/calibrated-steam.reaplugin/update/approve', { method: 'POST' });
-      const plugin = await refreshUpdateState();
-      if (plugin?.version) {
-        installedVersion = plugin.version;
-        extensionVersion.textContent = 'Version ' + plugin.version;
-        showUpdateDialog('Extension updated', 'Updated to version ' + plugin.version + '. Reopen this page to load the updated interface.');
-      }
-    } catch (error) {
-      showUpdateDialog('Update failed', await updateFailureMessage(error));
-    } finally {
-      approveUpdate.disabled = false; checkUpdate.disabled = false;
-    }
+  }
+  checkUpdate.addEventListener('click', async () => updateCandidate ? installAvailableUpdate() : refreshUpdateState(true));
+  approveUpdate.addEventListener('click', () => {
+    if (!updateCandidate) return;
+    const permissions = updateCandidate.addedPermissions.length ? updateCandidate.addedPermissions.join(', ') : 'permissions listed by Decaid';
+    showUpdateDialog('Approve new permissions', 'Version ' + updateCandidate.version + ' requests: ' + permissions + '. Approve only if you trust this update.', 'Approve & Update', installAvailableUpdate);
   });
   function updateChoices() {
     const current = values();
@@ -344,7 +408,7 @@ function settingsPage() {
 @media(prefers-color-scheme:dark){:root{--bg:#111827;--surface:#1d293b;--soft:#253247;--text:#edf3fb;--muted:#adbbcf;--border:#43516a;--accent:#70aaf0;--notice:#263d5d;--green:#65d796;--configured-bg:#1c402e;--configured-text:#65d796;--unconfigured-bg:#512d32;--unconfigured-text:#ffc2c2;--danger:#ff8c8c}}
 *{box-sizing:border-box}[hidden]{display:none!important}body{max-width:1024px;min-height:690px;margin:auto;padding:18px;background:var(--bg);color:var(--text)}h1,h2,h3,p{margin-top:0}h1{margin-bottom:2px;font-size:21px;font-weight:500}h2{margin-bottom:3px;font-size:17px;font-weight:500}h3{margin-bottom:7px;font-size:14px;font-weight:500}p{margin-bottom:10px}button,a,input,select{touch-action:manipulation}button,input,select{min-height:40px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit}button{padding:7px 11px;font-weight:500;cursor:pointer}button:disabled{opacity:.48;cursor:default}input,select{width:100%;height:40px;min-width:0;padding:7px 9px;font-size:16px}input[type=checkbox]{width:22px;height:22px;min-height:22px;margin:0;accent-color:var(--accent)}a{color:var(--accent)}
 header{display:grid;grid-template-columns:auto minmax(0,1fr) 250px;align-items:center;gap:12px}.extension-title{min-width:0;text-align:center}.extension-title h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#extension-version{display:block;color:var(--muted);font-size:12px}.extension-actions{display:flex;justify-content:flex-end;gap:8px}.extension-actions button{width:max-content;white-space:nowrap;border-color:var(--accent);background:var(--accent);color:#fff}#return-settings{justify-self:start;display:inline-block;min-height:40px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);text-decoration:none}
-.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.update-dialog{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.55)}.update-dialog-card{width:min(460px,100%);padding:16px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 18px 45px rgba(0,0,0,.3)}.update-dialog-card p{color:var(--muted);overflow-wrap:anywhere}.update-dialog-card button{float:right;min-width:80px;border-color:var(--accent);background:var(--accent);color:#fff}
+.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.update-dialog{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.55)}.update-dialog-card{width:min(460px,100%);padding:16px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 18px 45px rgba(0,0,0,.3)}.update-dialog-card p{color:var(--muted);overflow-wrap:anywhere}.update-dialog-actions{display:flex;justify-content:flex-end;gap:8px}.update-dialog-card button{min-width:80px;border-color:var(--accent)}#extension-update-dialog-close{background:var(--surface);color:var(--text)}#extension-update-dialog-confirm{background:var(--accent);color:#fff}
 #settings-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:10px 0 12px}#settings-tabs{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px}#settings-tabs button{min-height:38px;padding:6px 11px;color:var(--muted)}#settings-tabs [aria-selected=true],button[aria-pressed=true],#save{border-color:var(--accent);background:var(--accent);color:#fff}#configuration-summary{display:flex;align-items:center;justify-self:end;gap:6px;margin:0;color:var(--muted);font-size:12px;white-space:nowrap}.configured-pitcher,.unconfigured-pitcher{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;font-weight:500}.configured-pitcher{background:var(--configured-bg);color:var(--configured-text)}.unconfigured-pitcher{background:var(--unconfigured-bg);color:var(--unconfigured-text)}.configuration-flow{margin-left:5px;color:var(--text);font-weight:500}
 .settings-panel{padding:14px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 5px 17px rgba(43,62,90,.07)}.panel-intro{margin-bottom:11px;color:var(--muted);font-size:12px}.settings-section{min-width:0;margin:0 0 11px;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--soft)}.settings-section:last-child{margin-bottom:0}fieldset.settings-section{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.field{display:grid;align-content:start;gap:4px;color:var(--muted);font-size:12px}.field label{color:var(--text);font-weight:500}.field small,.section-help{color:var(--muted);font-size:12px}.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;grid-column:1/-1}.full-width{grid-column:1/-1}.local-status{margin:8px 0 0;padding:7px 9px;border-radius:7px;background:var(--notice);color:var(--muted);font-size:12px;overflow-wrap:anywhere}
 .pitcher-weights-section,.automatic-section{display:block!important}.pitcher-section-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.pitcher-section-header h3{margin:0}.scale-reading{color:var(--muted);font-size:12px}.scale-tools{display:flex;align-items:center;gap:8px}.pitcher-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.pitcher-card{display:grid;grid-template-columns:1fr;grid-template-rows:auto auto auto auto;align-content:start;gap:6px;min-width:0}.pitcher-card+.pitcher-card{padding-left:12px;border-left:1px solid var(--border)}.pitcher-card-name{display:flex;align-items:center;gap:7px;color:var(--text)!important}.pitcher-card-badge{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--configured-bg);color:var(--configured-text);font-weight:500}.pitcher-card button{width:100%}.pitcher-card .capture-result{margin:0;color:var(--muted);font-size:12px}.automatic-switch{display:flex;align-items:center;gap:10px;min-height:40px;font-weight:500}.automatic-switch>span{color:var(--text)}#setting-autoDetect{flex:0 0 30px;width:30px;height:30px;min-height:30px}.section-help{margin:4px 0 9px}.automatic-fields{margin-top:0}
@@ -357,9 +421,9 @@ header{display:grid;grid-template-columns:auto minmax(0,1fr) 250px;align-items:c
 @media(max-width:680px){#settings-toolbar{grid-template-columns:1fr}#configuration-summary{justify-self:end}.calibration-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){body{padding:12px}header{grid-template-columns:auto 1fr}.extension-title{grid-column:1/-1;grid-row:1;padding:0 86px}.extension-actions{grid-column:2;grid-row:2}#return-settings{grid-column:1;grid-row:1;z-index:1}#settings-toolbar{margin-top:-50px}#settings-tabs{padding-right:150px}#configuration-summary{justify-self:stretch;flex-wrap:wrap}.field-grid,.calibration-config-grid,.pitcher-grid,.help-list,.glossary,.editor-identity-fields,.guided-overview,.guided-overview.is-tared{grid-template-columns:1fr}.pitcher-card+.pitcher-card{padding-top:10px;padding-left:0;border-top:1px solid var(--border);border-left:0}.calibration-library-header{align-items:stretch;flex-direction:column}.calibration-library-actions{justify-content:space-between}.saved-calibration-row{grid-template-columns:minmax(0,1fr) auto auto}.saved-calibration-details{grid-column:1/-1}.default-choice{grid-column:1/-1;justify-self:end}.editor-header{align-items:stretch}.entry-methods{justify-content:flex-start}.editor-save-row{align-items:stretch}.editor-save-row button{flex:1}}
 </style></head><body>
-<header><a id="return-settings" href="/api/v1/plugins/settings.reaplugin/ui">← Settings</a><div class="extension-title"><h1>Auto Steam Calculator</h1><span id="extension-version">Version …</span></div><div class="extension-actions"><button id="check-extension-update" type="button" disabled>Check &amp; Update</button><button id="approve-extension-update" type="button" hidden>Approve Update</button></div></header>
+<header><a id="return-settings" href="/api/v1/plugins/settings.reaplugin/ui">← Settings</a><div class="extension-title"><h1>Auto Steam Calculator</h1><span id="extension-version">Version …</span></div><div class="extension-actions"><button id="check-extension-update" type="button" hidden>Update</button><button id="approve-extension-update" type="button" hidden>Approve &amp; Update</button></div></header>
 <p id="extension-update-status" class="visually-hidden" role="status" aria-live="polite">Loading update status…</p>
-<div id="extension-update-dialog" class="update-dialog" hidden><section class="update-dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="extension-update-dialog-title" aria-describedby="extension-update-dialog-message"><h2 id="extension-update-dialog-title">Extension update</h2><p id="extension-update-dialog-message"></p><button id="extension-update-dialog-close" type="button">OK</button></section></div>
+<div id="extension-update-dialog" class="update-dialog" hidden><section class="update-dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="extension-update-dialog-title" aria-describedby="extension-update-dialog-message"><h2 id="extension-update-dialog-title">Extension update</h2><p id="extension-update-dialog-message"></p><div class="update-dialog-actions"><button id="extension-update-dialog-close" type="button">OK</button><button id="extension-update-dialog-confirm" type="button" hidden></button></div></section></div>
 <div id="settings-toolbar"><nav id="settings-tabs" role="tablist" aria-label="Auto Steam settings"></nav><p id="configuration-summary" role="status" aria-live="polite">Loading configuration…</p></div>
 <form id="settings" novalidate></form>
 <div class="save-row"><p id="status" role="status" aria-live="polite">Loading settings…</p><button id="save" form="settings" type="submit" disabled>Save calibration</button></div>

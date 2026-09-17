@@ -24,14 +24,14 @@ the current set flow shown to their right in Single mode. Multiple mode omits th
 set-flow label because the calibrated range is adjustable. Save is required to
 persist changes.
 
-The page also displays the installed extension version. A compact **Check &
-Update** button shares the top header with the return control and title, leaving
-the settings area free for configuration. It uses Decaid's normal updater.
-Compatible updates install during the check and preserve saved settings; results
-and errors open in a dialog. A GitHub 403 reports the remaining minutes until
-the unauthenticated API limit resets. A future update that adds permissions is
-shown for explicit approval. Because Decaid's update route checks all managed
-plugins together, the button may also update other GitHub-backed extensions.
+The page always displays the installed extension version and checks the recorded
+GitHub branch when it opens. When that version is current, no update button is
+shown. A newer version shows **Update** in the top-right header; one that adds
+permissions shows **Approve & Update** and names those permissions before the
+user approves installation. A failed check shows **Unable to check · Retry**.
+The action uses Decaid's branch installer for this extension only and preserves
+saved settings. Results and update failures open in a dialog. A GitHub 403
+reports the remaining minutes until the unauthenticated API limit resets.
 
 Pitchers & Auto places empty-scale tare beside the pitcher rows. Each **Set from
 scale** button fills its own field without focusing it first, and reports success

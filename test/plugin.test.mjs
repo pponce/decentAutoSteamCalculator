@@ -106,7 +106,7 @@ test('settings UI is self-contained and credits Damian', () => {
   assert.equal(response.status, 200);
   assert.match(response.body, /github.com\/Damian-AU\/DSx2/);
   assert.match(response.body, /form="settings"/);
-  assert.match(response.body, /<header>[\s\S]*check-extension-update[\s\S]*Check &amp; Update[\s\S]*<\/header>/);
+  assert.match(response.body, /<header>[\s\S]*check-extension-update[^>]*hidden[^>]*>Update<[\s\S]*approve-extension-update[^>]*hidden[^>]*>Approve &amp; Update<[\s\S]*<\/header>/);
   assert.match(response.body, /role="alertdialog"/);
   const script = response.body.match(/<script>([\s\S]*)<\/script>/)[1];
   assert.doesNotThrow(() => new vm.Script(script));
