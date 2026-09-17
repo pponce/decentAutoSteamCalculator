@@ -57,6 +57,7 @@ globalThis.createPlugin = function createPlugin() {
     onLoad(values = {}) {
       settings = configured(values);
       if (settings.referenceFlow === 0) settings.referenceFlow = defaults.referenceFlow;
+      if (!(Number(settings.targetTemperatureC) > 0)) settings.targetTemperatureC = defaults.targetTemperatureC;
       loaded = true;
     },
     onUnload() {

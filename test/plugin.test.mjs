@@ -64,17 +64,17 @@ test('configuration validation is read-only and reload replaces calculation sett
   assert.equal(call(instance, 'status').json.settings.referenceSeconds, 30);
 });
 
-test('temperature notes persist as metadata without changing calculated time or workflow settings', () => {
+test('target temperature defaults to 140 F and notes do not change calculated time or workflow settings', () => {
   const input = {
     samples: [800, 400, 0].map(ageMs => ({ weightGrams: 330, ageMs })),
     pitcher: 'small', machineState: 'idle', stopAtTemperature: 0,
   };
   const baseline = call(plugin(), 'calculate', 'POST', input).json;
-  for (const targetTemperatureC of [0, 55, 65]) {
+  for (const [targetTemperatureC, expectedTemperatureC] of [[0, 60], [55, 55], [65, 65]]) {
     const instance = plugin({ ...valid, targetTemperatureC });
     const saved = call(instance, 'status').json.settings;
     assert.equal(saved.referenceMilkGrams, 150);
-    assert.equal(saved.targetTemperatureC, targetTemperatureC);
+    assert.equal(saved.targetTemperatureC, expectedTemperatureC);
     instance.onLoad(JSON.parse(JSON.stringify(saved)));
     const result = call(instance, 'calculate', 'POST', input).json;
     assert.equal(result.durationSeconds, baseline.durationSeconds);
