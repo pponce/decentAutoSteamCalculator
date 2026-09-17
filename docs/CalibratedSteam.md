@@ -9,9 +9,11 @@ Install the plugin and supporting skin using the [official-app setup guide](../R
 
 ## Setup and use
 
-In Streamline, open **Settings > Extensions > Auto Steam Calculator**. Enable the
-extension (install it first if offered), then choose **Open settings**. The standalone page is also available
-from **Extensions > Plugins > Open**. Both entry points provide a return address:
+In Streamline, open **Settings > Extensions**, select **Auto Steam Calculator**,
+enable the extension (install it first if needed), then choose **Open**. Streamline
+builds this plugin row and details page generically from `GET /api/v1/plugins` and
+the manifest; no calculator-specific settings page is required in the skin. The
+standalone page provides a return address:
 **Return to settings** leaves without saving, and a successful **Save calibration**
 returns to the calling settings page. Validation or save errors keep the form open.
 
@@ -24,11 +26,12 @@ the current set flow shown to their right in Single mode. Multiple mode omits th
 set-flow label because the calibrated range is adjustable. Save is required to
 persist changes.
 
-The page always displays the installed extension version and checks the recorded
-GitHub branch when it opens. When that version is current, no update button is
-shown. A newer version shows **Update** in the top-right header; one that adds
-permissions shows **Approve & Update** and names those permissions before the
-user approves installation. A failed check shows **Unable to check · Retry**.
+The page keeps **Auto Steam Calculator** centered in its header and checks the
+recorded GitHub branch when it opens. When the installed version is current, that
+version appears alone at top right. When a newer version exists, the current and
+new versions appear immediately left of **Update**; one that adds permissions
+shows **Approve & Update** and names those permissions before the user approves
+installation. A failed check shows **Unable to check · Retry**.
 The action uses Decaid's branch installer for this extension only and preserves
 saved settings. Results and update failures open in a dialog. A GitHub 403
 reports the remaining minutes until the unauthenticated API limit resets.
@@ -248,6 +251,10 @@ proof that the plugin is running. Restore the skin's usual steam UI if disabled.
 | POST | `calculate` | Return a calculation and duration/flow workflow patch; performs no write |
 | POST | `calibration` | Prepare, start, stop, cancel or renew an owned guided calibration session |
 
+`calculate` is calculation-only: it never writes workflow or machine settings and
+never starts steaming. The supporting skin owns the separate, validated and
+machine-bounded workflow write after it has rejected stale observations.
+
 Prefix endpoints with `/api/v1/plugins/calibrated-steam.reaplugin/`.
 Settings are persisted through the existing
 `POST /api/v1/plugins/calibrated-steam.reaplugin/settings` endpoint. That endpoint
@@ -286,8 +293,9 @@ readings alone do not establish valid pitcher settings.
 
 Persist `calibrationMode` (`single` by default, or `multiple`) and `flowReadings`
 (a JSON string containing the saved calibration library). A string is used
-because the existing plugin setting schema supports primitive types. Custom
-skins should use the shared settings page instead of exposing raw JSON. The
+because the existing plugin setting schema supports primitive types. Generic manifest-driven settings pages will expose this primitive field as text;
+skins should direct calibration edits to the plugin's **Open** page instead of
+asking users to edit the serialized library. The
 `referenceMilkGrams` and `referenceSeconds` fields define the single calibration;
 in both modes the selected library entry is mirrored to the legacy reference
 fields. `referenceFlow` is the fixed/default flow. `minimumFlow` and `maximumFlow`
@@ -436,9 +444,10 @@ when updating inside the same Decaid installation. No native application changes
 or fork-specific APK are required. The plugin is maintained independently of Decaid;
 Decaid's maintainers do not own this repository or its release lifecycle.
 
-The companion Streamline integration is maintained on the `main` branch of
-`pponce/streamline-js` and distributed through that fork's releases. Other skins can use the API documented here without
-copying the calculations or calibration page.
+A focused official Streamline contribution is maintained on the
+`feature/upstream-auto-steam` branch of `pponce/streamline-js` while it is reviewed
+upstream. Other skins can use the API documented here without copying the
+calculations or calibration page.
 
 ## Runtime verification before release
 
@@ -471,8 +480,8 @@ returns 404; restart and confirm it stays disabled. Inspect
 `scripts/sb-dev.sh logs -n 30 --filter error`, then `scripts/sb-dev.sh stop`.
 
 On the tablet, verify the 114 px mode label and four preset touch targets in
-light/dark mode; heading and label cycling; direct Settings > Extensions access
-before and after visiting a legacy settings page; enable/disable; gross/tared
+light/dark mode; heading and label cycling; the generic Settings > Extensions
+plugin row and **Open** action before and after visiting a legacy settings page; enable/disable; gross/tared
 weighing; repeated taps on the same pitcher; and persistence across reloads. Verify
 entry and post-steam Off, automatic calibration-flow application, manual-setting
 restoration and a deferred disable while steaming. A failed scale/calibration

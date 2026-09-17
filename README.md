@@ -99,11 +99,12 @@ The skin and plugin update independently:
 - **Skin:** use **Check for Skin Updates** in the Decaid settings dashboard.
   Installations made using `pponce/streamline-js` follow its published releases.
   Pushing commits alone does not update a release-installed skin.
-- **Calculator:** its settings page always displays the installed version and
-  checks its recorded GitHub branch when the page opens. When the installed
-  version is current, no update button takes up header space. A newer version
-  shows **Update**; one requesting additional permissions shows **Approve &
-  Update** and lists those permissions before installation. A failed check shows
+- **Calculator:** its settings page keeps the title centered and checks its
+  recorded GitHub branch when the page opens. When current, the installed version
+  appears alone at top right. When an update exists, the current and new version
+  numbers appear immediately left of **Update**; one requesting additional
+  permissions shows **Approve & Update** and lists those permissions before
+  installation. A failed check shows
   **Unable to check · Retry**. Updates target only Auto Steam Calculator and
   preserve its saved settings. A GitHub 403 reports how many minutes remain
   before the unauthenticated API limit resets. Branch installs follow new commits
