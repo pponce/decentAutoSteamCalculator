@@ -6,9 +6,9 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const manual = labels.referenceMilkGrams.closest('fieldset');
   const config = make('fieldset'); config.className = 'flow-setup';
   const configGrid = make('div'); configGrid.className = 'calibration-config-grid full-width'; config.append(configGrid);
-  configGrid.append(labels.weightMode, labels.temperatureUnit, labels.targetTemperatureC);
   const support = make('div'); support.className = 'field flow-support'; support.append(make('label', 'Flow support:'));
   const supportButtons = make('div'); supportButtons.className = 'calibration-actions'; support.append(supportButtons); configGrid.append(support);
+  configGrid.append(labels.weightMode, labels.temperatureUnit, labels.targetTemperatureC);
   const single = make('button', 'Single'), multipleButton = make('button', 'Multiple');
   single.type = multipleButton.type = 'button'; single.id = 'flow-mode-single'; multipleButton.id = 'flow-mode-multiple';
   supportButtons.append(single, multipleButton);
@@ -21,6 +21,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   others.append(make('summary', 'Other saved calibrations'));
   const otherRows = make('div'); others.append(otherRows); panel.insertBefore(others, manual);
   const editor = make('section'); editor.id = 'calibration-editor'; editor.className = 'calibration-editor'; editor.hidden = true;
+  const editorHome = make('div'); editorHome.hidden = true; panel.insertBefore(editorHome, manual); editorHome.append(editor);
   const editorHeader = make('div'); editorHeader.className = 'editor-header';
   const editorTitle = make('h2'); const editorCancel = make('button', 'Cancel'); editorCancel.type = 'button';
   const editorFlowLabel = make('label', 'Flow (ml/s)'); editorFlowLabel.className = 'field editor-flow';
@@ -138,6 +139,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     openKey = null; editor.hidden = true; syncStored(); render();
   }
   function render() {
+    if (!openKey) { editor.hidden = true; editorHome.append(editor); }
     const isMultiple = field('calibrationMode').value === 'multiple';
     single.setAttribute('aria-pressed', String(!isMultiple)); multipleButton.setAttribute('aria-pressed', String(isMultiple));
     range.hidden = !isMultiple; newCalibration.hidden = isMultiple;
@@ -163,7 +165,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
         ? 'All ' + required.active.length + ' matching calibrations will be used for piecewise interpolation.'
         : 'Add the exact minimum, exact maximum, and at least one interior reading. A reading near the middle is recommended.';
     }
-    if (openKey && openKey === 'new:single') newRow.append(editor); else if (!openKey) editor.hidden = true;
+    if (openKey && openKey === 'new:single') newRow.append(editor);
     paintEditor(); updateChoices();
   }
   function mode(value) {

@@ -214,6 +214,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       ];
       const captions = { smallPitcherGrams: 'Small (g)', mediumPitcherGrams: 'Medium (g)', largePitcherGrams: 'Large (g)', weightMode: 'Scale weight Mode' };
       const hints = { smallPitcherGrams: 'Empty pitcher. Blank means unused.', mediumPitcherGrams: 'Empty pitcher. Blank means unused.', largePitcherGrams: 'Empty pitcher. Blank means unused.', weightMode: 'One global choice for single and multiple calibration. Gross: pitcher + milk. Tared: milk only.' };
+      const noInlineHelp = new Set(['weightMode', 'temperatureUnit', 'targetTemperatureC']);
       for (const [panelName, heading, keys] of groups) {
         const section = make('fieldset'); if (heading) section.append(make('legend', heading)); panels[panelName].append(section);
         let automaticFields;
@@ -241,7 +242,8 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
             input.value = item.type === 'number' && savedValue === 0 ? ''
               : key === 'targetTemperatureC' ? temperatureFromC(savedValue, data.settings.temperatureUnit || 'F') : savedValue;
           }
-          wrapper.append(input); wrapper.append(make('small', hints[key] || item.description));
+          wrapper.append(input);
+          if (!noInlineHelp.has(key)) wrapper.append(make('small', hints[key] || item.description));
           if (automaticFields && key !== 'autoDetect') automaticFields.append(wrapper); else section.append(wrapper);
           labels[key] = wrapper; fieldPanels[key] = panelName;
         }

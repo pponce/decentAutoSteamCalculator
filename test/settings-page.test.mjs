@@ -36,9 +36,15 @@ async function page(settings = partial, { guided = false, updateVersion = null, 
     ids[id] = new Element(id === 'settings' ? 'form' : /close|check-|approve-/.test(id) ? 'button' : 'div'); ids[id].id = id;
   }
   ids['extension-update-dialog'].hidden = true; ids['check-extension-update'].textContent = 'Check & Update';
-  ids.settings.elements = { namedItem: key => fields[key] };
+  ids.settings.elements = { namedItem: key => {
+    const input = fields[key];
+    for (let element = input; element; element = element.parent) {
+      if (element === ids.settings) return input;
+    }
+    return null;
+  } };
   const calls = [], savedSettings = [], calibrationCalls = [];
-  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.1', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
+  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.2', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
   let session = null;
   const fetch = async (url, options = {}) => {
     const endpoint = url.split('/').at(-1);
@@ -107,6 +113,29 @@ test('single saved calibrations edit inline and every opener toggles to Cancel',
   assert.equal(p.ids['calibration-editor'].hidden, true);
 });
 
+test('closed calibration editor stays form-owned so initialization, tare, edit and delete work', async () => {
+  const p = await page();
+  assert.doesNotMatch(p.ids.status.textContent, /null/i);
+  assert.ok(p.fields.referenceMilkGrams);
+  await p.buttons('Tare empty scale')[0].handlers.click();
+  assert.doesNotMatch(p.ids.status.textContent, /null/i);
+  assert.match(p.ids['panel-pitchers'].textContent, /Waiting for a stable zero/);
+  await p.buttons('Edit')[0].handlers.click();
+  assert.equal(p.ids['calibration-editor'].hidden, false);
+  await p.buttons('Cancel')[0].handlers.click();
+  await p.buttons('Delete')[0].handlers.click();
+  assert.match(p.ids['active-calibrations'].textContent, /No saved calibrations yet/);
+});
+
+test('compact calibration controls omit inline help retained by instructions and glossary', async () => {
+  const p = await page();
+  for (const key of ['weightMode', 'temperatureUnit', 'targetTemperatureC']) {
+    assert.equal(p.fields[key].parent.children.some(child => child.tag === 'small'), false);
+  }
+  assert.match(p.ids['panel-instructions'].textContent, /Scale weight mode/);
+  assert.match(p.ids['panel-glossary'].textContent, /Display preference for calibration targets/);
+});
+
 test('multiple mode separates out-of-range and different-temperature readings', async () => {
   const settings = { ...partial, calibrationMode: 'multiple', minimumFlow: 0.6, maximumFlow: 2.0, referenceFlow: 1.2,
     flowReadings: JSON.stringify([saved(0.4, 45), saved(0.6, 40), saved(1.2, 30), saved(2.0, 20), saved(2.4, 18), saved(1.0, 32, 55)]) };
@@ -171,6 +200,8 @@ test('F is default and changing units converts every display without changing st
   assert.match(p.fields.targetTemperatureC.parent.children[0].textContent, /Target temp \(°F\)/);
   assert.match(p.ids['active-calibrations'].textContent, /140\.0 °F/);
   const grid = p.fields.temperatureUnit.parent.parent;
+  assert.equal(grid.children[0].className, 'field flow-support');
+  assert.equal(grid.children[1], p.fields.weightMode.parent);
   assert.equal(grid.children.indexOf(p.fields.targetTemperatureC.parent), grid.children.indexOf(p.fields.temperatureUnit.parent) + 1);
 
   p.fields.temperatureUnit.value = 'C'; await p.fields.temperatureUnit.handlers.change();
@@ -198,7 +229,7 @@ test('the settings page requires a target temperature before saving', async () =
 
 test('Check & Update remains in the header and reports GitHub rate limits', async () => {
   const p = await page(partial, { updateError: 'failed 403' });
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.1');
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.2');
   await p.ids['check-extension-update'].handlers.click();
   assert.equal(p.ids['extension-update-dialog'].hidden, false);
   assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);
