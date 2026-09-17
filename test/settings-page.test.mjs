@@ -16,7 +16,11 @@ const partial = { autoDetect: false, smallPitcherGrams: 150, mediumPitcherGrams:
 async function page(settings = partial, {
   guided = false,
   remoteVersion = installedVersion,
+  betaVersion = nextVersion + '-beta.1',
+  sourceBranch = 'main',
+  managedVersion = installedVersion,
   remotePermissions = ['api', 'events.machine'],
+  betaPermissions = ['api', 'events.machine', 'pluginStorage'],
   checkError = null,
   updateError = null,
   pendingUpdate = null,
@@ -55,8 +59,8 @@ async function page(settings = partial, {
   } };
   const calls = [], savedSettings = [], calibrationCalls = [];
   const managed = {
-    id: 'calibrated-steam.reaplugin', version: installedVersion, permissions: ['api', 'events.machine'],
-    source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: 'main', lastError: null }, pendingUpdate,
+    id: 'calibrated-steam.reaplugin', version: managedVersion, permissions: ['api', 'events.machine'],
+    source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: sourceBranch, lastError: null }, pendingUpdate,
   };
   let session = null;
   const fetch = async (url, options = {}) => {
@@ -67,10 +71,18 @@ async function page(settings = partial, {
         ? { ok: false, status: 403, statusText: 'Forbidden', text: async () => JSON.stringify({ error: checkError }) }
         : { ok: true, status: 200, statusText: 'OK', text: async () => JSON.stringify({ id: 'calibrated-steam.reaplugin', version: remoteVersion, permissions: remotePermissions }) };
     }
+    if (url === 'https://raw.githubusercontent.com/pponce/decentAutoSteamCalculator/beta/manifest.json') {
+      return checkError
+        ? { ok: false, status: 403, statusText: 'Forbidden', text: async () => JSON.stringify({ error: checkError }) }
+        : { ok: true, status: 200, statusText: 'OK', text: async () => JSON.stringify({ id: 'calibrated-steam.reaplugin', version: betaVersion, permissions: betaPermissions }) };
+    }
     if (url === '/api/v1/plugins/install/github-branch') {
       calls.push('github-branch');
       if (updateError) return { ok: false, status: 403, statusText: 'Forbidden', text: async () => JSON.stringify({ error: updateError }) };
-      managed.version = remoteVersion;
+      const requested = JSON.parse(options.body);
+      managed.source.branch = requested.branch;
+      managed.version = requested.branch === 'beta' ? betaVersion : remoteVersion;
+      managed.permissions = requested.branch === 'beta' ? betaPermissions : remotePermissions;
       return { ok: true, text: async () => JSON.stringify({ id: managed.id, version: managed.version }) };
     }
     if (url === '/api/v1/plugins/calibrated-steam.reaplugin/update/approve') {
@@ -180,6 +192,16 @@ test('recovered tablet layout keeps quick-reference tabs compact and two-column'
   assert.match(source, /\.help-list\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(source, /\.glossary\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(source, /@media\(pointer:coarse\)\{button,input,select\{min-height:44px/);
+});
+
+test('getting started is a full-width bordered card with a strong heading', async () => {
+  const p = await page();
+  const card = p.ids['panel-instructions'].children.find(child => child.className === 'getting-started');
+  assert.ok(card);
+  assert.equal(card.children[0].children[0].tag, 'strong');
+  assert.equal(card.children[0].children[0].textContent, 'Getting started:');
+  assert.match(source, /\.getting-started\{margin-bottom:9px;padding:10px;border:1px solid var\(--border\)/);
+  assert.match(source, /\.getting-started strong\{color:var\(--text\);font-weight:600\}/);
 });
 
 test('Pitchers and Calibration use the recovered mockup component structure', async () => {
@@ -370,6 +392,40 @@ test('an update failure still reports the GitHub rate-limit wait', async () => {
   await p.ids['check-extension-update'].handlers.click();
   assert.equal(p.ids['extension-update-dialog'].hidden, false);
   assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);
+});
+
+test('stable users can join the extension beta from Instructions', async () => {
+  const p = await page();
+  assert.match(p.ids['beta-channel-status'].textContent, /Stable channel/);
+  assert.match(p.ids['beta-channel-status'].textContent, new RegExp(nextVersion + '-beta\\.1'));
+  assert.equal(p.ids['beta-channel-action'].textContent, 'Join beta');
+  assert.equal(p.ids['beta-channel-action'].disabled, false);
+  await p.ids['beta-channel-action'].handlers.click();
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /may be less stable/);
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /does not currently allow downgrades/);
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /pluginStorage/);
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.match(p.ids['beta-channel-status'].textContent, /Beta channel/);
+  assert.equal(p.ids['extension-update-dialog-title'].textContent, 'Beta installed');
+});
+
+test('beta users cannot return while stable would be a downgrade', async () => {
+  const betaVersion = nextVersion + '-beta.1';
+  const p = await page(partial, { sourceBranch: 'beta', managedVersion: betaVersion, betaVersion });
+  assert.match(p.ids['beta-channel-status'].textContent, /Decaid does not allow downgrades/);
+  assert.equal(p.ids['beta-channel-action'].textContent, 'Return to stable');
+  assert.equal(p.ids['beta-channel-action'].disabled, true);
+});
+
+test('beta users can return when stable is equal to or newer than beta', async () => {
+  const betaVersion = nextVersion + '-beta.1';
+  const p = await page(partial, { sourceBranch: 'beta', managedVersion: betaVersion, betaVersion, remoteVersion: nextVersion });
+  assert.equal(p.ids['beta-channel-action'].disabled, false);
+  await p.ids['beta-channel-action'].handlers.click();
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /leave the beta channel/);
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.match(p.ids['beta-channel-status'].textContent, /Stable channel/);
+  assert.equal(p.ids['extension-update-dialog-title'].textContent, 'Stable installed');
 });
 
 test('stored settings mockup tracks the current temperature and calibration UX', () => {

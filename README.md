@@ -110,6 +110,13 @@ The skin and plugin update independently:
   before the unauthenticated API limit resets. Branch installs follow new commits
   on `pponce/decentAutoSteamCalculator`'s `main` branch.
 
+The **Instructions** tab also shows whether this extension follows the stable or
+beta branch. **Join beta** installs the newer beta for this extension only. Beta
+versions may be less stable, and Decaid does not currently allow downgrades, so
+**Return to stable** becomes available only when the stable version is equal to
+or newer than the installed beta. Saved settings are preserved when changing
+channels.
+
 If you previously installed the skin from a branch or a ZIP URL, install it once
 using `pponce/streamline-js` in the dashboard to switch to release updates.
 
