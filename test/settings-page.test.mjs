@@ -409,6 +409,12 @@ test('stable users can join the extension beta from Instructions', async () => {
   assert.equal(p.ids['extension-update-dialog-title'].textContent, 'Beta installed');
 });
 
+test('double-digit beta versions compare numerically', async () => {
+  const p = await page(partial, { managedVersion: '0.12.11-beta.9', betaVersion: '0.12.11-beta.10' });
+  assert.match(p.ids['beta-channel-status'].textContent, /Beta 0\.12\.11-beta\.10 is available/);
+  assert.equal(p.ids['beta-channel-action'].disabled, false);
+});
+
 test('beta users cannot return while stable would be a downgrade', async () => {
   const betaVersion = nextVersion + '-beta.1';
   const p = await page(partial, { sourceBranch: 'beta', managedVersion: betaVersion, betaVersion });

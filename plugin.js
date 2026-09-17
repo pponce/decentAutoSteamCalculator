@@ -1063,7 +1063,17 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     for (let index = 0; index < 3; index += 1) if (a.core[index] !== b.core[index]) return a.core[index] < b.core[index] ? -1 : 1;
     if (a.prerelease === b.prerelease) return 0;
     if (!a.prerelease || !b.prerelease) return a.prerelease ? -1 : 1;
-    return a.prerelease < b.prerelease ? -1 : 1;
+    const aParts = a.prerelease.split('.'), bParts = b.prerelease.split('.');
+    for (let index = 0; index < Math.max(aParts.length, bParts.length); index += 1) {
+      if (aParts[index] === undefined) return -1;
+      if (bParts[index] === undefined) return 1;
+      if (aParts[index] === bParts[index]) continue;
+      const aNumber = /^\d+$/.test(aParts[index]), bNumber = /^\d+$/.test(bParts[index]);
+      if (aNumber && bNumber) return Number(aParts[index]) < Number(bParts[index]) ? -1 : 1;
+      if (aNumber !== bNumber) return aNumber ? -1 : 1;
+      return aParts[index] < bParts[index] ? -1 : 1;
+    }
+    return 0;
   }
   function branchManifestUrl(repo, branch) {
     repo = String(repo || ''); branch = String(branch || '');
