@@ -135,7 +135,6 @@ function secondsPerGram(settings, flow) {
 }
 
 
-
 class CalculationError extends Error {
   constructor(code, message) {
     super(message);
@@ -249,7 +248,6 @@ function calculate(settings, input) {
   };
 }
 
-
 function settingsReturnUrl(currentUrl, referrer = '') {
   const current = new URL(currentUrl);
   const fallback = new URL('/api/v1/plugins/settings.reaplugin/ui', current).href;
@@ -265,7 +263,6 @@ function settingsReturnUrl(currentUrl, referrer = '') {
   }
   return fallback;
 }
-
 
 function captureScaleWeight(samples, now) {
   const recent = samples.filter(sample => Number.isFinite(sample.weight) && now - sample.at >= 0 && now - sample.at <= 2500);
@@ -425,7 +422,6 @@ function createCalibrationSession({ now = () => Date.now(), readWorkflow, writeS
     tick,
   };
 }
-
 
 function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow }, model) {
   const { calibrationLibrary, partitionFlowReadings, multipleCalibrationRequirements, calibrationKey, validFlowReading,
@@ -724,7 +720,6 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   };
 }
 
-
 function mountCalibrationPage({ form, labels, save, back, status, request, base, field, updateChoices, syncFlow, flowPlan }, captureWeight) {
   const sizes = ['small', 'medium', 'large'];
   let samples = [], zeroConfirmed = false, awaitingZero = false, tarePending = false;
@@ -962,7 +957,6 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
   connectScale();
   return { isActive: () => active || pending, flowChanged() { appliedResult = false; runStatus.textContent = 'Flow changed. Repeat calibration or enter a time measured at this flow.'; }, assertCanSave() { if (active || pending) throw new Error('Finish or cancel calibration before saving.'); } };
 }
-
 
 function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitcherChoices, validateConfiguration, mountFlowPlan) {
   const base = '/api/v1/plugins/calibrated-steam.reaplugin';
@@ -1607,6 +1601,5 @@ globalThis.createPlugin = function createPlugin() {
     },
   };
 };
-
 
 })();
