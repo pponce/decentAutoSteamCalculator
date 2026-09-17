@@ -192,7 +192,8 @@ test('Pitchers and Calibration use the recovered mockup component structure', as
   assert.match(source, /#setting-autoDetect\{flex:0 0 30px;width:30px;height:30px/);
   assert.match(source, /\.pitcher-grid\{display:grid;grid-template-columns:repeat\(3/);
   assert.match(source, /\.calibration-library-header\{display:flex/);
-  assert.match(source, /header\{display:grid;grid-template-columns:minmax\(0,1fr\) auto minmax\(0,1fr\)/);
+  assert.match(source, /header\{display:grid;grid-template-columns:minmax\(0,1fr\);grid-template-areas:"header"/);
+  assert.doesNotMatch(source, /\.extension-actions\{grid-column:1\/-1;grid-row:2/);
   assert.match(source, /<div class="extension-title"><h1>Auto Steam Calculator<\/h1><\/div><div class="extension-actions"><span id="extension-version">/);
 });
 
