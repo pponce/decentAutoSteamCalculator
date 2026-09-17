@@ -323,6 +323,9 @@ A custom guided UI can `POST calibration` with:
 {"action":"begin","pitcher":"small","pitcherGrams":150,"milkGrams":160,"flow":0.4,"heaterTemperature":145}
 ```
 
+For Tared mode, send `"pitcher":null` and `"pitcherGrams":0`; `milkGrams`
+is the captured milk-only weight.
+
 `begin` validates idle state, fresh host machine telemetry, pitcher/milk ranges,
 flow and heater availability before preparation. Weights come from the caller's
 validated capture; the endpoint does not authenticate scale samples. The response

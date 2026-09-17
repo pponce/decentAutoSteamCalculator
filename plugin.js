@@ -338,7 +338,9 @@ function createCalibrationSession({ now = () => Date.now(), readWorkflow, writeS
       if (active) throw new Error('A calibration is already active.');
       if (!fresh() || state !== 'idle') throw new Error('Wait for a connected, idle machine.');
       const { milkGrams, pitcher, pitcherGrams, flow, heaterTemperature } = options;
-      if (!['small', 'medium', 'large'].includes(pitcher) || !Number.isFinite(pitcherGrams) || pitcherGrams < 1 || pitcherGrams > 3000 ||
+      const tared = pitcher === null && pitcherGrams === 0;
+      const gross = ['small', 'medium', 'large'].includes(pitcher) && Number.isFinite(pitcherGrams) && pitcherGrams >= 1 && pitcherGrams <= 3000;
+      if ((!tared && !gross) ||
           !Number.isFinite(milkGrams) || milkGrams < 10 || milkGrams > 1500) throw new Error('Capture a configured pitcher containing 10–1500 g of milk.');
       if (!Number.isFinite(flow) || flow < 0.4 || flow > 2.5) throw new Error('Set a calibration flow from 0.4 to 2.5 ml/s.');
       active = true; busy = true; phase = 'preparing'; message = ''; result = null; original = null;
@@ -401,7 +403,6 @@ function createCalibrationSession({ now = () => Date.now(), readWorkflow, writeS
     tick,
   };
 }
-
 
 function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow }, model) {
   const { calibrationLibrary, partitionFlowReadings, multipleCalibrationRequirements, calibrationKey, validFlowReading } = model;

@@ -47,6 +47,13 @@ test('calibration applies flow, excludes warm-up, follows physical stop and rest
   assert.deepEqual(f.writes.at(-1), f.original);
 });
 
+test('tared guided calibration accepts milk-only weight without a pitcher selection', async () => {
+  const f = fixture();
+  await f.session.begin({ milkGrams: 160, pitcher: null, pitcherGrams: 0, flow: 0.4, heaterTemperature: 145 });
+  assert.deepEqual(f.session.snapshot().measurement, { milkGrams: 160, pitcher: null, pitcherGrams: 0, flow: 0.4 });
+  assert.equal(f.session.snapshot().phase, 'armed');
+});
+
 test('page start and stop are commands; stopping counter waits for machine confirmation', async () => {
   const f = fixture(); await f.begin(); await f.session.start();
   assert.deepEqual(f.commands, ['steam']);
