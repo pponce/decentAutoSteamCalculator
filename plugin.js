@@ -135,6 +135,7 @@ function secondsPerGram(settings, flow) {
 }
 
 
+
 class CalculationError extends Error {
   constructor(code, message) {
     super(message);
@@ -247,6 +248,7 @@ function calculate(settings, input) {
     workflowPatch: { steamSettings: { duration: durationSeconds, flow } },
   };
 }
+
 
 function settingsReturnUrl(currentUrl, referrer = '') {
   const current = new URL(currentUrl);
@@ -423,6 +425,7 @@ function createCalibrationSession({ now = () => Date.now(), readWorkflow, writeS
     tick,
   };
 }
+
 
 function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow }, model) {
   const { calibrationLibrary, partitionFlowReadings, multipleCalibrationRequirements, calibrationKey, validFlowReading,
@@ -721,6 +724,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   };
 }
 
+
 function mountCalibrationPage({ form, labels, save, back, status, request, base, field, updateChoices, syncFlow, flowPlan }, captureWeight) {
   const sizes = ['small', 'medium', 'large'];
   let samples = [], zeroConfirmed = false, awaitingZero = false, tarePending = false;
@@ -958,6 +962,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
   connectScale();
   return { isActive: () => active || pending, flowChanged() { appliedResult = false; runStatus.textContent = 'Flow changed. Repeat calibration or enter a time measured at this flow.'; }, assertCanSave() { if (active || pending) throw new Error('Finish or cancel calibration before saving.'); } };
 }
+
 
 function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitcherChoices, validateConfiguration, mountFlowPlan) {
   const base = '/api/v1/plugins/calibrated-steam.reaplugin';
@@ -1392,6 +1397,7 @@ header{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align
 <script>{const FLOW_MINIMUM=0.4,FLOW_MAXIMUM=2.5,MAX_READINGS=100;const close=(a,b)=>Math.abs(Number(a)-Number(b))<0.000001;const targetFor=settings=>Number(settings.targetTemperatureC)>0?Number(settings.targetTemperatureC):60;${temperatureToC.toString()}\n${temperatureFromC.toString()}\n${formatTemperature.toString()}\n${readFlowReadings.toString()}\n${validFlowReading.toString()}\n${calibrationKey.toString()}\n${calibrationLibrary.toString()}\n${partitionFlowReadings.toString()}\n${multipleCalibrationRequirements.toString()}\n${validateFlowCalibration.toString()}\n${configuredPitchers.toString()}\n${availablePitchers.toString()}\n${validateSettings.toString()}\n(${settingsBrowser.toString()})(${settingsReturnUrl.toString()},${mountCalibrationPage.toString()},${captureScaleWeight.toString()},availablePitchers,validateSettings,${mountFlowCalibrationPage.toString()});}</script></body></html>`;
 }
 
+
 globalThis.createPlugin = function createPlugin() {
   let settings = {};
   let loaded = false;
@@ -1490,5 +1496,6 @@ globalThis.createPlugin = function createPlugin() {
     },
   };
 };
+
 
 })();
