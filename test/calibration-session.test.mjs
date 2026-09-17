@@ -47,6 +47,39 @@ test('calibration applies flow, excludes warm-up, follows physical stop and rest
   assert.deepEqual(f.writes.at(-1), f.original);
 });
 
+test('puffing freezes the measured time while confirmed idle still gates restoration', async () => {
+  const f = fixture();
+  await f.begin();
+  f.advance(100, 'steam', 'pouring');
+  f.advance(2000, 'steam', 'pouring');
+  f.advance(500, 'steam', 'puffing');
+  assert.equal(f.session.snapshot().phase, 'puffing');
+  assert.equal(f.session.snapshot().seconds, 2.5);
+  f.advance(1000, 'steam', 'puffing');
+  assert.equal(f.session.snapshot().seconds, 2.5);
+  assert.equal(f.session.snapshot().active, true);
+  f.advance(100, 'idle');
+  await f.session.tick();
+  assert.equal(f.session.snapshot().phase, 'complete');
+  assert.equal(f.session.snapshot().result.seconds, 2.5);
+  assert.deepEqual(f.writes.at(-1), f.original);
+});
+
+test('pausedSteam still rejects an interrupted guided reading', async () => {
+  const f = fixture();
+  await f.begin();
+  f.advance(100, 'steam', 'pouring');
+  f.advance(2000, 'steam', 'pouring');
+  f.advance(100, 'steam', 'pausedSteam');
+  assert.match(f.session.snapshot().message, /paused or interrupted/);
+  await f.session.tick();
+  assert.equal(f.commands.at(-1), 'idle');
+  f.advance(100, 'idle');
+  await f.session.tick();
+  assert.equal(f.session.snapshot().phase, 'failed');
+  assert.equal(f.session.snapshot().result, null);
+});
+
 test('tared guided calibration accepts milk-only weight without a pitcher selection', async () => {
   const f = fixture();
   await f.session.begin({ milkGrams: 160, pitcher: null, pitcherGrams: 0, flow: 0.4, heaterTemperature: 145 });

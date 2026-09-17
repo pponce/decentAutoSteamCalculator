@@ -1,0 +1,1400 @@
+<div id="auto-steam-settings-aligned">
+  <style>
+    #auto-steam-settings-aligned {
+      color-scheme: light dark;
+      --steam-page: light-dark(#eef2f7, #111827);
+      --steam-panel: light-dark(#ffffff, #1d293b);
+      --steam-soft: light-dark(#f7f9fc, #253247);
+      --steam-text: light-dark(#1f2a3d, #edf3fb);
+      --steam-muted: light-dark(#5c6b81, #adbbcf);
+      --steam-border: light-dark(#d2dae6, #43516a);
+      --steam-blue: light-dark(#326eb9, #70aaf0);
+      --steam-blue-soft: light-dark(#e9f1fb, #263d5d);
+      --steam-green: light-dark(#1c7a45, #65d796);
+      --steam-green-soft: light-dark(#e4f5ea, #1c402e);
+      --steam-amber: light-dark(#9a5a0b, #efb867);
+      --steam-danger: light-dark(#b23a3a, #ff8c8c);
+      max-width: 1024px;
+      margin: 0 auto;
+      color: var(--steam-text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    #auto-steam-settings-aligned * { box-sizing: border-box; }
+    #auto-steam-settings-aligned [hidden] { display: none !important; }
+
+    #auto-steam-settings-aligned .steam-page {
+      min-height: 690px;
+      padding: 18px;
+      border-radius: 18px;
+      background: var(--steam-page);
+    }
+
+    #auto-steam-settings-aligned .steam-header {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) 250px;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #auto-steam-settings-aligned h1,
+    #auto-steam-settings-aligned h2,
+    #auto-steam-settings-aligned h3,
+    #auto-steam-settings-aligned p { margin-top: 0; }
+
+    #auto-steam-settings-aligned h1 { margin-bottom: 2px; font-size: 21px; font-weight: 500; }
+    #auto-steam-settings-aligned h2 { margin-bottom: 3px; font-size: 17px; font-weight: 500; }
+    #auto-steam-settings-aligned h3 { margin-bottom: 7px; font-size: 14px; font-weight: 500; }
+
+    #auto-steam-settings-aligned .steam-title { min-width: 0; text-align: center; }
+    #auto-steam-settings-aligned .steam-title h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #auto-steam-settings-aligned .steam-version { color: var(--steam-muted); font-size: 12px; }
+
+    #auto-steam-settings-aligned button,
+    #auto-steam-settings-aligned input,
+    #auto-steam-settings-aligned select {
+      min-height: 40px;
+      border: 1px solid var(--steam-border);
+      border-radius: 8px;
+      background: var(--steam-panel);
+      color: var(--steam-text);
+      font: inherit;
+      touch-action: manipulation;
+    }
+
+    #auto-steam-settings-aligned button { padding: 7px 11px; font-weight: 500; }
+    #auto-steam-settings-aligned button:disabled { opacity: .48; }
+    #auto-steam-settings-aligned input,
+    #auto-steam-settings-aligned select { width: 100%; height: 40px; min-width: 0; padding: 7px 9px; font-size: 16px; }
+    #auto-steam-settings-aligned input[type="checkbox"] { width: 22px; min-height: 22px; accent-color: var(--steam-blue); }
+
+    #auto-steam-settings-aligned .steam-back { justify-self: start; background: var(--steam-panel); }
+    #auto-steam-settings-aligned .steam-update {
+      justify-self: end;
+      width: max-content;
+      border-color: var(--steam-blue);
+      background: var(--steam-blue);
+      color: light-dark(#ffffff, #101827);
+    }
+
+    #auto-steam-settings-aligned .steam-subnav {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      margin: 10px 0 12px;
+    }
+
+    #auto-steam-settings-aligned .steam-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: flex-start;
+    }
+
+    #auto-steam-settings-aligned .steam-tab {
+      min-height: 38px;
+      padding: 6px 11px;
+      color: var(--steam-muted);
+      background: var(--steam-panel);
+    }
+
+    #auto-steam-settings-aligned .steam-tab[aria-selected="true"],
+    #auto-steam-settings-aligned .steam-segment[aria-pressed="true"],
+    #auto-steam-settings-aligned .steam-reading[aria-pressed="true"] {
+      border-color: var(--steam-blue);
+      background: var(--steam-blue);
+      color: light-dark(#ffffff, #101827);
+    }
+
+    #auto-steam-settings-aligned .steam-summary {
+      display: flex;
+      align-items: center;
+      justify-self: end;
+      gap: 6px;
+      color: var(--steam-muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    #auto-steam-settings-aligned .steam-badge {
+      display: inline-grid;
+      place-items: center;
+      min-width: 24px;
+      height: 24px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: var(--steam-green-soft);
+      color: var(--steam-green);
+      font-weight: 500;
+    }
+    #auto-steam-settings-aligned .steam-badge.is-unconfigured {
+      background: light-dark(#fde8e8, #512d32);
+      color: light-dark(#8f2929, #ffc2c2);
+    }
+    #auto-steam-settings-aligned .steam-flow-label { margin-left: 5px; color: var(--steam-muted); }
+    #auto-steam-settings-aligned .steam-flow { color: var(--steam-text); font-weight: 500; }
+
+    #auto-steam-settings-aligned .steam-panel {
+      padding: 14px;
+      border: 1px solid var(--steam-border);
+      border-radius: 11px;
+      background: var(--steam-panel);
+      box-shadow: 0 5px 17px light-dark(rgb(43 62 90 / 7%), rgb(0 0 0 / 15%));
+    }
+
+    #auto-steam-settings-aligned .steam-panel-intro {
+      margin-bottom: 11px;
+      color: var(--steam-muted);
+      font-size: 12px;
+    }
+
+    #auto-steam-settings-aligned .steam-section {
+      margin: 0 0 11px;
+      padding: 11px;
+      border: 1px solid var(--steam-border);
+      border-radius: 9px;
+      background: var(--steam-soft);
+    }
+
+    #auto-steam-settings-aligned .steam-section:last-child { margin-bottom: 0; }
+    #auto-steam-settings-aligned .steam-section-header,
+    #auto-steam-settings-aligned .steam-row,
+    #auto-steam-settings-aligned .steam-actions,
+    #auto-steam-settings-aligned .steam-save-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #auto-steam-settings-aligned .steam-section-header { justify-content: space-between; margin-bottom: 8px; }
+    #auto-steam-settings-aligned .steam-section-header h3 { margin: 0; }
+    #auto-steam-settings-aligned .steam-scale { color: var(--steam-muted); font-size: 12px; }
+    #auto-steam-settings-aligned .steam-tare { min-height: 36px; padding: 5px 9px; }
+
+    #auto-steam-settings-aligned .steam-pitcher-row {
+      display: grid;
+      grid-template-columns: 88px minmax(100px, 1fr) 122px minmax(120px, 1.2fr);
+      align-items: center;
+      gap: 8px;
+      padding: 7px 0;
+      border-top: 1px solid var(--steam-border);
+    }
+
+    #auto-steam-settings-aligned .steam-pitcher-row:first-of-type { border-top: 0; }
+    #auto-steam-settings-aligned .steam-pitcher-name { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+    #auto-steam-settings-aligned .steam-result { color: var(--steam-muted); font-size: 12px; }
+
+    #auto-steam-settings-aligned .steam-pitcher-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    #auto-steam-settings-aligned .steam-pitcher-card {
+      display: grid;
+      grid-template-rows: auto auto auto auto;
+      align-content: start;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    #auto-steam-settings-aligned .steam-pitcher-card + .steam-pitcher-card {
+      padding-left: 12px;
+      border-left: 1px solid var(--steam-border);
+    }
+
+    #auto-steam-settings-aligned .steam-pitcher-card button { width: 100%; }
+
+    #auto-steam-settings-aligned .steam-switch-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 38px;
+    }
+
+    #auto-steam-settings-aligned .steam-switch-row span { font-weight: 500; }
+    #auto-steam-settings-aligned .steam-grid-2,
+    #auto-steam-settings-aligned .steam-grid-3,
+    #auto-steam-settings-aligned .steam-grid-4 {
+      display: grid;
+      gap: 9px;
+    }
+
+    #auto-steam-settings-aligned .steam-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #auto-steam-settings-aligned .steam-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #auto-steam-settings-aligned .steam-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    #auto-steam-settings-aligned .steam-field { display: grid; align-content: start; gap: 4px; color: var(--steam-muted); font-size: 12px; }
+    #auto-steam-settings-aligned .steam-field b { color: var(--steam-text); font-weight: 500; }
+    #auto-steam-settings-aligned .steam-help { margin: 4px 0 0; color: var(--steam-muted); font-size: 12px; }
+
+    #auto-steam-settings-aligned .steam-mode-row {
+      display: grid;
+      grid-template-columns: minmax(180px, .75fr) minmax(0, 2.25fr);
+      gap: 10px;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+
+    #auto-steam-settings-aligned .steam-mode-choice {
+      display: grid;
+      grid-template-rows: auto 40px;
+      align-content: start;
+      gap: 4px;
+      color: var(--steam-muted);
+      font-size: 12px;
+    }
+
+    #auto-steam-settings-aligned .steam-mode-choice b { color: var(--steam-text); font-weight: 500; }
+    #auto-steam-settings-aligned .steam-mode-choice .steam-segments { align-self: end; }
+    #auto-steam-settings-aligned .steam-mode-choice .steam-segment { height: 40px; }
+    #auto-steam-settings-aligned .steam-segments { display: flex; flex-wrap: nowrap; gap: 6px; }
+    #auto-steam-settings-aligned .steam-segment { min-height: 38px; padding: 6px 10px; }
+    #auto-steam-settings-aligned .steam-compact-fields { align-items: start; }
+
+    #auto-steam-settings-aligned .steam-readings {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 9px 0;
+    }
+
+    #auto-steam-settings-aligned .steam-reading {
+      min-height: 36px;
+      padding: 5px 9px;
+      color: var(--steam-muted);
+    }
+
+    #auto-steam-settings-aligned .steam-reading.is-done::before { content: "✓ "; color: var(--steam-green); }
+    #auto-steam-settings-aligned .steam-reading.is-pending::before { content: "○ "; color: var(--steam-amber); }
+
+    #auto-steam-settings-aligned .steam-reading-title-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #auto-steam-settings-aligned .steam-reading-title-row h3 { margin: 0; }
+    #auto-steam-settings-aligned .steam-inline-flow {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--steam-text);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    #auto-steam-settings-aligned .steam-inline-flow input {
+      width: 92px;
+      height: 36px;
+      min-height: 36px;
+    }
+    #auto-steam-settings-aligned .steam-inline-flow span { color: var(--steam-muted); font-weight: 400; }
+    #auto-steam-settings-aligned .steam-reading-nav { display: flex; gap: 5px; }
+    #auto-steam-settings-aligned .steam-nav-arrow {
+      min-width: 40px;
+      min-height: 36px;
+      padding: 4px 9px;
+      font-size: 17px;
+    }
+
+    #auto-steam-settings-aligned .steam-saved-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    #auto-steam-settings-aligned .steam-saved-head h3 { margin: 0; }
+    #auto-steam-settings-aligned .steam-saved-list { margin-bottom: 10px; }
+    #auto-steam-settings-aligned .steam-saved-wrap { border-top: 1px solid var(--steam-border); }
+    #auto-steam-settings-aligned .steam-saved-wrap:first-child { border-top: 0; }
+    #auto-steam-settings-aligned .steam-saved-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto auto auto;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 0;
+    }
+
+    #auto-steam-settings-aligned .steam-saved-row.is-editing {
+      margin: 0 -7px;
+      padding-right: 7px;
+      padding-left: 7px;
+      border-radius: 8px 8px 0 0;
+      background: var(--steam-blue-soft);
+    }
+    #auto-steam-settings-aligned .steam-saved-details { min-width: 0; }
+    #auto-steam-settings-aligned .steam-saved-flow { display: block; font-weight: 500; }
+    #auto-steam-settings-aligned .steam-saved-meta { color: var(--steam-muted); font-size: 12px; }
+    #auto-steam-settings-aligned .steam-small-action { min-height: 36px; padding: 5px 9px; }
+    #auto-steam-settings-aligned .steam-create-action { grid-column: 2 / 4; }
+    #auto-steam-settings-aligned .steam-default-choice {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 36px;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+
+    #auto-steam-settings-aligned .steam-default-choice input { margin: 0; }
+    #auto-steam-settings-aligned .steam-default-placeholder { justify-self: end; color: var(--steam-amber); font-size: 12px; }
+    #auto-steam-settings-aligned .steam-empty-saved { margin: 8px 0; color: var(--steam-muted); font-size: 12px; }
+
+    #auto-steam-settings-aligned .steam-inline-editor {
+      margin: 0 -7px 8px;
+      padding: 10px;
+      border-radius: 0 0 8px 8px;
+      background: var(--steam-blue-soft);
+    }
+
+    #auto-steam-settings-aligned .steam-inline-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    #auto-steam-settings-aligned .steam-inline-note { margin: 0 0 8px; color: var(--steam-muted); font-size: 12px; }
+    #auto-steam-settings-aligned .steam-inline-editor .steam-workspace { margin-bottom: 8px; }
+    #auto-steam-settings-aligned .steam-inline-editor .steam-save-row { margin-top: 8px; }
+    #auto-steam-settings-aligned .steam-validation { color: var(--steam-green); font-size: 12px; }
+    #auto-steam-settings-aligned .steam-validation.is-invalid { color: var(--steam-danger); }
+    #auto-steam-settings-aligned .steam-list-block + .steam-list-block { margin-top: 10px; }
+    #auto-steam-settings-aligned .steam-collapse-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      color: var(--steam-text);
+      background: var(--steam-panel);
+    }
+    #auto-steam-settings-aligned .steam-collapse-toggle span { color: var(--steam-muted); }
+    #auto-steam-settings-aligned .steam-other-content { padding: 7px 2px 0; }
+    #auto-steam-settings-aligned .steam-other-help { margin: 0 0 4px; color: var(--steam-muted); font-size: 12px; }
+    #auto-steam-settings-aligned .steam-list-actions { display: flex; align-items: center; gap: 8px; }
+    #auto-steam-settings-aligned .steam-new-calibration { min-height: 36px; padding: 5px 9px; }
+    #auto-steam-settings-aligned .steam-label-value {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #auto-steam-settings-aligned .steam-label-value span { color: var(--steam-muted); text-align: right; }
+    #auto-steam-settings-aligned .steam-range-note {
+      margin: 9px 0 0;
+      padding: 8px 9px;
+      border-radius: 7px;
+      background: var(--steam-blue-soft);
+      color: var(--steam-muted);
+      font-size: 12px;
+    }
+    #auto-steam-settings-aligned .steam-guided-workspace { grid-template-columns: 1fr; }
+    #auto-steam-settings-aligned .steam-guided-overview {
+      display: grid;
+      grid-template-columns: minmax(130px, .58fr) minmax(205px, .92fr) minmax(245px, 1.1fr);
+      align-items: stretch;
+      gap: 9px;
+      margin-bottom: 8px;
+    }
+    #auto-steam-settings-aligned .steam-guided-overview.is-tared {
+      grid-template-columns: minmax(225px, .95fr) minmax(245px, 1.05fr);
+    }
+    #auto-steam-settings-aligned .steam-guided-overview > * { min-width: 0; }
+    #auto-steam-settings-aligned .steam-guided-readouts {
+      display: grid;
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+    }
+    #auto-steam-settings-aligned .steam-guided-metric {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 9px;
+      min-height: 0;
+      padding: 4px 9px;
+      border-radius: 7px;
+      background: var(--steam-soft);
+    }
+    #auto-steam-settings-aligned .steam-guided-metric b { font-weight: 500; }
+    #auto-steam-settings-aligned .steam-guided-metric span { color: var(--steam-text); font-variant-numeric: tabular-nums; }
+    #auto-steam-settings-aligned .steam-guided-actions {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 7px;
+    }
+    #auto-steam-settings-aligned .steam-guided-actions button { width: 100%; }
+    #auto-steam-settings-aligned .steam-steam-controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 8px;
+    }
+    #auto-steam-settings-aligned .steam-steam-controls .steam-timer-readout {
+      margin-right: auto;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    #auto-steam-settings-aligned .steam-machine-state { color: var(--steam-muted); font-size: 12px; }
+
+    #auto-steam-settings-aligned .steam-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, .85fr);
+      gap: 10px;
+    }
+
+    #auto-steam-settings-aligned .steam-workspace-block {
+      padding: 10px;
+      border: 1px solid var(--steam-border);
+      border-radius: 8px;
+      background: var(--steam-panel);
+    }
+
+    #auto-steam-settings-aligned .steam-status {
+      margin: 8px 0 0;
+      padding: 7px 9px;
+      border-radius: 7px;
+      background: var(--steam-blue-soft);
+      color: var(--steam-muted);
+      font-size: 12px;
+    }
+
+    #auto-steam-settings-aligned .steam-timer { margin: 4px 0 8px; font-size: 24px; font-variant-numeric: tabular-nums; }
+    #auto-steam-settings-aligned .steam-primary { border-color: var(--steam-blue); background: var(--steam-blue); color: light-dark(#ffffff, #101827); }
+    #auto-steam-settings-aligned .steam-danger { color: var(--steam-danger); }
+
+    #auto-steam-settings-aligned .steam-save-row {
+      justify-content: space-between;
+      margin-top: 11px;
+      min-height: 40px;
+    }
+
+    #auto-steam-settings-aligned .steam-global-status { margin: 0; color: var(--steam-muted); font-size: 12px; }
+
+    #auto-steam-settings-aligned .steam-help-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    #auto-steam-settings-aligned .steam-help-item {
+      padding: 10px;
+      border: 1px solid var(--steam-border);
+      border-radius: 8px;
+      background: var(--steam-soft);
+    }
+
+    #auto-steam-settings-aligned .steam-help-item h3 { margin-bottom: 4px; }
+    #auto-steam-settings-aligned .steam-help-item p { margin-bottom: 0; color: var(--steam-muted); font-size: 12px; }
+
+    #auto-steam-settings-aligned .steam-glossary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0 18px;
+      margin: 0;
+    }
+
+    #auto-steam-settings-aligned .steam-term { padding: 9px 0; border-bottom: 1px solid var(--steam-border); }
+    #auto-steam-settings-aligned .steam-term dt { margin-bottom: 3px; font-weight: 500; }
+    #auto-steam-settings-aligned .steam-term dd { margin: 0; color: var(--steam-muted); font-size: 12px; }
+
+    #auto-steam-settings-aligned .steam-modal {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      display: grid;
+      place-items: start center;
+      padding: 84px 18px 18px;
+      border-radius: 18px;
+      background: light-dark(rgb(21 32 49 / 42%), rgb(0 0 0 / 58%));
+    }
+
+    #auto-steam-settings-aligned .steam-modal-card {
+      width: min(420px, 100%);
+      padding: 16px;
+      border: 1px solid var(--steam-border);
+      border-radius: 11px;
+      background: var(--steam-panel);
+      box-shadow: 0 18px 45px light-dark(rgb(20 30 45 / 20%), rgb(0 0 0 / 45%));
+    }
+
+    #auto-steam-settings-aligned .steam-modal-card p { color: var(--steam-muted); }
+    #auto-steam-settings-aligned .steam-modal-card .steam-actions { justify-content: flex-end; }
+    #auto-steam-settings-aligned .steam-stage { position: relative; }
+
+    @media (pointer: coarse) {
+      #auto-steam-settings-aligned button,
+      #auto-steam-settings-aligned input,
+      #auto-steam-settings-aligned select { min-height: 44px; }
+      #auto-steam-settings-aligned input,
+      #auto-steam-settings-aligned select { height: 44px; }
+      #auto-steam-settings-aligned .steam-mode-choice { grid-template-rows: auto 44px; }
+      #auto-steam-settings-aligned .steam-mode-choice .steam-segment { height: 44px; }
+    }
+
+    @media (max-width: 790px) {
+      #auto-steam-settings-aligned .steam-header { grid-template-columns: auto minmax(0, 1fr) auto; }
+      #auto-steam-settings-aligned .steam-summary { justify-self: end; }
+      #auto-steam-settings-aligned .steam-pitcher-row { grid-template-columns: 82px minmax(90px, 1fr) 120px; }
+      #auto-steam-settings-aligned .steam-pitcher-row .steam-result { grid-column: 2 / -1; }
+      #auto-steam-settings-aligned .steam-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #auto-steam-settings-aligned .steam-workspace { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      #auto-steam-settings-aligned .steam-subnav { grid-template-columns: 1fr; }
+      #auto-steam-settings-aligned .steam-summary { justify-self: end; }
+    }
+
+    @media (max-width: 560px) {
+      #auto-steam-settings-aligned .steam-page { padding: 12px; }
+      #auto-steam-settings-aligned .steam-header { grid-template-columns: auto 1fr; }
+      #auto-steam-settings-aligned .steam-title { grid-column: 1 / -1; grid-row: 1; padding: 0 86px; }
+      #auto-steam-settings-aligned .steam-back { grid-column: 1; grid-row: 1; z-index: 1; }
+      #auto-steam-settings-aligned .steam-update { grid-column: 2; grid-row: 2; }
+      #auto-steam-settings-aligned .steam-subnav { margin-top: -50px; }
+      #auto-steam-settings-aligned .steam-tabs { padding-right: 150px; }
+      #auto-steam-settings-aligned .steam-summary { margin-top: 3px; justify-self: stretch; flex-wrap: wrap; }
+      #auto-steam-settings-aligned .steam-pitcher-row { grid-template-columns: 72px minmax(84px, 1fr); }
+      #auto-steam-settings-aligned .steam-pitcher-row button { grid-column: 2; }
+      #auto-steam-settings-aligned .steam-pitcher-row .steam-result { grid-column: 1 / -1; }
+      #auto-steam-settings-aligned .steam-pitcher-grid { grid-template-columns: 1fr; }
+      #auto-steam-settings-aligned .steam-pitcher-card + .steam-pitcher-card {
+        padding-top: 10px;
+        padding-left: 0;
+        border-top: 1px solid var(--steam-border);
+        border-left: 0;
+      }
+      #auto-steam-settings-aligned .steam-grid-2,
+      #auto-steam-settings-aligned .steam-grid-3,
+      #auto-steam-settings-aligned .steam-grid-4,
+      #auto-steam-settings-aligned .steam-help-list,
+      #auto-steam-settings-aligned .steam-glossary { grid-template-columns: 1fr; }
+      #auto-steam-settings-aligned .steam-mode-row { grid-template-columns: 1fr; }
+      #auto-steam-settings-aligned .steam-saved-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+      #auto-steam-settings-aligned .steam-default-choice { grid-column: 1 / -1; justify-self: end; }
+      #auto-steam-settings-aligned .steam-default-placeholder { grid-column: 1 / -1; }
+      #auto-steam-settings-aligned .steam-create-action { grid-column: 2 / -1; }
+      #auto-steam-settings-aligned .steam-guided-overview,
+      #auto-steam-settings-aligned .steam-guided-actions { grid-template-columns: 1fr; }
+    }
+  </style>
+
+  <main class="steam-page steam-stage" aria-label="Auto Steam Calculator compact settings mockup">
+    <header class="steam-header">
+      <button class="steam-back" type="button">← Settings</button>
+      <div class="steam-title">
+        <h1>Auto Steam Calculator</h1>
+        <span class="steam-version">Version 0.12.6</span>
+      </div>
+      <button class="steam-update" id="steam-mock-update" type="button">Check &amp; Update</button>
+    </header>
+
+    <div class="steam-subnav">
+      <nav class="steam-tabs" role="tablist" aria-label="Auto Steam settings">
+        <button class="steam-tab" id="steam-tab-pitchers" type="button" role="tab" aria-controls="steam-panel-pitchers" aria-selected="true">Pitchers &amp; Auto</button>
+        <button class="steam-tab" id="steam-tab-calibration" type="button" role="tab" aria-controls="steam-panel-calibration" aria-selected="false">Calibration</button>
+        <button class="steam-tab" id="steam-tab-instructions" type="button" role="tab" aria-controls="steam-panel-instructions" aria-selected="false">Instructions</button>
+        <button class="steam-tab" id="steam-tab-glossary" type="button" role="tab" aria-controls="steam-panel-glossary" aria-selected="false">Glossary</button>
+      </nav>
+
+      <aside class="steam-summary" aria-label="Configuration summary" aria-live="polite">
+        <span class="steam-badge" data-summary-pitcher="small" aria-label="Small configured">S</span>
+        <span class="steam-badge" data-summary-pitcher="medium" aria-label="Medium configured">M</span>
+        <span class="steam-badge" data-summary-pitcher="large" aria-label="Large configured">L</span>
+        <span class="steam-badge is-unconfigured" id="steam-mock-auto-status" aria-label="Auto not configured">Auto</span>
+        <span class="steam-flow-label" id="steam-mock-flow-summary">Set flow: <span class="steam-flow" id="steam-mock-summary-flow">0.6 ml/s</span></span>
+      </aside>
+    </div>
+
+    <section class="steam-panel" id="steam-panel-pitchers" role="tabpanel" aria-labelledby="steam-tab-pitchers">
+      <p class="steam-panel-intro">Configure empty pitcher weights manually or capture each one from the connected scale.</p>
+
+      <section class="steam-section">
+        <div class="steam-section-header" id="steam-mock-reading-header">
+          <div>
+            <h3>Empty pitcher weights</h3>
+            <span class="steam-scale" id="steam-mock-pitcher-scale">Scale: 0.0g - stable</span>
+          </div>
+          <button class="steam-tare" data-action="tare" type="button">Tare empty scale</button>
+        </div>
+
+        <div class="steam-pitcher-grid">
+        <div class="steam-pitcher-card" data-pitcher="small">
+          <div class="steam-pitcher-name"><span class="steam-badge">S</span> Small</div>
+          <input aria-label="Small empty pitcher weight" inputmode="decimal" value="152.4">
+          <button data-action="set-pitcher" type="button">Set from scale</button>
+          <span class="steam-result">Empty pitcher · grams</span>
+        </div>
+        <div class="steam-pitcher-card" data-pitcher="medium">
+          <div class="steam-pitcher-name"><span class="steam-badge">M</span> Medium</div>
+          <input aria-label="Medium empty pitcher weight" inputmode="decimal" value="198.7">
+          <button data-action="set-pitcher" type="button">Set from scale</button>
+          <span class="steam-result">Empty pitcher · grams</span>
+        </div>
+        <div class="steam-pitcher-card" data-pitcher="large">
+          <div class="steam-pitcher-name"><span class="steam-badge">L</span> Large</div>
+          <input aria-label="Large empty pitcher weight" inputmode="decimal" value="243.1">
+          <button data-action="set-pitcher" type="button">Set from scale</button>
+          <span class="steam-result">Empty pitcher · grams</span>
+        </div>
+        </div>
+      </section>
+
+      <section class="steam-section">
+        <label class="steam-switch-row">
+          <input id="steam-mock-auto-toggle" type="checkbox">
+          <span>Offer Auto pitcher selection</span>
+        </label>
+        <p class="steam-help">Optional. Requires Gross mode, all three pitcher weights, and the two values below.</p>
+        <div class="steam-grid-2" id="steam-mock-auto-fields" hidden>
+          <label class="steam-field"><b>Usual milk per drink</b><input inputmode="decimal" value="160"><span>Milk only · grams</span></label>
+          <label class="steam-field"><b>Pitcher normally used for one drink</b><select><option>Small</option><option>Medium</option></select></label>
+        </div>
+      </section>
+    </section>
+
+    <section class="steam-panel" id="steam-panel-calibration" role="tabpanel" aria-labelledby="steam-tab-calibration" hidden>
+      <p class="steam-panel-intro">Set one fixed flow or measure several flows. Changes remain a draft until saved.</p>
+
+      <section class="steam-section">
+        <div class="steam-mode-row">
+          <div class="steam-mode-choice">
+            <b>Flow support:</b>
+            <div class="steam-segments" aria-label="Calibration type">
+              <button class="steam-segment" id="steam-mock-single" type="button" aria-pressed="false">Single</button>
+              <button class="steam-segment" id="steam-mock-multiple" type="button" aria-pressed="true">Multiple</button>
+            </div>
+          </div>
+          <div class="steam-grid-3 steam-compact-fields">
+            <label class="steam-field"><b>Scale weight Mode</b><select id="steam-mock-weight-mode"><option>Gross</option><option>Tared</option></select></label>
+            <label class="steam-field"><b>Temperature unit</b><select id="steam-mock-temperature-unit"><option value="F">F</option><option value="C">C</option></select></label>
+            <label class="steam-field"><b id="steam-mock-target-label">Target temp (°F) — required</b><input id="steam-mock-target-temp" inputmode="decimal" value="140" required></label>
+          </div>
+        </div>
+
+        <div id="steam-mock-multiple-options">
+          <div class="steam-grid-2">
+            <label class="steam-field"><b>Minimum flow</b><input id="steam-mock-min-flow" value="0.6"><span>ml/s</span></label>
+            <label class="steam-field"><b>Maximum flow</b><input id="steam-mock-max-flow" value="1.8"><span>ml/s</span></label>
+          </div>
+          <p class="steam-range-note">Multiple uses every saved reading at the selected target temperature within this range. At least three are required: exact minimum, exact maximum, and one interior reading—preferably near the middle.</p>
+        </div>
+      </section>
+
+      <section class="steam-section">
+        <div class="steam-list-block">
+          <div class="steam-saved-head">
+            <div>
+              <h3 id="steam-mock-list-title">Active readings (3)</h3>
+              <span class="steam-scale" id="steam-mock-list-help">These measurements are used by Multiple flow support.</span>
+            </div>
+            <div class="steam-list-actions">
+              <span class="steam-validation" id="steam-mock-validation" role="status" aria-live="polite">Ready to save</span>
+              <button class="steam-new-calibration" id="steam-mock-new-calibration" type="button" hidden>+ New calibration</button>
+            </div>
+          </div>
+          <div class="steam-saved-list" id="steam-mock-active-list" aria-live="polite"></div>
+        </div>
+        <div class="steam-list-block" id="steam-mock-other-block">
+          <button class="steam-collapse-toggle" id="steam-mock-other-toggle" type="button" aria-expanded="false" aria-controls="steam-mock-other-content">
+            <b id="steam-mock-other-title">Other saved calibrations (3)</b><span aria-hidden="true">▾</span>
+          </button>
+          <div class="steam-other-content" id="steam-mock-other-content" hidden>
+            <p class="steam-other-help">Readings at another target temperature or outside the selected flow range. They remain saved until deleted.</p>
+            <div class="steam-saved-list" id="steam-mock-other-list" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="steam-panel" id="steam-panel-instructions" role="tabpanel" aria-labelledby="steam-tab-instructions" hidden>
+      <p class="steam-panel-intro">The complete workflow, kept concise for quick reference at the machine.</p>
+      <div class="steam-help-list">
+        <section class="steam-help-item"><h3>1 · Configure pitchers</h3><p>Enter at least one empty pitcher weight. To measure one, tare the empty scale, wait for stable zero, place the pitcher on the scale, then select its Set from scale button.</p></section>
+        <section class="steam-help-item"><h3>2 · Scale weight mode</h3><p>Gross captures pitcher plus milk and subtracts the selected empty-pitcher weight. Tared captures milk only after taring with the empty pitcher already on the scale. One choice applies to every calibration.</p></section>
+        <section class="steam-help-item"><h3>3 · Set the target temperature</h3><p>Choose Fahrenheit or Celsius for display, then enter the required target. The preference is remembered, while saved calibration temperatures remain stored internally in Celsius.</p></section>
+        <section class="steam-help-item"><h3>4 · Build a calibration library</h3><p>Single can create as many flow readings as wanted. Each flow and target-temperature combination is saved independently until deleted; choose one saved reading as the Default.</p></section>
+        <section class="steam-help-item"><h3>5 · How Multiple chooses readings</h3><p>Multiple uses every saved reading at the equivalent target temperature inside the selected range. Other temperatures and out-of-range flows remain under Other saved calibrations.</p></section>
+        <section class="steam-help-item"><h3>6 · Range and accuracy</h3><p>Multiple requires exact minimum and maximum readings plus at least one interior reading. A reading near the middle is recommended. More matching readings improve piecewise interpolation accuracy.</p></section>
+        <section class="steam-help-item"><h3>7 · Measure manually or with guidance</h3><p>Manual entry uses actual milk-only weight and steaming time. Guided capture arms timing; start and stop steam with the machine controls. The counter excludes warm-up and stops when the machine stops steaming.</p></section>
+        <section class="steam-help-item"><h3>8 · Review, save and make a drink</h3><p>Edit opens a calibration beneath its row; Update saved flow closes it. Save the complete setup, then select Auto on the shot page, weigh the filled pitcher and tap S, M, L or Auto to calculate.</p></section>
+      </div>
+    </section>
+
+    <section class="steam-panel" id="steam-panel-glossary" role="tabpanel" aria-labelledby="steam-tab-glossary" hidden>
+      <p class="steam-panel-intro">Definitions for the settings and calibration controls.</p>
+      <dl class="steam-glossary">
+        <div class="steam-term"><dt>Default measured flow</dt><dd>The saved single-flow calibration used by default. The lowest saved flow starts as the default, and exactly one remains selected.</dd></div>
+        <div class="steam-term"><dt>Temperature unit</dt><dd>Display preference for calibration targets in Fahrenheit or Celsius. Changing it converts every displayed target without changing the calibration stored internally in Celsius.</dd></div>
+        <div class="steam-term"><dt>Target temperature</dt><dd>Required for every reading. Flow plus target temperature uniquely identifies a saved calibration. It guides your physical stop point; the machine does not measure milk temperature.</dd></div>
+        <div class="steam-term"><dt>Scale weight mode</dt><dd>Gross captures pitcher plus milk and subtracts the selected saved pitcher weight. Tared assumes the empty pitcher was on the scale when it was tared, so the captured scale reading is already milk only.</dd></div>
+        <div class="steam-term"><dt>Empty pitcher weight</dt><dd>The untared pitcher weight used to subtract the pitcher from a Gross scale reading. Blank means that pitcher is not configured.</dd></div>
+        <div class="steam-term"><dt>Automatic pitcher selection</dt><dd>Damian’s heuristic infers S, M or L from gross weight and typical drink size. It is off by default, and some skins will not benefit from enabling it.</dd></div>
+        <div class="steam-term"><dt>Minimum / maximum flow</dt><dd>The active Multiple range where Auto may interpolate. Readings outside the range are kept under Other saved calibrations until deleted.</dd></div>
+        <div class="steam-term"><dt>Active readings</dt><dd>Every saved calibration with the selected target temperature and a flow inside the current range. Multiple uses all active readings for piecewise interpolation.</dd></div>
+        <div class="steam-term"><dt>Other saved calibrations</dt><dd>Readings at a different target temperature or outside the selected flow range. They remain available for later configurations until deleted.</dd></div>
+        <div class="steam-term"><dt>S / M / L / Auto</dt><dd>Green means that choice is configured; red means it is not. Some skins do not use Auto pitcher selection, so it is off by default.</dd></div>
+        <div class="steam-term"><dt>Tare / capture</dt><dd>In Gross mode, tare with the scale empty. In Tared mode, tare with the empty pitcher on the scale. Capture derives the milk weight and arms automatic timing for the next physical steam run.</dd></div>
+        <div class="steam-term"><dt>Update saved flow / Save calibration</dt><dd>Update closes one inline editor and keeps the reading in the draft library. Save calibration applies the complete valid configuration.</dd></div>
+      </dl>
+    </section>
+
+    <div class="steam-save-row">
+      <p class="steam-global-status" id="steam-mock-global-status" role="status" aria-live="polite">Draft changes apply only after saving.</p>
+      <button class="steam-primary" id="steam-mock-save" type="button">Save calibration</button>
+    </div>
+
+    <div class="steam-modal" id="steam-mock-modal" hidden>
+      <section class="steam-modal-card" role="dialog" aria-modal="true" aria-labelledby="steam-mock-modal-title">
+        <h2 id="steam-mock-modal-title">Extension is up to date</h2>
+        <p>Version 0.12.6 is the latest available version.</p>
+        <div class="steam-actions"><button class="steam-primary" id="steam-mock-modal-close" type="button">OK</button></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.getElementById('auto-steam-settings-aligned');
+      const q = selector => root.querySelector(selector);
+      const qa = selector => Array.from(root.querySelectorAll(selector));
+      const tabNames = ['pitchers', 'calibration', 'instructions', 'glossary'];
+
+      let supportMode = 'multiple';
+      let minimumFlow = 0.6;
+      let maximumFlow = 1.8;
+      let singleTargetTempC = 60;
+      let multipleTargetTempC = 60;
+      let expandedKey = null;
+      let newSingleDraft = false;
+      let entryMethod = 'manual';
+      let weightMode = 'Gross';
+      let otherExpanded = false;
+      let singleDefaultKey = '0.60@60.00';
+      let multipleDefaultKey = '0.60@60.00';
+      let guidedTimerId = null;
+      let guidedArmTimeout = null;
+      let guidedStopTimeout = null;
+      let guidedIdleTimeout = null;
+      let guidedElapsed = 0;
+      let calibrations = [
+        { flow: 0.6, tempC: 60, milk: 160, seconds: 31.6 },
+        { flow: 1.0, tempC: 60, milk: 160, seconds: 27.3 },
+        { flow: 1.2, tempC: 60, milk: 160, seconds: 24.8 },
+        { flow: 1.4, tempC: 60, milk: 160, seconds: 22.9 },
+        { flow: 1.8, tempC: 60, milk: 160, seconds: 20.9 },
+        { flow: 1.2, tempC: 57.22, milk: 160, seconds: 23.6 },
+        { flow: 0.4, tempC: 60, milk: 160, seconds: 35.8 },
+        { flow: 2.0, tempC: 60, milk: 160, seconds: 19.7 }
+      ];
+
+      let temperatureUnit = 'F';
+      try {
+        const savedUnit = localStorage.getItem('tempUnit');
+        if (savedUnit === 'C' || savedUnit === 'F') temperatureUnit = savedUnit;
+      } catch (error) {
+        temperatureUnit = 'F';
+      }
+      q('#steam-mock-temperature-unit').value = temperatureUnit;
+      q('#steam-mock-target-label').textContent = 'Target temp (°' + temperatureUnit + ') — required';
+
+      function showTab(name) {
+        tabNames.forEach(tabName => {
+          q('#steam-tab-' + tabName).setAttribute('aria-selected', String(tabName === name));
+          q('#steam-panel-' + tabName).hidden = tabName !== name;
+        });
+      }
+
+      function roundFlow(value) {
+        return Math.round(value * 100) / 100;
+      }
+
+      function roundTemp(value) {
+        return Math.round(value * 100) / 100;
+      }
+
+      function toDisplayTemp(tempC) {
+        return temperatureUnit === 'F' ? (tempC * 9) / 5 + 32 : tempC;
+      }
+
+      function toCanonicalTemp(displayValue) {
+        return roundTemp(temperatureUnit === 'F' ? ((displayValue - 32) * 5) / 9 : displayValue);
+      }
+
+      function displayTemp(tempC) {
+        return Math.round(toDisplayTemp(tempC)) + '°' + temperatureUnit;
+      }
+
+      function displayFlow(flow) {
+        return Number(flow).toFixed(2).replace(/0$/, '') + ' ml/s';
+      }
+
+      function keyFor(flow, tempC) {
+        return Number(flow).toFixed(2) + '@' + Number(tempC).toFixed(2);
+      }
+
+      function currentTargetTempC() {
+        return supportMode === 'multiple' ? multipleTargetTempC : singleTargetTempC;
+      }
+
+      function setCurrentTargetTempC(value) {
+        if (supportMode === 'multiple') multipleTargetTempC = value;
+        else singleTargetTempC = value;
+      }
+
+      function calibrationByKey(key) {
+        return calibrations.find(item => keyFor(item.flow, item.tempC) === key);
+      }
+
+      function sortedCalibrations() {
+        return [...calibrations].sort((a, b) => a.flow - b.flow || a.tempC - b.tempC);
+      }
+
+      function matchingTargetCalibrations() {
+        return sortedCalibrations().filter(item =>
+          Math.abs(item.tempC - multipleTargetTempC) < 0.01
+        );
+      }
+
+      function activeSavedCalibrations() {
+        if (supportMode !== 'multiple') return sortedCalibrations();
+        return matchingTargetCalibrations().filter(item =>
+          item.flow >= minimumFlow - 0.001 &&
+          item.flow <= maximumFlow + 0.001
+        );
+      }
+
+      function requirementKey(requirement) {
+        return requirement.flexible ? '__interior__' : keyFor(requirement.flow, requirement.tempC);
+      }
+
+      function activeRequirements() {
+        if (supportMode === 'single') return sortedCalibrations().map(item => ({ flow: item.flow, tempC: item.tempC }));
+        const active = activeSavedCalibrations().map(item => ({ flow: item.flow, tempC: item.tempC }));
+        const hasMinimum = active.some(item => Math.abs(item.flow - minimumFlow) < 0.001);
+        const hasMaximum = active.some(item => Math.abs(item.flow - maximumFlow) < 0.001);
+        const hasInterior = active.some(item => item.flow > minimumFlow + 0.001 && item.flow < maximumFlow - 0.001);
+        if (!hasMinimum) active.push({ flow: minimumFlow, tempC: multipleTargetTempC, requiredMissing: true });
+        if (!hasMaximum) active.push({ flow: maximumFlow, tempC: multipleTargetTempC, requiredMissing: true });
+        if (!hasInterior) active.push({
+          flow: roundFlow((minimumFlow + maximumFlow) / 2),
+          tempC: multipleTargetTempC,
+          requiredMissing: true,
+          flexible: true
+        });
+        return active.sort((a, b) => a.flow - b.flow);
+      }
+
+      function calibrationFor(requirement) {
+        return requirement.flexible ? null : calibrationByKey(keyFor(requirement.flow, requirement.tempC));
+      }
+
+      function requirementIsActive(requirement) {
+        if (supportMode !== 'multiple') return true;
+        return Math.abs(requirement.tempC - multipleTargetTempC) < 0.01 &&
+          requirement.flow >= minimumFlow - 0.001 &&
+          requirement.flow <= maximumFlow + 0.001;
+      }
+
+      function multipleMainRequirements() {
+        return activeRequirements();
+      }
+
+      function otherSavedCalibrations() {
+        if (supportMode !== 'multiple') return [];
+        return sortedCalibrations().filter(item =>
+          Math.abs(item.tempC - multipleTargetTempC) >= 0.01 ||
+          item.flow < minimumFlow - 0.001 ||
+          item.flow > maximumFlow + 0.001
+        );
+      }
+
+      function currentDefaultKey() {
+        return supportMode === 'multiple' ? multipleDefaultKey : singleDefaultKey;
+      }
+
+      function setCurrentDefaultKey(key) {
+        if (supportMode === 'multiple') multipleDefaultKey = key;
+        else singleDefaultKey = key;
+      }
+
+      function normalizeDefaults() {
+        calibrations = sortedCalibrations();
+        if (!calibrationByKey(singleDefaultKey)) {
+          const replacement = calibrations.find(item => Math.abs(item.tempC - singleTargetTempC) < 0.01) || calibrations[0];
+          singleDefaultKey = replacement ? keyFor(replacement.flow, replacement.tempC) : null;
+          if (replacement) singleTargetTempC = replacement.tempC;
+        }
+
+        const usableActive = supportMode === 'multiple'
+          ? activeSavedCalibrations().map(item => keyFor(item.flow, item.tempC))
+          : [];
+        if (!usableActive.includes(multipleDefaultKey)) multipleDefaultKey = usableActive[0] ?? null;
+      }
+
+      function missingActiveRequirements() {
+        return supportMode === 'multiple' ? activeRequirements().filter(item => !calibrationFor(item)) : [];
+      }
+
+      function configurationValid() {
+        if (supportMode === 'single') {
+          const selected = calibrationByKey(singleDefaultKey);
+          return Boolean(selected && Math.abs(selected.tempC - singleTargetTempC) < 0.01);
+        }
+        const active = activeSavedCalibrations();
+        const hasMinimum = active.some(item => Math.abs(item.flow - minimumFlow) < 0.001);
+        const hasMaximum = active.some(item => Math.abs(item.flow - maximumFlow) < 0.001);
+        const hasInterior = active.some(item => item.flow > minimumFlow + 0.001 && item.flow < maximumFlow - 0.001);
+        return active.length >= 3 && hasMinimum && hasMaximum && hasInterior && active.some(item => keyFor(item.flow, item.tempC) === multipleDefaultKey);
+      }
+
+      function editorMarkup(requirement, active, isNewSingle) {
+        const flexibleInterior = Boolean(requirement?.flexible);
+        const key = isNewSingle ? '__new__' : requirementKey(requirement);
+        const calibration = isNewSingle || flexibleInterior ? null : calibrationByKey(key);
+        const targets = activeRequirements();
+        const readingIndex = targets.findIndex(item => requirementKey(item) === key);
+        const multipleActive = supportMode === 'multiple' && active && readingIndex >= 0;
+        const title = isNewSingle
+          ? 'New saved calibration · ' + displayTemp(singleTargetTempC)
+          : flexibleInterior
+            ? 'New interior reading · ' + displayTemp(multipleTargetTempC)
+          : multipleActive
+            ? 'Reading ' + (readingIndex + 1) + ' of ' + targets.length + ' · ' + displayFlow(requirement.flow) + ' · ' + displayTemp(requirement.tempC)
+            : 'Editing ' + displayFlow(requirement.flow) + ' · ' + displayTemp(requirement.tempC);
+        const navigation = multipleActive
+          ? '<div class="steam-reading-nav">' +
+              '<button class="steam-nav-arrow" data-action="previous-flow" type="button" aria-label="Previous reading above"' + (readingIndex <= 0 ? ' disabled' : '') + '>↑</button>' +
+              '<button class="steam-nav-arrow" data-action="next-flow" type="button" aria-label="Next reading below"' + (readingIndex >= targets.length - 1 ? ' disabled' : '') + '>↓</button>' +
+            '</div>'
+          : '';
+        const headingMarkup = flexibleInterior
+          ? '<label class="steam-inline-flow"><b>Flow</b><input data-field="identity-flow" inputmode="decimal" value="' + requirement.flow + '"><span>ml/s · ' + minimumFlow + '–' + maximumFlow + '</span></label>'
+          : '<h3>' + title + '</h3>';
+        const identityHelp = flexibleInterior
+          ? 'Target ' + displayTemp(multipleTargetTempC) + ' · midpoint suggested; choose any interior flow.'
+          : 'Flow and target temperature uniquely identify this calibration.';
+        const identityFields = isNewSingle
+          ? '<div class="steam-grid-2">' +
+              '<label class="steam-field"><b>Flow</b><input data-field="identity-flow" inputmode="decimal" placeholder="1.2"><span>ml/s · required</span></label>' +
+              '<label class="steam-field"><b>Target temp</b><input value="' + Math.round(toDisplayTemp(singleTargetTempC)) + '" readonly><span>°' + temperatureUnit + ' · from required setting above</span></label>' +
+            '</div>'
+          : '';
+        const manualPressed = entryMethod === 'manual';
+        const guidedPressed = entryMethod === 'guided';
+        const milk = calibration ? calibration.milk : '';
+        const seconds = calibration ? calibration.seconds : '';
+        const taredWeight = weightMode === 'Tared';
+        const captureLabel = taredWeight ? 'Capture milk only (g)' : 'Capture pitcher + milk (g)';
+        const guidedPrompt = taredWeight
+          ? 'Place the empty pitcher on the scale and tare it. Add milk, then capture the milk-only weight.'
+          : 'Tare the empty scale if needed. Select the pitcher, place it with milk on the scale, then capture the gross weight.';
+
+        return '<div class="steam-inline-editor" data-editor-key="' + key + '" data-editor-flow="' + (requirement?.flow ?? '') + '" data-editor-temp="' + (requirement?.tempC ?? singleTargetTempC) + '" data-editor-active="' + active + '">' +
+          '<div class="steam-inline-top"><div><div class="steam-reading-title-row">' + headingMarkup + navigation + '</div>' +
+            '<span class="steam-scale">' + identityHelp + '</span></div>' +
+            '<div class="steam-segments" aria-label="Entry method">' +
+              '<button class="steam-segment" data-action="manual-entry" type="button" aria-pressed="' + manualPressed + '">Enter measured time</button>' +
+              '<button class="steam-segment" data-action="guided-entry" type="button" aria-pressed="' + guidedPressed + '">Guided calibration</button>' +
+            '</div></div>' +
+          identityFields +
+          '<div class="steam-workspace" data-manual-panel' + (manualPressed ? '' : ' hidden') + '><div class="steam-workspace-block">' +
+            '<div class="steam-grid-2">' +
+              '<label class="steam-field"><b>Milk weight</b><input data-field="milk" inputmode="decimal" value="' + milk + '"><span>Milk only · grams</span></label>' +
+              '<label class="steam-field"><b>Steaming time</b><input data-field="seconds" inputmode="decimal" value="' + seconds + '"><span>seconds</span></label>' +
+            '</div><p class="steam-status" data-editor-status>Measure to ' + displayTemp(isNewSingle ? singleTargetTempC : requirement.tempC) + '.</p></div></div>' +
+          '<div class="steam-workspace steam-guided-workspace" data-guided-panel' + (guidedPressed ? '' : ' hidden') + '><div class="steam-workspace-block">' +
+            '<div class="steam-guided-overview' + (taredWeight ? ' is-tared' : '') + '">' +
+              (taredWeight ? '' : '<label class="steam-field"><b>Calibration pitcher</b><select data-field="pitcher"><option value="152.4">Small</option><option value="198.7">Medium</option><option value="243.1">Large</option></select></label>') +
+              '<div class="steam-guided-readouts">' +
+                '<div class="steam-guided-metric"><b>Scale reading:</b><span data-scale-state>0.0g - stable</span></div>' +
+                '<div class="steam-guided-metric"><b>Derived milk weight (g):</b><span data-milk-state>0</span></div>' +
+              '</div>' +
+              '<div class="steam-guided-actions"><button data-action="guided-tare" type="button">Tare</button><button data-action="capture-milk" type="button">' + captureLabel + '</button></div>' +
+            '</div>' +
+            '<p class="steam-status" data-guided-status>' + guidedPrompt + '</p>' +
+            '<div class="steam-steam-controls"><span class="steam-timer-readout">Time elapsed: <span data-timer-state>0.0 s</span></span><span class="steam-machine-state" data-machine-state>Waiting for milk capture</span></div>' +
+          '</div></div>' +
+          '<div class="steam-save-row"><button data-action="close-editor" type="button">Close without update</button>' +
+            '<button class="steam-primary" data-action="update-flow" type="button"' + (guidedPressed ? ' disabled' : '') + '>' + (calibration ? 'Update saved flow' : 'Create saved calibration') + '</button></div>' +
+        '</div>';
+      }
+
+      function rowMarkup(requirement, active) {
+        const key = requirementKey(requirement);
+        const calibration = requirement.flexible ? null : calibrationByKey(key);
+        const editing = expandedKey === key;
+        const allowDefault = calibration && (supportMode === 'single' || active);
+        let details;
+        let actions;
+        if (calibration) {
+          details = '<div class="steam-saved-details"><span class="steam-saved-flow">' + displayFlow(calibration.flow) + ' · ' + displayTemp(calibration.tempC) + '</span>' +
+            '<span class="steam-saved-meta">' + calibration.milk + ' g milk · ' + calibration.seconds + ' s</span></div>';
+          actions = '<button class="steam-small-action steam-danger" data-action="delete-flow" data-key="' + key + '" type="button">Delete</button>' +
+            (editing
+              ? '<button class="steam-small-action" data-action="close-editor" type="button">Cancel</button>'
+              : '<button class="steam-small-action" data-action="edit-flow" data-key="' + key + '" data-active="' + active + '" type="button">Edit</button>') +
+            (allowDefault
+              ? '<label class="steam-default-choice"><input data-action="default-flow" data-key="' + key + '" type="checkbox"' + (key === currentDefaultKey() ? ' checked' : '') +
+                  (supportMode === 'single' && calibrations.length === 1 ? ' disabled' : '') + '><span>Default</span></label>'
+              : '<span class="steam-default-placeholder">Not used</span>');
+        } else {
+          details = '<div class="steam-saved-details"><span class="steam-saved-flow">' + (requirement.flexible ? 'Interior reading · ' + displayTemp(requirement.tempC) : displayFlow(requirement.flow) + ' · ' + displayTemp(requirement.tempC)) + '</span>' +
+            '<span class="steam-saved-meta steam-danger">' + (requirement.flexible ? 'Choose any flow inside the range; near ' + displayFlow(requirement.flow) + ' is suggested' : 'Needs calibration') + '</span></div>';
+          actions = editing
+            ? '<button class="steam-small-action steam-create-action" data-action="close-editor" type="button">Cancel</button>' +
+                '<span class="steam-default-placeholder">Required before saving</span>'
+            : '<button class="steam-small-action steam-primary steam-create-action" data-action="create-flow" data-key="' + key + '" data-active="true" type="button">Create reading</button>' +
+                '<span class="steam-default-placeholder">Required before saving</span>';
+        }
+        return '<div class="steam-saved-wrap"><div class="steam-saved-row' + (editing ? ' is-editing' : '') + '">' + details + actions + '</div>' +
+          (editing ? editorMarkup(requirement, active, false) : '') + '</div>';
+      }
+
+      function updateConfigurationSummary() {
+        let allPitchersConfigured = true;
+        qa('[data-summary-pitcher]').forEach(badge => {
+          const size = badge.dataset.summaryPitcher;
+          const input = q('[data-pitcher="' + size + '"] input');
+          const configured = Number.isFinite(Number(input.value)) && Number(input.value) > 0;
+          allPitchersConfigured = allPitchersConfigured && configured;
+          badge.classList.toggle('is-unconfigured', !configured);
+          const name = size[0].toUpperCase() + size.slice(1);
+          badge.setAttribute('aria-label', name + (configured ? ' configured' : ' not configured'));
+        });
+
+        const autoToggle = q('#steam-mock-auto-toggle');
+        const autoInput = q('#steam-mock-auto-fields input');
+        const autoSelect = q('#steam-mock-auto-fields select');
+        const autoConfigured = autoToggle.checked &&
+          weightMode === 'Gross' &&
+          allPitchersConfigured &&
+          Number.isFinite(Number(autoInput.value)) &&
+          Number(autoInput.value) > 0 &&
+          Boolean(autoSelect.value);
+        const autoBadge = q('#steam-mock-auto-status');
+        autoBadge.classList.toggle('is-unconfigured', !autoConfigured);
+        autoBadge.setAttribute('aria-label', autoConfigured ? 'Auto configured' : 'Auto not configured');
+
+        const flowSummary = q('#steam-mock-flow-summary');
+        flowSummary.hidden = supportMode !== 'single';
+        if (supportMode === 'single') {
+          const selected = calibrationByKey(singleDefaultKey);
+          q('#steam-mock-summary-flow').textContent = selected ? displayFlow(selected.flow) : '—';
+        }
+      }
+
+      function render() {
+        if (guidedTimerId) clearInterval(guidedTimerId);
+        if (guidedArmTimeout) clearTimeout(guidedArmTimeout);
+        if (guidedStopTimeout) clearTimeout(guidedStopTimeout);
+        if (guidedIdleTimeout) clearTimeout(guidedIdleTimeout);
+        guidedTimerId = null;
+        guidedArmTimeout = null;
+        guidedStopTimeout = null;
+        guidedIdleTimeout = null;
+        guidedElapsed = 0;
+        normalizeDefaults();
+        const multiple = supportMode === 'multiple';
+        const active = multiple ? multipleMainRequirements() : activeRequirements();
+        const activeSaved = activeSavedCalibrations();
+        const other = otherSavedCalibrations();
+        q('#steam-mock-single').setAttribute('aria-pressed', String(!multiple));
+        q('#steam-mock-multiple').setAttribute('aria-pressed', String(multiple));
+        q('#steam-mock-multiple-options').hidden = !multiple;
+        q('#steam-mock-new-calibration').hidden = multiple;
+        q('#steam-mock-new-calibration').textContent = newSingleDraft ? 'Cancel' : '+ New calibration';
+        q('#steam-mock-weight-mode').value = weightMode;
+        q('#steam-mock-target-temp').value = Math.round(toDisplayTemp(currentTargetTempC()));
+
+        q('#steam-mock-list-title').textContent = multiple
+          ? 'Active readings (' + activeSaved.length + ')'
+          : 'Saved calibrations (' + calibrations.length + ')';
+        q('#steam-mock-list-help').textContent = multiple
+          ? 'Used by Multiple at ' + displayTemp(multipleTargetTempC) + ' within ' + minimumFlow + '–' + maximumFlow + ' ml/s.'
+          : 'Each flow and target-temperature combination is saved independently.';
+
+        let activeMarkup = '';
+        if (!multiple && newSingleDraft) activeMarkup += '<div class="steam-saved-wrap"><div class="steam-saved-row is-editing"><div class="steam-saved-details"><span class="steam-saved-flow">New calibration</span><span class="steam-saved-meta">Target ' + displayTemp(singleTargetTempC) + '</span></div></div>' + editorMarkup(null, true, true) + '</div>';
+        activeMarkup += active.map(item => rowMarkup(item, multiple ? requirementIsActive(item) : true)).join('');
+        if (!activeMarkup) activeMarkup = '<div class="steam-empty-saved">No saved calibrations. <button class="steam-primary steam-new-calibration" data-action="new-calibration" type="button">Create first calibration</button></div>';
+        q('#steam-mock-active-list').innerHTML = activeMarkup;
+
+        q('#steam-mock-other-block').hidden = !multiple;
+        q('#steam-mock-other-title').textContent = 'Other saved calibrations (' + other.length + ')';
+        q('#steam-mock-other-toggle').setAttribute('aria-expanded', String(otherExpanded));
+        q('#steam-mock-other-toggle').querySelector('span').textContent = otherExpanded ? '▴' : '▾';
+        q('#steam-mock-other-content').hidden = !otherExpanded;
+        q('#steam-mock-other-list').innerHTML = other.length ? other.map(item => rowMarkup(item, false)).join('') : '<p class="steam-empty-saved">No calibrations at other target temperatures.</p>';
+
+        const missing = missingActiveRequirements();
+        const valid = configurationValid();
+        q('#steam-mock-save').disabled = !valid;
+        q('#steam-mock-validation').classList.toggle('is-invalid', !valid);
+        if (multiple && missing.length) {
+          const missingNames = missing.map(item => item.flexible ? 'interior' : Math.abs(item.flow - minimumFlow) < 0.001 ? 'minimum' : 'maximum');
+          q('#steam-mock-validation').textContent = 'Missing ' + missingNames.join(', ') + ' reading' + (missingNames.length === 1 ? '' : 's');
+        }
+        else if (!multiple && !valid) q('#steam-mock-validation').textContent = 'Choose or create a default at ' + displayTemp(singleTargetTempC);
+        else q('#steam-mock-validation').textContent = 'Ready to save';
+
+        updateConfigurationSummary();
+      }
+
+      function openEditor(key, active) {
+        expandedKey = key;
+        newSingleDraft = false;
+        entryMethod = 'manual';
+        if (!active && supportMode === 'multiple') {
+          const selected = calibrationByKey(key);
+          if (selected && Math.abs(selected.tempC - multipleTargetTempC) >= 0.01) otherExpanded = true;
+        }
+        render();
+      }
+
+      function openNewSingle() {
+        supportMode = 'single';
+        expandedKey = null;
+        newSingleDraft = true;
+        entryMethod = 'manual';
+        render();
+      }
+
+      tabNames.forEach(name => q('#steam-tab-' + name).addEventListener('click', () => showTab(name)));
+      q('#steam-mock-update').addEventListener('click', () => { q('#steam-mock-modal').hidden = false; });
+      q('#steam-mock-modal-close').addEventListener('click', () => { q('#steam-mock-modal').hidden = true; });
+      q('#steam-mock-modal').addEventListener('click', event => { if (event.target === q('#steam-mock-modal')) q('#steam-mock-modal').hidden = true; });
+      qa('[data-action="tare"]').forEach(button => button.addEventListener('click', () => { q('#steam-mock-pitcher-scale').textContent = 'Scale: 0.0g - stable'; }));
+      const sampleWeights = { small: '153.0', medium: '199.2', large: '243.8' };
+      qa('[data-action="set-pitcher"]').forEach(button => button.addEventListener('click', () => {
+        const row = button.closest('[data-pitcher]');
+        const size = row.dataset.pitcher;
+        row.querySelector('input').value = sampleWeights[size];
+        row.querySelector('.steam-result').textContent = size[0].toUpperCase() + size.slice(1) + ' pitcher set to ' + sampleWeights[size] + ' g';
+        updateConfigurationSummary();
+      }));
+      qa('[data-pitcher] input').forEach(input => input.addEventListener('input', updateConfigurationSummary));
+      q('#steam-mock-auto-toggle').addEventListener('change', event => {
+        q('#steam-mock-auto-fields').hidden = !event.target.checked;
+        updateConfigurationSummary();
+      });
+      q('#steam-mock-auto-fields').addEventListener('input', updateConfigurationSummary);
+      q('#steam-mock-auto-fields').addEventListener('change', updateConfigurationSummary);
+
+      q('#steam-mock-single').addEventListener('click', () => {
+        supportMode = 'single'; expandedKey = null; newSingleDraft = false; render();
+        q('#steam-mock-global-status').textContent = 'Single support uses one default flow + target-temperature calibration.';
+      });
+      q('#steam-mock-multiple').addEventListener('click', () => {
+        supportMode = 'multiple'; expandedKey = null; newSingleDraft = false; otherExpanded = false; render();
+        q('#steam-mock-global-status').textContent = 'Multiple support uses every matching saved calibration inside the range.';
+      });
+      q('#steam-mock-new-calibration').addEventListener('click', () => {
+        if (newSingleDraft) {
+          newSingleDraft = false;
+          expandedKey = null;
+          render();
+        } else {
+          openNewSingle();
+        }
+      });
+      function applyRange() {
+        const nextMin = Number(q('#steam-mock-min-flow').value);
+        const nextMax = Number(q('#steam-mock-max-flow').value);
+        if (!(nextMin > 0) || !(nextMax > nextMin)) return;
+        minimumFlow = roundFlow(nextMin); maximumFlow = roundFlow(nextMax); expandedKey = null; otherExpanded = false; render();
+      }
+      q('#steam-mock-min-flow').addEventListener('change', applyRange);
+      q('#steam-mock-max-flow').addEventListener('change', applyRange);
+      q('#steam-mock-weight-mode').addEventListener('change', event => {
+        weightMode = event.target.value;
+        render();
+        q('#steam-mock-global-status').textContent = weightMode === 'Tared'
+          ? 'Tared mode captures milk-only weight after the empty pitcher is tared.'
+          : 'Gross mode subtracts the selected empty-pitcher weight from the captured total.';
+      });
+      q('#steam-mock-temperature-unit').addEventListener('change', event => {
+        temperatureUnit = event.target.value;
+        try { localStorage.setItem('tempUnit', temperatureUnit); } catch (error) {}
+        q('#steam-mock-target-label').textContent = 'Target temp (°' + temperatureUnit + ') — required';
+        render();
+        q('#steam-mock-global-status').textContent = 'Temperature display changed to °' + temperatureUnit + '; saved readings remain stored in Celsius.';
+      });
+      q('#steam-mock-target-temp').addEventListener('change', event => {
+        const displayValue = Number(event.target.value);
+        if (!Number.isFinite(displayValue)) return;
+        setCurrentTargetTempC(toCanonicalTemp(displayValue));
+        expandedKey = null; newSingleDraft = false; otherExpanded = false; render();
+        q('#steam-mock-global-status').textContent = 'Target temperature changed. Only exact saved matches remain active.';
+      });
+      q('#steam-mock-other-toggle').addEventListener('click', () => { otherExpanded = !otherExpanded; render(); });
+
+      root.addEventListener('change', event => {
+        const checkbox = event.target.closest('[data-action="default-flow"]');
+        if (!checkbox) return;
+        if (!checkbox.checked) return render();
+        setCurrentDefaultKey(checkbox.dataset.key);
+        const selected = calibrationByKey(checkbox.dataset.key);
+        if (supportMode === 'single' && selected) singleTargetTempC = selected.tempC;
+        render();
+        q('#steam-mock-global-status').textContent = displayFlow(selected.flow) + ' at ' + displayTemp(selected.tempC) + ' selected as default.';
+      });
+
+      root.addEventListener('click', event => {
+        const action = event.target.closest('[data-action]');
+        if (!action || action.matches('[data-action="tare"], [data-action="set-pitcher"]')) return;
+        const editor = action.closest('[data-editor-key]');
+        const key = action.dataset.key ?? editor?.dataset.editorKey;
+        const active = action.dataset.active === 'true' || editor?.dataset.editorActive === 'true';
+        if (action.dataset.action === 'new-calibration') return openNewSingle();
+        if (action.dataset.action === 'edit-flow' || action.dataset.action === 'create-flow') return openEditor(key, active);
+        if (action.dataset.action === 'delete-flow') {
+          calibrations = calibrations.filter(item => keyFor(item.flow, item.tempC) !== key);
+          if (expandedKey === key) expandedKey = null;
+          render();
+          q('#steam-mock-global-status').textContent = 'Saved calibration deleted. It will remain missing until recreated.';
+          return;
+        }
+        if (action.dataset.action === 'close-editor') {
+          expandedKey = null; newSingleDraft = false; render(); return;
+        }
+        if (action.dataset.action === 'manual-entry' || action.dataset.action === 'guided-entry') {
+          entryMethod = action.dataset.action === 'manual-entry' ? 'manual' : 'guided'; render(); return;
+        }
+        if (action.dataset.action === 'previous-flow' || action.dataset.action === 'next-flow') {
+          const targets = activeRequirements();
+          const index = targets.findIndex(item => requirementKey(item) === expandedKey);
+          const direction = action.dataset.action === 'previous-flow' ? -1 : 1;
+          const next = targets[Math.max(0, Math.min(targets.length - 1, index + direction))];
+          return openEditor(requirementKey(next), true);
+        }
+        if (action.dataset.action === 'guided-tare') {
+          if (guidedTimerId) clearInterval(guidedTimerId);
+          if (guidedArmTimeout) clearTimeout(guidedArmTimeout);
+          if (guidedStopTimeout) clearTimeout(guidedStopTimeout);
+          if (guidedIdleTimeout) clearTimeout(guidedIdleTimeout);
+          guidedTimerId = null;
+          guidedArmTimeout = null;
+          guidedStopTimeout = null;
+          guidedIdleTimeout = null;
+          guidedElapsed = 0;
+          editor.querySelector('[data-scale-state]').textContent = '0.0g - stable';
+          editor.querySelector('[data-milk-state]').textContent = '0';
+          editor.querySelector('[data-timer-state]').textContent = '0.0 s';
+          editor.querySelector('[data-machine-state]').textContent = 'Waiting for milk capture';
+          editor.querySelector('[data-field="milk"]').value = '';
+          editor.querySelector('[data-field="seconds"]').value = '';
+          editor.querySelector('[data-action="update-flow"]').disabled = true;
+          editor.querySelector('[data-guided-status]').textContent = weightMode === 'Tared'
+            ? 'Scale tared with the empty pitcher. Add milk, then capture the milk-only weight.'
+            : 'Scale tared with no pitcher. Place the selected pitcher with milk on the scale, then capture the gross weight.';
+          return;
+        }
+        if (action.dataset.action === 'capture-milk') {
+          if (guidedTimerId) clearInterval(guidedTimerId);
+          if (guidedArmTimeout) clearTimeout(guidedArmTimeout);
+          if (guidedStopTimeout) clearTimeout(guidedStopTimeout);
+          if (guidedIdleTimeout) clearTimeout(guidedIdleTimeout);
+          guidedTimerId = null;
+          guidedArmTimeout = null;
+          guidedStopTimeout = null;
+          guidedIdleTimeout = null;
+          guidedElapsed = 0;
+          const taredMode = weightMode === 'Tared';
+          const pitcherField = editor.querySelector('[data-field="pitcher"]');
+          const emptyPitcher = taredMode ? 0 : Number(pitcherField.value);
+          const milkWeight = 160.4;
+          const scaleReading = taredMode ? milkWeight : emptyPitcher + milkWeight;
+          editor.querySelector('[data-field="milk"]').value = milkWeight.toFixed(1);
+          editor.querySelector('[data-scale-state]').textContent = scaleReading.toFixed(1) + 'g - stable';
+          editor.querySelector('[data-milk-state]').textContent = milkWeight.toFixed(1);
+          editor.querySelector('[data-timer-state]').textContent = '0.0 s';
+          editor.querySelector('[data-machine-state]').textContent = 'Waiting for machine steam';
+          editor.querySelector('[data-field="seconds"]').value = '';
+          editor.querySelector('[data-action="update-flow"]').disabled = true;
+          editor.querySelector('[data-guided-status]').textContent = 'Milk weight captured. Start steam now, then stop steam when the milk reaches ' + displayTemp(Number(editor.dataset.editorTemp)) + '.';
+
+          guidedArmTimeout = setTimeout(() => {
+            if (!editor.isConnected) return;
+            editor.querySelector('[data-machine-state]').textContent = 'Machine steam detected · Timing';
+            guidedTimerId = setInterval(() => {
+              guidedElapsed += 0.5;
+              editor.querySelector('[data-timer-state]').textContent = guidedElapsed.toFixed(1) + ' s';
+            }, 100);
+            guidedStopTimeout = setTimeout(() => {
+              if (guidedTimerId) clearInterval(guidedTimerId);
+              guidedTimerId = null;
+              if (!editor.isConnected) return;
+              guidedElapsed = Math.max(0.5, guidedElapsed);
+              editor.querySelector('[data-field="seconds"]').value = guidedElapsed.toFixed(1);
+              editor.querySelector('[data-timer-state]').textContent = guidedElapsed.toFixed(1) + ' s final';
+              editor.querySelector('[data-machine-state]').textContent = 'Steam stopped · finishing purge…';
+              editor.querySelector('[data-guided-status]').textContent = 'Final time captured. Waiting for machine idle before restoring settings.';
+              guidedIdleTimeout = setTimeout(() => {
+                if (!editor.isConnected) return;
+                editor.querySelector('[data-machine-state]').textContent = 'Machine idle · settings restored';
+                editor.querySelector('[data-action="update-flow"]').disabled = false;
+                editor.querySelector('[data-guided-status]').textContent = taredMode
+                  ? 'Need to try again? Capture milk-only weight again to start a new timer.'
+                  : 'Need to try again? Capture pitcher + milk weight again to start a new timer.';
+              }, 800);
+            }, 5000);
+          }, 800);
+          return;
+        }
+        if (action.dataset.action === 'update-flow') {
+          const milk = Number(editor.querySelector('[data-field="milk"]').value);
+          const seconds = Number(editor.querySelector('[data-field="seconds"]').value);
+          let flow = Number(editor.dataset.editorFlow);
+          let tempC = Number(editor.dataset.editorTemp);
+          if (key === '__new__' || key === '__interior__') {
+            flow = Number(editor.querySelector('[data-field="identity-flow"]').value);
+            tempC = key === '__new__' ? singleTargetTempC : multipleTargetTempC;
+          }
+          const status = entryMethod === 'guided' ? editor.querySelector('[data-guided-status]') : editor.querySelector('[data-editor-status]');
+          if (!(flow > 0) || !(milk > 0) || !(seconds > 0)) {
+            status.textContent = 'Flow, milk weight, target temperature, and steaming time are required.';
+            status.classList.add('steam-danger');
+            return;
+          }
+          if (key === '__interior__' && !(flow > minimumFlow && flow < maximumFlow)) {
+            status.textContent = 'Choose an interior flow greater than the minimum and less than the maximum.';
+            status.classList.add('steam-danger');
+            return;
+          }
+          const saveKey = keyFor(flow, tempC);
+          const existing = calibrationByKey(saveKey);
+          if (existing && (key === '__new__' || key === '__interior__')) {
+            status.textContent = 'That flow and target temperature are already saved. Edit the existing calibration instead.';
+            status.classList.add('steam-danger');
+            return;
+          }
+          if (existing) { existing.milk = milk; existing.seconds = seconds; }
+          else calibrations.push({ flow: roundFlow(flow), tempC: roundTemp(tempC), milk, seconds });
+          if (key === '__new__') singleDefaultKey = saveKey;
+          expandedKey = null; newSingleDraft = false; render();
+          q('#steam-mock-global-status').textContent = displayFlow(flow) + ' at ' + displayTemp(tempC) + ' saved and closed.';
+        }
+      });
+
+      q('#steam-mock-save').addEventListener('click', () => {
+        if (!configurationValid()) return;
+        const selected = calibrationByKey(currentDefaultKey());
+        q('#steam-mock-global-status').textContent = supportMode === 'multiple'
+          ? activeSavedCalibrations().length + ' matching readings saved for Multiple at ' + displayTemp(multipleTargetTempC) + '. Default: ' + displayFlow(selected.flow) + '.'
+          : 'Single calibration saved: ' + displayFlow(selected.flow) + ' at ' + displayTemp(selected.tempC) + '.';
+      });
+
+      render();
+    })();
+  </script>
+</div>

@@ -73,6 +73,7 @@ export function createCalibrationSession({ now = () => Date.now(), readWorkflow,
           seenSteam = true;
           if (frame.state.substate === 'pouring') phase = 'steaming';
           else if (frame.state.substate === 'preparingForShot') phase = 'heating';
+          else if (seconds > 0 && frame.state.substate === 'puffing') phase = 'puffing';
           else if (seconds > 0 && frame.state.substate === 'pausedSteam') {
             fail('Steam was paused or interrupted. Repeat with one continuous run.');
           }

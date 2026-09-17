@@ -175,9 +175,13 @@ Capture prepares and applies the current reading's flow (0.4–2.5 ml/s), the ex
 setting and a temporary duration of 255 seconds, with probe stopping disabled.
 255 is the existing machine timer ceiling, not a new user setting. The user stops
 at their desired temperature. The measured counter follows machine snapshot
-`pouring` time, excluding warm-up, and waits for confirmed idle before completing.
-Runs reaching the timer ceiling, paused runs and interrupted telemetry are not
-accepted as calibration. After review, Save stores values and returns to settings.
+`pouring` time, excluding warm-up. On Decaid 0.8.6 or newer, `puffing` freezes
+the final measured time and displays **Steam stopped · finishing purge…** while
+the machine completes its purge; confirmed idle is still required before settings
+are restored and the reading completes. A `pausedSteam` state rejects the reading
+because guided calibration requires one continuous pour. Runs reaching the timer
+ceiling and interrupted telemetry are also not accepted as calibration. After
+review, Save stores values and returns to settings.
 Changing a single calibration flow clears its measured weight and time and
 requires a new measurement. Changing a multiple calibration default inside the measured range
 does not discard readings. Capture fresh milk to repeat any guided reading.

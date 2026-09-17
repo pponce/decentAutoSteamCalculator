@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL('../plugin.js', import.meta.url), 'utf8');
+const settingsMockup = readFileSync(new URL('../assets/settings_mockup.html', import.meta.url), 'utf8');
 const saved = (flow, seconds, targetTemperatureC = 60) => ({ flow, targetTemperatureC, milkGrams: 160, seconds });
 const partial = { autoDetect: false, smallPitcherGrams: 150, mediumPitcherGrams: 220, largePitcherGrams: 0,
   weightMode: 'gross', targetTemperatureC: 60, referenceMilkGrams: 160, referenceSeconds: 25,
@@ -44,7 +45,7 @@ async function page(settings = partial, { guided = false, updateVersion = null, 
     return null;
   } };
   const calls = [], savedSettings = [], calibrationCalls = [];
-  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.5', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
+  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.6', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
   let session = null;
   const fetch = async (url, options = {}) => {
     const endpoint = url.split('/').at(-1);
@@ -79,6 +80,7 @@ async function page(settings = partial, { guided = false, updateVersion = null, 
     scale(weight) { time += 300; socket.onmessage({ data: JSON.stringify({ weight }) }); },
     async heartbeat() { const callback = timers.shift(); if (callback) await callback(); },
     machineStart() { session.phase = 'steaming'; session.seconds = 3; },
+    machinePuffing() { session.phase = 'puffing'; session.seconds = 25; },
     machineStop() { session.phase = 'complete'; session.seconds = 25; },
     change: target => ids.settings.handlers.change({ target }),
     submit: () => ids.settings.handlers.submit({ preventDefault() {} }),
@@ -241,7 +243,10 @@ test('capture arms calibration and physical machine start/stop completes timing 
   assert.equal(p.calibrationCalls[0].action, 'begin'); assert.equal(p.calibrationCalls[0].milkGrams, 230);
   assert.equal(p.buttons('Start steam').length, 0); assert.equal(p.buttons('Stop steam').length, 0);
   assert.match(p.ids['calibration-editor'].textContent, /Start steam now[\s\S]*140\.0 °F/);
-  p.machineStart(); await p.heartbeat(); p.machineStop(); await p.heartbeat();
+  p.machineStart(); await p.heartbeat();
+  p.machinePuffing(); await p.heartbeat();
+  assert.match(p.ids['calibration-editor'].textContent, /Steam stopped · finishing purge/);
+  p.machineStop(); await p.heartbeat();
   assert.match(p.ids['calibration-editor'].textContent, /Need to try again/);
   assert.equal(p.fields.referenceSeconds.value, '25');
 });
@@ -290,8 +295,21 @@ test('the settings page requires a target temperature before saving', async () =
 
 test('Check & Update remains in the header and reports GitHub rate limits', async () => {
   const p = await page(partial, { updateError: 'failed 403' });
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.5');
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.6');
   await p.ids['check-extension-update'].handlers.click();
   assert.equal(p.ids['extension-update-dialog'].hidden, false);
   assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);
+});
+
+test('stored settings mockup tracks the current temperature and calibration UX', () => {
+  const script = settingsMockup.match(/<script>([\s\S]*)<\/script>/)?.[1];
+  assert.ok(script);
+  assert.doesNotThrow(() => new vm.Script(script));
+  assert.match(settingsMockup, /Version 0\.12\.6/);
+  assert.match(settingsMockup, /id="steam-mock-temperature-unit"/);
+  assert.match(settingsMockup, /Target temp \(°F\) — required/);
+  assert.match(settingsMockup, /id="steam-mock-target-temp"[^>]*value="140"/);
+  assert.match(settingsMockup, /Other saved calibrations/);
+  assert.match(settingsMockup, /item\.flow < minimumFlow[\s\S]*item\.flow > maximumFlow/);
+  assert.match(settingsMockup, /Steam stopped · finishing purge…/);
 });

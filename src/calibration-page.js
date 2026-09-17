@@ -136,7 +136,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
   function accept(value) {
     sessionPhase = value.phase;
     token = value.token ?? token; active = value.active === true;
-    runStatus.textContent = value.message || ({ armed: 'Waiting for machine steam', starting: 'Waiting for machine steam', heating: 'Heating · Timer waiting', steaming: 'Machine steam detected · Timing', restoring: 'Restoring previous steam settings…' }[value.phase] ?? value.phase);
+    runStatus.textContent = value.message || ({ armed: 'Waiting for machine steam', starting: 'Waiting for machine steam', heating: 'Heating · Timer waiting', steaming: 'Machine steam detected · Timing', puffing: 'Steam stopped · finishing purge…', restoring: 'Restoring previous steam settings…' }[value.phase] ?? value.phase);
     elapsed.textContent = Number(value.seconds || 0).toFixed(1) + ' s';
     if (value.result && !appliedResult) {
       appliedResult = true; captured = null;
