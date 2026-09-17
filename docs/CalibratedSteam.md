@@ -17,13 +17,12 @@ returns to the calling settings page. Validation or save errors keep the form op
 
 The settings page uses compact **Pitchers & Auto**, **Calibration**,
 **Instructions**, and **Glossary** tabs. Calibration keeps its flow/default,
-target-temperature note and one global scale weight mode together. The compact
+required target temperature and one global scale weight mode together. The compact
 summary shares the tab row and updates as the draft changes. It always shows S,
 M, L and Auto: available choices are green and unavailable choices are red, with
-the current set flow shown to their right. Save is
-required to persist changes. There is one visible flow/default control. In Single flow, changing it clears the old
-measured time. In Multiple flows, it is the default Auto flow; changing it within
-the measured range preserves all readings.
+the current set flow shown to their right in Single mode. Multiple mode omits the
+set-flow label because the calibrated range is adjustable. Save is required to
+persist changes.
 
 The page also displays the installed extension version. A compact **Check &
 Update** button shares the top header with the return control and title, leaving
@@ -37,9 +36,9 @@ plugins together, the button may also update other GitHub-backed extensions.
 Pitchers & Auto places empty-scale tare beside the pitcher rows. Each **Set from
 scale** button fills its own field without focusing it first, and reports success
 or failure in that row. The Auto switch is grouped with its two detection inputs.
-Calibration has a second tare button, live scale status, a milk-capture result,
-and a local explanation of what is needed to enable Prepare. Save reveals the
-tab and manual-values section containing the first invalid setting.
+Calibration has a second tare button, live scale status, a derived milk-weight
+result, and guidance for the physical start/stop sequence. Save reveals the tab
+and first invalid setting.
 
 1. Enter at least one empty pitcher weight, or use **Tare empty scale** and then
    **Set from scale** for each size. Wait for the stable-zero message before
@@ -52,16 +51,16 @@ tab and manual-values section containing the first invalid setting.
    to single- and multiple-flow calculations. The supporting skin owns and
    remembers the current pitcher preset; the plugin no longer has a separate
    starting-pitcher setting.
-4. Choose **Single flow** or **Multiple flows** in Calibration (details below),
-   then follow **Guided calibration** for each reading:
-   tare the empty scale, choose a configured pitcher, place it with cold milk on
-   the scale, and **Capture pitcher + milk**. Review the milk-only weight,
-   **Prepare calibration**, then **Start steam**. Stop at your preferred milk
-   temperature using **Stop steam** or the machine control. Physical start also
-   works after preparation. The page fills the measured weight, time and flow.
+4. Enter a required target milk temperature and choose **Single** or **Multiple**
+   flow support (details below). For guided Gross calibration, tare the empty
+   scale, choose a configured pitcher, and **Capture pitcher + milk (g)**. For
+   Tared calibration, put the empty pitcher on the scale, select **Tare**, add
+   milk, and **Capture milk only (g)**. Capture arms the session. Start and stop
+   steam with the physical machine controls; there are no software Start/Stop
+   buttons. The page fills the actual milk weight, time and flow after the machine
+   stops and prior steam settings are restored.
    Alternatively, choose **Enter measured time** for each reading and enter values
-   measured using normal manual steam controls. Select **Use values and next**
-   between readings, then review the completed set.
+   measured using normal manual steam controls, then select **Update saved flow**.
 5. Save. Use similar milk, starting temperature and technique on later runs.
 
 Only configured sizes appear in the steam presets. With no setup, top-level Auto
@@ -110,26 +109,33 @@ press; the selected mode must match the scale display.
 
 ## Single and multiple flow calibration
 
-Single flow retains the original measured milk weight, time and fixed flow.
-Single flow is the default calibration mode.
+Every saved calibration contains flow, target temperature, actual milk weight and
+measured seconds. A flow/temperature pair is unique. The library is not limited
+to nine readings and keeps measurements until the user deletes them.
 
-Multiple flows asks for a minimum and maximum between 0.4 and 2.5 ml/s and **2, 3
-(recommended), or 4 readings**. Two uses both endpoints; three adds a midpoint;
-four adds two evenly spaced interior points, rounded to 0.1 ml/s. A range must
-allow distinct points at least 0.1 ml/s apart. For 0.4–2.5 ml/s, the four points
-are 0.4, 1.1, 1.8 and 2.5 ml/s. The default Auto flow must lie within that range.
+Single flow lists the whole library and uses only the reading checked as
+**Default**. If one reading exists it becomes the default; when choosing among
+several readings, the selected reading supplies the fixed Auto flow.
+
+Multiple flow asks for a minimum and maximum between 0.4 and 2.5 ml/s. Its active
+set contains every saved reading whose target temperature matches the selected
+target and whose flow is inside the selected range. It requires at least three
+active readings: one at the exact minimum, one at the exact maximum, and at least
+one interior reading. A reading near the middle is recommended, but not forced.
+Additional matching readings are all used. Readings outside the range or at a
+different target temperature remain under collapsed **Other saved calibrations**.
+Changing range or target therefore does not erase prior work.
 
 Record the **actual milk-only weight for every reading**. New manual readings
 start blank and require the measured weight; guided calibration fills it from
 the scale after subtracting the selected pitcher. Each reading stores and uses
 its own actual weight. Editing a saved reading retains its measured values.
 
-**Target calibration temperature (°C)** is an optional milk-temperature note,
-initially blank. It does not set the steam heater, stop steam, or change calculated
-time. Aim for the same target for every reading. If you later calibrate to a
-different temperature, update this note and repeat the readings for that target.
-The note appears alongside the flow, actual milk weight and time in each compact
-summary. Editing the note alone does not adjust existing measurements.
+**Target temp (°C)** is required and is stored in each reading. It does not set
+the steam heater or stop steam. It selects which readings belong to the active
+Multiple set, so readings at different target temperatures are never mixed.
+Current Decaid plugin settings do not expose the app's Celsius/Fahrenheit display
+preference, so the extension stores and displays this canonical value in Celsius.
 
 For each point, use the same pitcher,
 milk starting temperature, target temperature, heater setting and technique. Use
@@ -142,28 +148,27 @@ the default Auto flow. Start remains unavailable until preparation completes and
 rechecks the workflow's flow, duration and probe-stop settings before requesting
 steam. No successful result is returned until prior steam settings are restored.
 
-Select **Use values and next** after each measurement, then **Use values and
-review** to see the compact summaries. Saved calibrations reopen in this compact
-view. Each **Edit** button opens its reading for manual adjustment or a new guided
-run. Accepting an edit returns to review when all readings are complete and retains
-the other measurements. Changing the planned range/count clears the
-draft readings; editing a captured reading requires using it again. Save stores
-the complete set through one settings request. Until Save, the previous saved
-calibration remains active; leaving without saving discards the draft. The page
-does not save invented readings or sample times.
+Each **Edit** button opens that calibration directly below its row. Only one
+editor is open at a time. **Update saved flow** closes it after accepting the
+measurement; **Close without update** and the opener's **Cancel** state discard
+the draft. Missing Multiple requirements have **Create reading** controls, which
+also toggle to **Cancel** while open. Delete removes only that library entry. If
+deletion makes Multiple incomplete, recreate the missing endpoint/interior entry
+or switch to Single before saving.
 
 ## Guided calibration details
 
-Tare always means an **empty scale**, never a pitcher already on it. The page waits
+In Gross mode, tare means an **empty scale**. In Tared mode, place the empty
+pitcher on the scale before taring. The page waits
 for a stable zero (within 0.5 g), then allows capture from at least three fresh
 samples spanning 500 ms with no more than 2 g spread. This cannot detect a later
 press of the scale's physical tare button. Repeat the empty-scale tare if unsure.
-Guided calibration always subtracts the explicitly selected pitcher from gross
-weight, including when everyday calculation uses Tared mode. Auto inference is
-not used for calibration. Initial milk weight is frozen before steam starts;
+Gross guided calibration subtracts the explicitly selected pitcher. Tared guided
+calibration removes the pitcher selector and treats captured weight as milk only.
+Auto inference is not used for calibration. Initial milk weight is frozen before steam starts;
 removing the pitcher from the scale does not change it.
 
-Preparation applies the current reading's flow (0.4–2.5 ml/s), the existing normal heater
+Capture prepares and applies the current reading's flow (0.4–2.5 ml/s), the existing normal heater
 setting and a temporary duration of 255 seconds, with probe stopping disabled.
 255 is the existing machine timer ceiling, not a new user setting. The user stops
 at their desired temperature. The measured counter follows machine snapshot
@@ -199,7 +204,8 @@ Single flow: `seconds = round(referenceSeconds × milkGrams / referenceMilkGrams
 
 Multiple flows normalize each reading to `rate = seconds / milkGrams`. For a
 requested flow between adjacent measured flows `f0` and `f1`, let
-`p = (flow - f0) / (f1 - f0)`. Then
+`p = (flow - f0) / (f1 - f0)`. Every active reading participates through its
+adjacent segment. Then
 `seconds = round(milkGrams × ((1-p) × rate0 + p × rate1))`.
 Measured endpoints retain their measured rate. There is no curve fitting or
 extrapolation beyond the measured range. This extension to the original ratio
@@ -268,23 +274,22 @@ URL and restores the selected settings category from its existing navigation sta
 
 Status includes `flowCalibration`, either null for invalid
 calibration data or `{mode, adjustable, minimum, maximum, defaultFlow, readings}`.
-Each reading is `{flow, milkGrams, seconds}`. Also require `ready`; valid flow
+Each reading is `{flow, targetTemperatureC, milkGrams, seconds}`. Also require `ready`; valid flow
 readings alone do not establish valid pitcher settings.
 
 Persist `calibrationMode` (`single` by default, or `multiple`) and `flowReadings`
-(a JSON string containing the ordered 2–4 reading objects). A string is used
+(a JSON string containing the saved calibration library). A string is used
 because the existing plugin setting schema supports primitive types. Custom
 skins should use the shared settings page instead of exposing raw JSON. The
 `referenceMilkGrams` and `referenceSeconds` fields define the single calibration;
-in multiple mode the readings are authoritative. `referenceFlow` is the shared
-fixed/default flow, with a default of 0.4. Changing that default does not mutate
-multiple readings.
+in both modes the selected library entry is mirrored to the legacy reference
+fields. `referenceFlow` is the fixed/default flow. `minimumFlow` and `maximumFlow`
+select the active Multiple range; changing them does not delete readings.
 
 `referenceMilkGrams` and each reading's `milkGrams` store actual measured milk
-weight. `targetTemperatureC` is an optional shared milk-temperature note (0 means
-unspecified). The note is not used by the duration calculation or sent as a
-machine setting. Skins should preserve it when editing configuration; using the
-shared settings page handles this automatically.
+weight. `targetTemperatureC` is required for new saves and filters the active
+Multiple readings. It is not sent as a machine setting. Legacy single-flow data
+without a target is preserved at the migration target instead of being discarded.
 
 A `calculate` body may include optional numeric `flow`. If omitted, the plugin
 uses `referenceFlow`. Single mode

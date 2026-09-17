@@ -1,173 +1,205 @@
-function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow }, readReadings, suggestFlows, validReading) {
-  const make = (tag, text) => { const element = document.createElement(tag); if (text) element.textContent = text; return element; };
+function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow }, model) {
+  const { calibrationLibrary, partitionFlowReadings, multipleCalibrationRequirements, calibrationKey, validFlowReading } = model;
+  const make = (tag, text) => { const element = document.createElement(tag); if (text !== undefined) element.textContent = text; return element; };
   const panel = labels.referenceMilkGrams.closest('fieldset').parentElement;
   const manual = labels.referenceMilkGrams.closest('fieldset');
-  const config = make('fieldset'); config.className = 'flow-setup'; config.append(make('legend', 'Calibration type'));
-  const modes = make('div'); modes.className = 'calibration-actions full-width'; config.append(modes);
-  const controls = [];
-  const addButton = (text, parent, action, id) => {
-    const button = make('button', text); button.type = 'button'; if (id) button.id = id;
-    button.addEventListener('click', () => { try { action(); } catch (error) { notice.textContent = error.message; } });
-    parent.append(button); controls.push(button); return button;
-  };
-  let readings = readReadings({ flowReadings: field('flowReadings').value }) || [];
-  let multiple = field('calibrationMode').value === 'multiple';
-  if (!multiple || readings.length < 2 || readings.length > 4) readings = [];
-  let flows = readings.length ? readings.map(reading => reading?.flow) : [Number(field('referenceFlow').value)];
-  let index = 0, locked = false, reviewing = false, guidedMode = false, guide = null, review = null, planValid = true;
-  let clearGuided = () => {}, measurementReady = false;
-  const single = addButton('Single flow', modes, () => setMode(false), 'flow-mode-single');
-  const multi = addButton('Multiple flows', modes, () => setMode(true), 'flow-mode-multiple');
-  const range = make('div'); range.className = 'field-grid full-width'; config.append(range);
-  function input(label, value, type = 'number') {
-    const wrapper = make('label', label); wrapper.className = 'field';
-    const element = make(type === 'select' ? 'select' : 'input');
-    if (type !== 'select') { element.type = type; element.step = '0.1'; element.min = '0.4'; element.max = '2.5'; }
-    element.value = value; wrapper.append(element); controls.push(element);
-    return { wrapper, element };
-  }
-  const minimum = input('Minimum flow (ml/s)', readings[0]?.flow ?? 0.4); minimum.element.id = 'flow-minimum';
-  const maximum = input('Maximum flow (ml/s)', readings[readings.length - 1]?.flow ?? 2.5); maximum.element.id = 'flow-maximum';
-  const count = input('Readings', readings.length || 3, 'select'); count.element.id = 'flow-reading-count';
-  for (const n of [2, 3, 4]) { const option = make('option', n === 3 ? '3 · recommended' : String(n)); option.value = n; count.element.append(option); }
-  count.element.value = readings.length || 3;
-  range.append(minimum.wrapper, maximum.wrapper, count.wrapper);
-  const recommendation = make('p', 'Choose 3 or 4 readings for a wider range or a better estimate between measured flows.'); recommendation.className = 'full-width'; range.append(recommendation);
-  const flowSlot = make('div'); config.append(flowSlot);
-  const weightMode = field('weightMode');
-  controls.push(weightMode);
-  config.append(labels.weightMode);
-  const temperature = field('targetTemperatureC');
-  controls.push(temperature);
-  config.append(labels.targetTemperatureC);
-  const notice = make('p'); notice.className = 'local-status full-width'; notice.id = 'flow-calibration-status'; notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite'); config.append(notice);
+  const config = make('fieldset'); config.className = 'flow-setup';
+  const configGrid = make('div'); configGrid.className = 'field-grid full-width'; config.append(configGrid);
+  configGrid.append(labels.weightMode, labels.targetTemperatureC);
+  const support = make('div'); support.className = 'field flow-support'; support.append(make('label', 'Flow support:'));
+  const supportButtons = make('div'); supportButtons.className = 'calibration-actions'; support.append(supportButtons); configGrid.append(support);
+  const single = make('button', 'Single'), multipleButton = make('button', 'Multiple');
+  single.type = multipleButton.type = 'button'; single.id = 'flow-mode-single'; multipleButton.id = 'flow-mode-multiple';
+  supportButtons.append(single, multipleButton);
+  const range = make('div'); range.className = 'field-grid full-width'; range.append(labels.minimumFlow, labels.maximumFlow); config.append(range);
+  const note = make('p'); note.className = 'local-status full-width'; note.setAttribute('role', 'status'); config.append(note);
   panel.insertBefore(config, manual);
-  const steps = make('div'); steps.className = 'calibration-actions'; steps.id = 'flow-reading-steps'; panel.insertBefore(steps, manual);
-  const readingPanel = make('section'); readingPanel.id = 'flow-reading-panel'; panel.insertBefore(readingPanel, manual); readingPanel.append(manual);
-  const heading = make('h2'); heading.id = 'flow-reading-title'; readingPanel.insertBefore(heading, manual);
-  const instructions = make('p', 'Use fresh milk at the same starting temperature and the same pitcher for each reading. Stop at the same target milk temperature for every reading.'); readingPanel.insertBefore(instructions, manual);
-  const methods = make('div'); methods.className = 'calibration-actions'; readingPanel.insertBefore(methods, manual);
-  const manualButton = addButton('Enter measured time', methods, () => setMethod(false), 'flow-method-manual');
-  const guidedButton = addButton('Guided calibration', methods, () => setMethod(true), 'flow-method-guided');
-  const actions = make('div'); actions.className = 'calibration-actions'; panel.append(actions);
-  const previous = addButton('Previous reading', actions, () => openReading(index - 1), 'flow-previous');
-  const use = addButton('Use values and next', actions, useReading, 'flow-use-reading');
-  const summary = make('fieldset'); summary.id = 'flow-review'; summary.append(make('legend', 'Review calibration')); panel.append(summary);
-  const summaryRows = make('div'); summaryRows.className = 'full-width'; summary.append(summaryRows);
-  function stored() {
-    field('calibrationMode').value = multiple ? 'multiple' : 'single';
-    field('flowReadings').value = JSON.stringify(multiple ? flows.map((flow, i) => readings[i] || { flow, milkGrams: 0, seconds: 0 }) : []);
+
+  const main = make('section'); main.id = 'active-calibrations'; panel.insertBefore(main, manual);
+  const others = make('details'); others.id = 'other-calibrations';
+  others.append(make('summary', 'Other saved calibrations'));
+  const otherRows = make('div'); others.append(otherRows); panel.insertBefore(others, manual);
+  const editor = make('section'); editor.id = 'calibration-editor'; editor.className = 'calibration-editor'; editor.hidden = true;
+  const editorHeader = make('div'); editorHeader.className = 'editor-header';
+  const editorTitle = make('h2'); const editorCancel = make('button', 'Cancel'); editorCancel.type = 'button';
+  const editorFlowLabel = make('label', 'Flow (ml/s)'); editorFlowLabel.className = 'field editor-flow';
+  const editorFlow = make('input'); editorFlow.type = 'number'; editorFlow.min = '0.4'; editorFlow.max = '2.5'; editorFlow.step = '0.1'; editorFlowLabel.append(editorFlow);
+  editorHeader.append(editorTitle, editorFlowLabel, editorCancel); editor.append(editorHeader);
+  const methods = make('div'); methods.className = 'calibration-actions';
+  const guidedButton = make('button', 'Guided calibration'), manualButton = make('button', 'Enter measured time');
+  guidedButton.type = manualButton.type = 'button'; methods.append(guidedButton, manualButton); editor.append(methods);
+  const methodHost = make('div'); editor.append(methodHost);
+  const editorActions = make('div'); editorActions.className = 'calibration-actions';
+  const update = make('button', 'Update saved flow'), close = make('button', 'Close without update');
+  update.type = close.type = 'button'; editorActions.append(update, close); editor.append(editorActions);
+  const newRow = make('div'); newRow.className = 'calibration-actions'; panel.insertBefore(newRow, manual);
+  const newCalibration = make('button', 'New calibration'); newCalibration.type = 'button'; newRow.append(newCalibration);
+
+  let readings = calibrationLibrary(settings()) || [];
+  let openKey = null, draftFlow = NaN, draftTarget = NaN, guidedMode = true, locked = false;
+  let guide = null, review = null, clearGuided = () => {}, measurementReady = false;
+
+  function settings() {
+    return {
+      flowReadings: field('flowReadings').value,
+      calibrationMode: field('calibrationMode').value,
+      targetTemperatureC: Number(field('targetTemperatureC').value),
+      minimumFlow: Number(field('minimumFlow').value), maximumFlow: Number(field('maximumFlow').value),
+      referenceFlow: Number(field('referenceFlow').value), referenceMilkGrams: Number(field('referenceMilkGrams').value),
+      referenceSeconds: Number(field('referenceSeconds').value),
+    };
+  }
+  const same = (a, b) => Math.abs(Number(a) - Number(b)) < 0.000001;
+  function activeAndOther() {
+    return partitionFlowReadings({ ...settings(), flowReadings: JSON.stringify(readings) });
+  }
+  function defaultReading() {
+    const current = settings();
+    return readings.find(reading => same(reading.flow, current.referenceFlow) && same(reading.targetTemperatureC, current.targetTemperatureC));
+  }
+  function syncStored() {
+    readings.sort((a, b) => a.targetTemperatureC - b.targetTemperatureC || a.flow - b.flow);
+    field('flowReadings').value = JSON.stringify(readings);
+    const selected = defaultReading();
+    if (selected) {
+      field('referenceMilkGrams').value = selected.milkGrams;
+      field('referenceSeconds').value = selected.seconds;
+    }
     updateChoices();
   }
-  function paint() {
-    single.setAttribute('aria-pressed', String(!multiple)); multi.setAttribute('aria-pressed', String(multiple));
-    range.hidden = !multiple;
-    steps.hidden = !multiple || reviewing;
-    heading.textContent = planValid ? 'Reading ' + (index + 1) + ' of ' + flows.length + ' · ' + currentFlow() + ' ml/s' : 'Choose a valid flow range';
-    readingPanel.hidden = reviewing; actions.hidden = reviewing; summary.hidden = !reviewing;
-    use.textContent = flows.every((flow, i) => i === index || validReading(readings[i])) ? 'Use values and review' : 'Use values and next';
-    for (const control of controls) control.disabled = locked;
-    previous.disabled = locked || index === 0;
-    use.disabled = locked || !planValid || (guidedMode && !measurementReady);
-    steps.replaceChildren();
-    flows.forEach((flow, i) => {
-      const button = make('button', flow + ' ml/s · ' + (validReading(readings[i]) ? 'Captured' : 'Pending'));
-      button.type = 'button'; button.disabled = locked; button.setAttribute('aria-pressed', String(i === index && !reviewing));
-      button.addEventListener('click', () => openReading(i)); steps.append(button);
-    });
-    if (guide && review) { guide.hidden = !guidedMode; review.hidden = guidedMode; review.open = true; }
-    manualButton.setAttribute('aria-pressed', String(!guidedMode)); guidedButton.setAttribute('aria-pressed', String(guidedMode));
-    summaryRows.replaceChildren();
-    flows.forEach((flow, i) => {
-      const row = make('div'); row.className = 'scale-tools';
-      const reading = readings[i];
-      const temperatureNote = Number(temperature.value) > 0 ? temperature.value + ' °C target' : 'Temperature target not noted';
-      row.append(make('p', flow + ' ml/s · ' + (validReading(reading) ? reading.milkGrams + ' g · ' + reading.seconds + ' s · ' + temperatureNote : 'Not captured')));
-      const edit = make('button', 'Edit'); edit.type = 'button'; edit.disabled = locked; edit.addEventListener('click', () => openReading(i)); row.append(edit); summaryRows.append(row);
-    });
+  function setDefault(reading) {
+    field('targetTemperatureC').value = reading.targetTemperatureC;
+    field('referenceFlow').value = reading.flow;
+    field('referenceMilkGrams').value = reading.milkGrams;
+    field('referenceSeconds').value = reading.seconds;
+    syncFlow(reading.flow, true); syncStored(); render();
   }
-  function currentFlow() { return !planValid ? NaN : multiple ? flows[index] : Number(field('referenceFlow').value); }
-  function openReading(next) {
-    if (locked || next < 0 || next >= flows.length) return;
-    index = next; reviewing = false; measurementReady = false; clearGuided();
-    const reading = readings[index];
+  function readingLabel(reading) {
+    return reading.flow.toFixed(1) + ' ml/s · ' + reading.targetTemperatureC.toFixed(1) + ' °C · ' + reading.milkGrams + ' g · ' + reading.seconds + ' s';
+  }
+  function rowFor(reading, allowDefault = true) {
+    const wrapper = make('div'); wrapper.className = 'saved-calibration';
+    const row = make('div'); row.className = 'saved-calibration-row'; row.append(make('span', readingLabel(reading)));
+    const edit = make('button', openKey === calibrationKey(reading) ? 'Cancel' : 'Edit'); edit.type = 'button';
+    edit.addEventListener('click', () => openKey === calibrationKey(reading) ? cancelEditor() : openEditor(reading)); row.append(edit);
+    const remove = make('button', 'Delete'); remove.type = 'button'; remove.addEventListener('click', () => {
+      if (locked) return; readings = readings.filter(item => calibrationKey(item) !== calibrationKey(reading));
+      if (openKey === calibrationKey(reading)) cancelEditor();
+      const remaining = readings.filter(item => same(item.targetTemperatureC, field('targetTemperatureC').value));
+      if (!defaultReading() && remaining.length) setDefault(remaining.sort((a, b) => a.flow - b.flow)[0]);
+      else { syncStored(); render(); }
+    }); row.append(remove);
+    if (allowDefault) {
+      const label = make('label'); label.className = 'default-choice';
+      const checkbox = make('input'); checkbox.type = 'checkbox'; checkbox.checked = calibrationKey(defaultReading() || {}) === calibrationKey(reading);
+      checkbox.addEventListener('change', () => { if (checkbox.checked) setDefault(reading); }); label.append(checkbox, make('span', 'Default')); row.append(label);
+    }
+    wrapper.append(row);
+    if (openKey === calibrationKey(reading)) wrapper.append(editor);
+    return wrapper;
+  }
+  function missingRow(kind, flow) {
+    const wrapper = make('div'); wrapper.className = 'saved-calibration missing-calibration';
+    const row = make('div'); row.className = 'saved-calibration-row';
+    row.append(make('span', kind + ' reading · ' + flow.toFixed(1) + ' ml/s · required'));
+    const key = 'new:' + kind;
+    const button = make('button', openKey === key ? 'Cancel' : 'Create reading'); button.type = 'button';
+    button.addEventListener('click', () => openKey === key ? cancelEditor() : openEditor(null, flow, key)); row.append(button);
+    wrapper.append(row); if (openKey === key) wrapper.append(editor); return wrapper;
+  }
+  function openEditor(reading, flow, key) {
+    if (locked) return;
+    openKey = key || calibrationKey(reading); draftFlow = Number(reading?.flow ?? flow ?? field('referenceFlow').value);
+    draftTarget = Number(reading?.targetTemperatureC ?? field('targetTemperatureC').value);
     field('referenceMilkGrams').value = reading?.milkGrams || '';
     field('referenceSeconds').value = reading?.seconds || '';
-    notice.textContent = 'Changes only apply after save.';
-    paint();
+    editorFlow.value = draftFlow; measurementReady = false; clearGuided(); editor.hidden = false; render();
   }
-  function planFlows() {
-    if (locked) return;
-    try {
-      const next = suggestFlows(Number(minimum.element.value), Number(maximum.element.value), Number(count.element.value));
-      planValid = true; flows = next; readings = flows.map(() => null); stored(); openReading(0);
-      notice.textContent = 'Capture ' + flows.length + ' readings. Use fresh milk for each flow.';
-    } catch (error) {
-      planValid = false; readings = []; field('flowReadings').value = '[]'; notice.textContent = error.message; updateChoices(); paint();
+  function cancelEditor() { openKey = null; editor.hidden = true; measurementReady = false; clearGuided(); syncStored(); render(); }
+  function setMethod(guidedSelected) { guidedMode = guidedSelected; paintEditor(); }
+  function paintEditor() {
+    if (!openKey) return;
+    editorTitle.textContent = (openKey.startsWith('new:') ? 'New calibration · ' : 'Edit calibration · ') + draftFlow.toFixed(1) + ' ml/s · ' + draftTarget.toFixed(1) + ' °C';
+    editorFlowLabel.hidden = !openKey.startsWith('new:'); editorFlow.disabled = locked;
+    guidedButton.setAttribute('aria-pressed', String(guidedMode)); manualButton.setAttribute('aria-pressed', String(!guidedMode));
+    if (guide && review) { guide.hidden = !guidedMode; review.hidden = guidedMode; review.open = true; }
+    update.disabled = locked || (guidedMode && !measurementReady && !validFlowReading({ flow: draftFlow, targetTemperatureC: draftTarget, milkGrams: Number(field('referenceMilkGrams').value), seconds: Number(field('referenceSeconds').value) }));
+  }
+  function saveEditor() {
+    const reading = { flow: draftFlow, targetTemperatureC: draftTarget, milkGrams: Number(field('referenceMilkGrams').value), seconds: Number(field('referenceSeconds').value) };
+    if (!validFlowReading(reading)) { note.textContent = 'Enter 10–1500 g of milk and 1–255 seconds.'; return; }
+    const oldKey = openKey.startsWith('new:') ? null : openKey;
+    const duplicate = readings.find(item => calibrationKey(item) === calibrationKey(reading) && calibrationKey(item) !== oldKey);
+    if (duplicate) { note.textContent = 'A calibration at this flow and target temperature already exists.'; return; }
+    readings = readings.filter(item => calibrationKey(item) !== oldKey); readings.push(reading);
+    if (!defaultReading() || field('calibrationMode').value === 'single' && readings.length === 1) setDefault(reading);
+    openKey = null; editor.hidden = true; syncStored(); render();
+  }
+  function render() {
+    const isMultiple = field('calibrationMode').value === 'multiple';
+    single.setAttribute('aria-pressed', String(!isMultiple)); multipleButton.setAttribute('aria-pressed', String(isMultiple));
+    range.hidden = !isMultiple; newCalibration.hidden = isMultiple;
+    main.replaceChildren(); otherRows.replaceChildren();
+    const { active, other } = activeAndOther();
+    if (!isMultiple) {
+      main.append(make('p', readings.length ? 'Saved calibrations' : 'No saved calibrations yet. Create the first calibration.'));
+      readings.forEach(reading => main.append(rowFor(reading, true)));
+      newCalibration.textContent = openKey === 'new:single' ? 'Cancel' : (readings.length ? 'New calibration' : 'Create first calibration');
+      others.hidden = true;
+      note.textContent = 'Single uses only the calibration checked as Default.';
+    } else {
+      main.append(make('p', 'Calibrations used for ' + Number(field('targetTemperatureC').value).toFixed(1) + ' °C within the selected range'));
+      active.forEach((reading, index) => { main.append(rowFor(reading, true)); if (index < active.length - 1) { const arrow = make('div', '↓'); arrow.className = 'reading-arrow'; main.append(arrow); } });
+      const required = multipleCalibrationRequirements({ ...settings(), flowReadings: JSON.stringify(readings) });
+      const min = Number(field('minimumFlow').value), max = Number(field('maximumFlow').value);
+      if (!required.hasMinimum) main.append(missingRow('Minimum', min));
+      if (!required.hasInterior) main.append(missingRow('Interior', Math.round(((min + max) / 2) * 10) / 10));
+      if (!required.hasMaximum) main.append(missingRow('Maximum', max));
+      other.forEach(reading => otherRows.append(rowFor(reading, false)));
+      others.hidden = !other.length;
+      note.textContent = required.active.length >= 3 && required.hasMinimum && required.hasMaximum && required.hasInterior
+        ? 'All ' + required.active.length + ' matching calibrations will be used for piecewise interpolation.'
+        : 'Add the exact minimum, exact maximum, and at least one interior reading. A reading near the middle is recommended.';
     }
+    if (openKey && openKey === 'new:single') newRow.append(editor); else if (!openKey) editor.hidden = true;
+    paintEditor(); updateChoices();
   }
-  function setMode(value) {
-    if (locked || value === multiple) return;
-    multiple = value; reviewing = false;
-    if (multiple) planFlows();
-    else { planValid = true; flows = [Number(field('referenceFlow').value)]; readings = [null]; field('referenceSeconds').value = ''; stored(); openReading(0); }
-    stored(); paint();
-  }
-  function setMethod(value) {
-    if (locked) return;
-    guidedMode = value; paint();
-  }
-  function useReading() {
-    if (locked || !planValid || (guidedMode && !measurementReady)) return;
-    const reading = { flow: currentFlow(), milkGrams: Number(field('referenceMilkGrams').value), seconds: Number(field('referenceSeconds').value) };
-    if (!validReading(reading)) throw new Error('Enter 10–1500 g of milk and 1–255 seconds measured at this flow.');
-    readings[index] = reading; stored();
-    const next = flows.findIndex((flow, i) => !validReading(readings[i]));
-    if (next !== -1) openReading(next);
-    else {
-      reviewing = true;
-      notice.textContent = 'Changes only apply after save.';
-      paint();
+  function mode(value) {
+    if (locked) return; field('calibrationMode').value = value;
+    if (value === 'multiple') {
+      const active = activeAndOther().active;
+      if (active.length && !active.some(item => same(item.flow, field('referenceFlow').value))) setDefault(active[0]);
     }
+    cancelEditor();
   }
-  for (const element of [minimum.element, maximum.element, count.element]) element.addEventListener('change', planFlows);
-  form.addEventListener('input', event => {
-    if (event.target === temperature) paint();
-    if (event.target === field('referenceMilkGrams') || event.target === field('referenceSeconds')) {
-      readings[index] = null; stored();
-      measurementReady = false; reviewing = false; paint();
-    }
-  });
-  if (multiple && !readings.length) planFlows();
-  if (!multiple) readings = [{ flow: currentFlow(), milkGrams: Number(field('referenceMilkGrams').value), seconds: Number(field('referenceSeconds').value) }];
-  reviewing = readings.length === flows.length && readings.every(validReading);
-  if (!reviewing) openReading(Math.max(0, readings.findIndex(reading => !validReading(reading))));
-  notice.textContent = 'Changes only apply after save.';
-  paint();
+  single.addEventListener('click', () => mode('single')); multipleButton.addEventListener('click', () => mode('multiple'));
+  newCalibration.addEventListener('click', () => openKey === 'new:single' ? cancelEditor() : openEditor(null, Number(field('referenceFlow').value), 'new:single'));
+  editorCancel.addEventListener('click', cancelEditor); close.addEventListener('click', cancelEditor);
+  guidedButton.addEventListener('click', () => setMethod(true)); manualButton.addEventListener('click', () => setMethod(false)); update.addEventListener('click', saveEditor);
+  editorFlow.addEventListener('input', () => { draftFlow = Number(editorFlow.value); measurementReady = false; clearGuided(); paintEditor(); });
+  for (const input of [field('targetTemperatureC'), field('minimumFlow'), field('maximumFlow')]) input.addEventListener('change', () => { cancelEditor(); render(); });
+  form.addEventListener('input', event => { if (event.target === field('referenceMilkGrams') || event.target === field('referenceSeconds')) { measurementReady = false; paintEditor(); } });
+  syncStored(); render();
   return {
-    currentFlow,
+    currentFlow: () => draftFlow,
+    currentTargetLabel: () => draftTarget.toFixed(1) + ' °C',
     attach(guided, measured, flowLabel, clear) {
-      guide = guided; review = measured; clearGuided = clear; flowSlot.append(flowLabel); paint();
+      guide = guided; review = measured; clearGuided = clear;
+      flowLabel.hidden = true; methodHost.append(guided, measured); paintEditor();
     },
-    lock(value) { locked = value; paint(); },
+    lock(value) { locked = value; for (const button of [single, multipleButton, newCalibration, editorCancel, close, update, guidedButton, manualButton]) button.disabled = value; paintEditor(); },
     acceptMeasurement(result) {
-      if (result.flow !== currentFlow()) throw new Error('The measurement flow changed. Repeat this reading.');
-      field('referenceMilkGrams').value = result.milkGrams;
-      field('referenceSeconds').value = result.seconds;
-      readings[index] = null; stored();
-      measurementReady = true; reviewing = false; paint();
+      if (!same(result.flow, draftFlow)) throw new Error('The measurement flow changed. Repeat this reading.');
+      field('referenceMilkGrams').value = result.milkGrams; field('referenceSeconds').value = result.seconds;
+      measurementReady = true; paintEditor();
     },
-    flowChanged() {
-      if (!multiple) { flows = [Number(field('referenceFlow').value)]; readings = [null]; field('referenceMilkGrams').value = ''; measurementReady = false; clearGuided(); reviewing = false; }
-      paint();
-    },
-    reveal(key) { reviewing = false; if (['referenceMilkGrams', 'referenceSeconds'].includes(key)) guidedMode = false; paint(); },
+    flowChanged() { render(); },
+    reveal() { render(); },
     assertCanSave() {
-      const temperatureTarget = Number(temperature.value);
-      if (!Number.isFinite(temperatureTarget) || temperatureTarget < 0 || temperatureTarget > 100) throw Object.assign(new Error('Enter a target milk temperature between 0 and 100 °C, or leave the note blank.'), { field: 'targetTemperatureC' });
-      if (multiple && (!planValid || flows.length < 2 || readings.length !== flows.length || !readings.every(validReading))) {
-        reviewing = false; paint(); throw Object.assign(new Error('Complete and use every flow reading before saving.'), { field: 'flowReadings' });
-      }
+      if (openKey) throw Object.assign(new Error('Update or close the open calibration before saving.'), { field: 'flowReadings' });
+      const target = Number(field('targetTemperatureC').value);
+      if (!Number.isFinite(target) || target <= 0 || target > 100) throw Object.assign(new Error('Enter the required target milk temperature between 0 and 100 °C.'), { field: 'targetTemperatureC' });
+      syncStored();
     },
   };
 }

@@ -138,9 +138,11 @@ test('removed settings are absent from schema and ignored on upgrade', () => {
 });
 
 test('multiple-flow status and calculations survive settings serialization and plugin reload', () => {
-  const settings = { ...valid, calibrationMode: 'multiple', flowReadings: JSON.stringify([
-    { flow: 0.4, milkGrams: 200, seconds: 40 }, { flow: 2.5, milkGrams: 200, seconds: 10 },
-  ]) };
+  const settings = { ...valid, calibrationMode: 'multiple', referenceFlow: 1.45, flowReadings: JSON.stringify([
+    { flow: 0.4, targetTemperatureC: 60, milkGrams: 200, seconds: 40 },
+    { flow: 1.45, targetTemperatureC: 60, milkGrams: 200, seconds: 25 },
+    { flow: 2.5, targetTemperatureC: 60, milkGrams: 200, seconds: 10 },
+  ]), targetTemperatureC: 60, minimumFlow: 0.4, maximumFlow: 2.5 };
   const instance = plugin(JSON.parse(JSON.stringify(settings)));
   const status = call(instance, 'status').json;
   assert.equal(status.ready, true);

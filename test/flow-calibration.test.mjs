@@ -1,53 +1,76 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { calculate, validateSettings } from '../src/core.mjs';
-import { proposedFlows, flowCalibration } from '../src/flow-calibration.mjs';
+import { calibrationLibrary, flowCalibration, multipleCalibrationRequirements, partitionFlowReadings, secondsPerGram } from '../src/flow-calibration.mjs';
 
 const base = { smallPitcherGrams: 150, mediumPitcherGrams: 0, largePitcherGrams: 0, autoDetect: false,
-  weightMode: 'gross', referenceFlow: 1.5, referenceMilkGrams: 200, referenceSeconds: 40 };
+  weightMode: 'gross', calibrationMode: 'single', targetTemperatureC: 60, referenceFlow: 1.5,
+  referenceMilkGrams: 200, referenceSeconds: 40, minimumFlow: 0.4, maximumFlow: 2.5,
+  flowReadings: JSON.stringify([{ flow: 1.5, targetTemperatureC: 60, milkGrams: 200, seconds: 40 }]) };
 const input = flow => ({ pitcher: 'small', flow, machineState: 'idle', stopAtTemperature: 0,
   samples: [800, 400, 0].map(ageMs => ({ ageMs, weightGrams: 350 })) });
-const readings = [{ flow: 0.4, milkGrams: 200, seconds: 40 }, { flow: 2.5, milkGrams: 100, seconds: 5 }];
-const multi = list => ({ ...base, calibrationMode: 'multiple', flowReadings: JSON.stringify(list) });
+const reading = (flow, seconds, targetTemperatureC = 60) => ({ flow, targetTemperatureC, milkGrams: 200, seconds });
+const multiple = readings => ({ ...base, calibrationMode: 'multiple', referenceFlow: 1.5,
+  flowReadings: JSON.stringify(readings) });
 
-test('single calibration preserves old settings and rejects a different requested flow', () => {
-  assert.equal(calculate(base, input(undefined)).durationSeconds, 40);
-  assert.equal(flowCalibration(base).adjustable, false);
-  assert.throws(() => calculate(base, input(0.4)), e => e.code === 'flow_out_of_range');
+test('single flow uses only the selected saved calibration', () => {
+  const settings = { ...base, flowReadings: JSON.stringify([reading(0.8, 55), reading(1.5, 40), reading(2.2, 25)]) };
+  assert.equal(calculate(settings, input(undefined)).durationSeconds, 40);
+  assert.equal(flowCalibration(settings).adjustable, false);
+  assert.throws(() => calculate(settings, input(0.8)), error => error.code === 'flow_out_of_range');
 });
-test('two readings interpolate seconds per gram, honor endpoints, and never extrapolate', () => {
-  assert.equal(calculate(multi(readings), input(0.4)).durationSeconds, 40);
-  assert.equal(calculate(multi(readings), input(2.5)).durationSeconds, 10);
-  assert.equal(calculate(multi(readings), input(1.45)).durationSeconds, 25);
-  assert.equal(calculate(multi(readings), input(1.45)).workflowPatch.steamSettings.flow, 1.45);
-  for (const flow of [0.3, 2.6, '1.5', NaN]) assert.throws(() => calculate(multi(readings), input(flow)), e => e.code === 'flow_out_of_range');
+
+test('legacy single settings become a preserved library reading at the migration target', () => {
+  const legacy = { ...base, targetTemperatureC: 0, flowReadings: '[]' };
+  assert.deepEqual(calibrationLibrary(legacy), [{ flow: 1.5, targetTemperatureC: 60, milkGrams: 200, seconds: 40 }]);
+  assert.equal(calculate(legacy, input(undefined)).durationSeconds, 40);
 });
-test('one global tared mode applies to multiple-flow calculations', () => {
-  const result = calculate({ ...multi(readings), weightMode: 'tared' }, { ...input(1.45), samples: [800, 400, 0].map(ageMs => ({ ageMs, weightGrams: 200 })) });
-  assert.equal(result.milkGrams, 200);
-  assert.equal(result.durationSeconds, 25);
-  assert.equal(result.pitcherSource, 'tared');
+
+test('active readings match both target temperature and the selected flow range', () => {
+  const settings = { ...multiple([
+    reading(0.4, 60), reading(0.8, 50), reading(1.5, 40), reading(2.5, 20),
+    reading(0.6, 70, 55), reading(2.4, 25, 65),
+  ]), minimumFlow: 0.8, maximumFlow: 2.0, referenceFlow: 1.5 };
+  const { active, other } = partitionFlowReadings(settings);
+  assert.deepEqual(active.map(item => item.flow), [0.8, 1.5]);
+  assert.deepEqual(other.map(item => [item.flow, item.targetTemperatureC]), [[0.6, 55], [0.4, 60], [2.5, 60], [2.4, 65]]);
 });
-test('three readings interpolate only the adjacent segment, including exact middle measurements', () => {
-  const settings = multi([readings[0], { flow: 1.4, milkGrams: 200, seconds: 18 }, readings[1]]);
-  assert.equal(calculate(settings, input(1.4)).durationSeconds, 18);
-  assert.equal(calculate(settings, input(0.9)).durationSeconds, 29);
-  assert.equal(calculate(settings, input(1.95)).durationSeconds, 14);
+
+test('multiple flow requires exact endpoints and at least one interior reading', () => {
+  const valid = { ...multiple([reading(0.4, 60), reading(1.3, 42), reading(2.5, 20)]), referenceFlow: 1.3 };
+  assert.deepEqual(multipleCalibrationRequirements(valid), { active: calibrationLibrary(valid), hasMinimum: true, hasMaximum: true, hasInterior: true });
+  assert.deepEqual(validateSettings(valid), []);
+  for (const readings of [
+    [reading(0.4, 60), reading(2.5, 20)],
+    [reading(0.5, 58), reading(1.3, 42), reading(2.5, 20)],
+    [reading(0.4, 60), reading(1.3, 42), reading(2.4, 22)],
+  ]) assert.ok(validateSettings(multiple(readings)).some(error => error.field === 'flowReadings'));
 });
-test('multiple calibration validates all readings, ordering, separation, and default range', () => {
-  for (const list of [[], [readings[0]], [readings[1], readings[0]], [readings[0], readings[0]],
-    [readings[0], { ...readings[1], milkGrams: 0 }], [readings[0], null],
-    [readings[0], { ...readings[1], flow: 0.41 }], [...readings, ...readings, ...readings]]) {
-    assert.ok(validateSettings(multi(list)).some(e => e.field === 'flowReadings'));
-    assert.equal(flowCalibration(multi(list)), null);
-  }
-  assert.ok(validateSettings({ ...multi(readings), flowReadings: '{bad' }).length);
-  assert.ok(validateSettings({ ...multi(readings), referenceFlow: 0.3 }).length);
-  assert.equal(validateSettings({ ...multi(readings), referenceFlow: 0.9, referenceSeconds: 0 }).length, 0);
+
+test('all matching readings are used for adjacent piecewise interpolation', () => {
+  const settings = multiple([
+    reading(0.4, 80), reading(0.8, 64), reading(1.2, 52), reading(1.5, 40),
+    reading(1.8, 34), reading(2.1, 28), reading(2.5, 20),
+    reading(1.4, 200, 55),
+  ]);
+  assert.equal(flowCalibration(settings).readings.length, 7);
+  assert.equal(secondsPerGram(settings, 1.2), 52 / 200);
+  assert.ok(Math.abs(secondsPerGram(settings, 1.35) - (52 / 200 + 40 / 200) / 2) < 1e-12);
+  assert.equal(calculate(settings, input(1.35)).durationSeconds, 46);
 });
-test('suggested flows include endpoints, are evenly spaced, and reject duplicate rounded values', () => {
-  assert.deepEqual(proposedFlows(0.4, 2.5, 2), [0.4, 2.5]);
-  assert.deepEqual(proposedFlows(0.4, 2.5, 3), [0.4, 1.5, 2.5]);
-  assert.deepEqual(proposedFlows(0.4, 2.5, 4), [0.4, 1.1, 1.8, 2.5]);
-  assert.throws(() => proposedFlows(0.4, 0.5, 4));
+
+test('library can retain more than nine readings while runtime never extrapolates', () => {
+  const readings = Array.from({ length: 22 }, (_, index) => reading(Number((0.4 + index * 0.1).toFixed(1)), 80 - index * 2));
+  const settings = multiple(readings);
+  assert.equal(flowCalibration(settings).readings.length, 22);
+  assert.throws(() => calculate(settings, input(0.3)), error => error.code === 'flow_out_of_range');
+  assert.throws(() => calculate(settings, input(2.6)), error => error.code === 'flow_out_of_range');
+});
+
+test('duplicate flow and target pairs and malformed saved readings are rejected', () => {
+  for (const flowReadings of [
+    JSON.stringify([reading(0.4, 60), reading(0.4, 55), reading(2.5, 20)]),
+    JSON.stringify([reading(0.4, 60), { ...reading(1.5, 40), milkGrams: 0 }, reading(2.5, 20)]),
+    '{bad',
+  ]) assert.ok(validateSettings({ ...multiple([]), flowReadings }).length);
 });

@@ -21,31 +21,31 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
   scaleTools.append(scaleValue); scaleBox.append(scaleTools, scaleHelp);
   weights.insertBefore(scaleBox, labels.smallPitcherGrams);
   const guided = make('fieldset'); guided.className = 'guided-calibration';
-  guided.append(make('legend', 'Guided calibration'));
   const flowLabel = make('label', 'Auto flow / default (ml/s)'); flowLabel.className = 'field calibration-flow';
   const flow = make('input'); flow.id = 'calibration-flow'; flow.type = 'number'; flow.min = '0.4'; flow.max = '2.5'; flow.step = '0.1'; flow.value = field('referenceFlow').value;
   flow.addEventListener('input', () => syncFlow(flow.value)); flowLabel.append(flow); guided.append(flowLabel);
-  const weighStep = make('div'); weighStep.className = 'guided-step'; weighStep.append(make('h2', '1 · Weigh the milk'));
+  const weighStep = make('div'); weighStep.className = 'guided-step';
   const pitcherLabel = make('label', 'Calibration pitcher'); pitcherLabel.className = 'field';
   const pitcher = make('select'); pitcher.setAttribute('aria-label', 'Calibration pitcher'); pitcherLabel.append(pitcher); weighStep.append(pitcherLabel);
   const milkTools = make('div'); milkTools.className = 'scale-tools';
-  const calibrationScaleValue = make('p', 'Scale disconnected.'); milkTools.append(calibrationScaleValue); weighStep.append(milkTools);
-  weighStep.append(make('p', 'Tare empty → place pitcher with milk → capture.'));
+  const readings = make('div');
+  const calibrationScaleValue = make('p', 'Scale reading: disconnected');
+  const derivedMilk = make('p', 'Derived milk weight (g): —'); readings.append(calibrationScaleValue, derivedMilk); milkTools.append(readings); weighStep.append(milkTools);
   const milkActions = make('div'); milkActions.className = 'calibration-actions'; weighStep.append(milkActions);
-  const milk = make('p', 'Choose a configured pitcher, then capture pitcher + milk.'); milk.className = 'local-status'; milk.setAttribute('role', 'status'); milk.setAttribute('aria-live', 'polite');
+  const milk = make('p', 'Tare, then capture a fresh stable milk weight.'); milk.className = 'local-status'; milk.setAttribute('role', 'status'); milk.setAttribute('aria-live', 'polite');
   weighStep.append(milk); guided.append(weighStep);
-  const steamStep = make('div'); steamStep.className = 'guided-step'; steamStep.append(make('h2', '2 · Steam to your desired temperature'));
+  const steamStep = make('div'); steamStep.className = 'guided-step';
   const elapsed = make('p', 'Steaming: 0.0 s'); elapsed.className = 'calibration-timer'; steamStep.append(elapsed);
   const actions = make('div'); actions.className = 'calibration-actions'; steamStep.append(actions);
-  const runStatus = make('p', 'Capture the milk weight to enable Prepare.'); runStatus.className = 'local-status';
+  const runStatus = make('p', 'Capture the milk weight to arm calibration.'); runStatus.className = 'local-status';
   runStatus.setAttribute('role', 'status'); runStatus.setAttribute('aria-live', 'polite'); steamStep.append(runStatus); guided.append(steamStep);
   const help = make('details'); help.append(make('summary', 'Calibration tips'));
-  help.append(make('p', 'Use cold milk and the same normal heater setting each time. Guided calibration always subtracts the selected pitcher from gross weight, even when everyday calculation uses Tared mode. Prepare applies your selected flow. Start and stop here or on the machine. Stop at your preferred milk temperature; warm-up is excluded. Review the measured values and save.'));
+  help.append(make('p', 'Use similar milk, starting temperature, heater setting and technique. Gross mode subtracts the selected empty pitcher. Tared mode expects the empty pitcher to be on the scale when you tare. Capture applies the selected flow and arms timing; use the physical machine controls to start and stop steam. Warm-up is excluded.'));
   guided.append(help);
   const manual = labels.referenceMilkGrams.closest('fieldset');
   const calibrationPanel = manual.parentElement;
   calibrationPanel.insertBefore(guided, manual);
-  const review = make('details'); review.append(make('summary', 'Manual calibration / measured values'));
+  const review = make('details');
   calibrationPanel.insertBefore(review, manual); review.append(manual);
   function setScaleMessage(text) { scaleValue.textContent = text; calibrationScaleValue.textContent = text; }
   const captureButtons = [];
@@ -55,8 +55,9 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
   }
   function clearCapture() {
     captured = null;
-    milk.textContent = 'Choose a configured pitcher, then capture pitcher + milk.';
-    if (!active && !pending) runStatus.textContent = 'Capture the milk weight to enable Prepare.';
+    milk.textContent = 'Tare, then capture a fresh stable milk weight.';
+    derivedMilk.textContent = 'Derived milk weight (g): —';
+    if (!active && !pending) runStatus.textContent = 'Capture the milk weight to arm calibration.';
   }
   async function tare() {
     if (active || pending) throw new Error('Finish or cancel calibration before taring.');
@@ -80,18 +81,27 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
     }, result);
     capture.className = 'capture-button'; labels[size + 'PitcherGrams'].append(result); captureButtons.push(capture);
   }
-  const tareMilk = button('Tare empty scale', milkTools, tare, milk);
-  const captureMilk = button('Capture pitcher + milk', milkActions, () => {
-    const size = pitcher.value, pitcherGrams = Number(field(size + 'PitcherGrams')?.value);
-    if (!sizes.includes(size) || !(pitcherGrams >= 1 && pitcherGrams <= 3000)) throw new Error('Configure and choose a pitcher first.');
+  const tareMilk = button('Tare', milkActions, tare, milk);
+  const captureMilk = button('Capture pitcher + milk (g)', milkActions, async () => {
+    const tared = field('weightMode').value === 'tared';
+    const size = pitcher.value, pitcherGrams = tared ? 0 : Number(field(size + 'PitcherGrams')?.value);
+    if (!tared && (!sizes.includes(size) || !(pitcherGrams >= 1 && pitcherGrams <= 3000))) throw new Error('Configure and choose a pitcher first.');
     const total = weight(), milkGrams = Math.round((total - pitcherGrams) * 10) / 10;
-    const name = size[0].toUpperCase() + size.slice(1);
+    const name = tared ? 'Tared' : size[0].toUpperCase() + size.slice(1);
     if (milkGrams < 10) throw new Error('Milk < 10 g · ' + name + ' pitcher');
     if (milkGrams > 1500) throw new Error('Milk > 1500 g · ' + name + ' pitcher');
-    captured = { pitcher: size, pitcherGrams, milkGrams };
-    milk.textContent = total + ' g total − ' + pitcherGrams + ' g pitcher = ' + milkGrams + ' g milk. Captured.';
-    runStatus.textContent = 'Ready to prepare at ' + flowPlan.currentFlow() + ' ml/s.';
-    paint();
+    captured = { pitcher: tared ? null : size, pitcherGrams, milkGrams };
+    derivedMilk.textContent = 'Derived milk weight (g): ' + milkGrams;
+    milk.textContent = 'Milk weight captured. Start steam now, then stop steam when the milk reaches ' + flowPlan.currentTargetLabel() + '.';
+    pending = true; appliedResult = false; paint();
+    try {
+      const heaterTemperature = Number(new URL(window.location.href).searchParams.get('steamHeaterTemperature'));
+      await command('begin', { ...captured, flow: flowPlan.currentFlow(),
+        ...(Number.isInteger(heaterTemperature) && heaterTemperature >= 135 && heaterTemperature <= 165 ? { heaterTemperature } : {}) });
+    } finally {
+      pending = false; paint();
+      if (returnAfterRestore && active) await command('cancel');
+    }
   }, milk);
   async function command(action, values = {}) {
     try {
@@ -121,27 +131,13 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
       appliedResult = true; captured = null;
       flowPlan.acceptMeasurement(value.result);
       review.open = true;
-      runStatus.textContent = 'Measured ' + value.result.milkGrams + ' g milk in ' + value.result.seconds + ' s at ' + value.result.flow + ' ml/s. Select Use values to continue, or capture fresh milk to try again.';
+      runStatus.textContent = 'Measured ' + value.result.milkGrams + ' g milk in ' + value.result.seconds + ' s at ' + value.result.flow + ' ml/s.';
+      milk.textContent = 'Need to try again? Capture pitcher + milk weight again to start a new timer.';
     }
     paint(); schedule();
     if (returnAfterRestore && !active) { closed = true; window.location.assign(back.href); }
   }
-  const prepare = button('Prepare calibration', actions, async () => {
-    if (!captured) throw new Error('Capture the pitcher and milk weight first.');
-    pending = true; appliedResult = false; paint();
-    try {
-      const heaterTemperature = Number(new URL(window.location.href).searchParams.get('steamHeaterTemperature'));
-      await command('begin', { ...captured, flow: flowPlan.currentFlow(),
-        ...(Number.isInteger(heaterTemperature) && heaterTemperature >= 135 && heaterTemperature <= 165 ? { heaterTemperature } : {}) });
-    } finally {
-      pending = false; paint();
-      if (returnAfterRestore && active) await command('cancel');
-    }
-  });
-  const start = button('Start steam', actions, () => command('start'));
-  const stop = button('Stop steam', actions, () => command('stop'));
   const cancel = button('Cancel calibration', actions, () => command('cancel'));
-  start.disabled = true; stop.disabled = true;
   function paint() {
     const locked = active || pending;
     for (const key of Object.keys(labels)) field(key).disabled = locked;
@@ -149,11 +145,12 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
     flowPlan.lock(locked);
     if (!locked) updateChoices();
     for (const control of [tarePitchers, tareMilk, ...captureButtons, captureMilk, pitcher]) control.disabled = locked || tarePending;
-    prepare.disabled = locked || !captured || !Number.isFinite(flowPlan.currentFlow());
     cancel.disabled = !active;
     save.disabled = locked;
-    start.disabled = pending || !active || sessionPhase !== 'armed';
-    stop.disabled = !active || ['restoring', 'preparing', 'armed'].includes(sessionPhase);
+    const tared = field('weightMode').value === 'tared';
+    pitcherLabel.hidden = tared;
+    captureMilk.textContent = tared ? 'Capture milk only (g)' : 'Capture pitcher + milk (g)';
+    scaleHelp.textContent = zeroConfirmed ? (tared ? 'Zero confirmed with the empty pitcher. Add milk, then capture.' : 'Zero confirmed. Place pitcher plus milk, then capture.') : (tared ? 'Place the empty pitcher on the scale, then tare.' : 'Tare with nothing on the scale.');
   }
   function updatePitchers() {
     const previous = pitcher.value;
@@ -161,7 +158,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
     for (const size of sizes) {
       const grams = Number(field(size + 'PitcherGrams').value);
       if (!(grams >= 1 && grams <= 3000)) continue;
-      const option = make('option', size[0].toUpperCase() + size.slice(1) + ' (' + grams + ' g)'); option.value = size; pitcher.append(option);
+      const option = make('option', size[0].toUpperCase() + size.slice(1)); option.value = size; pitcher.append(option);
     }
     if (sizes.includes(previous) && Number(field(previous + 'PitcherGrams').value) >= 1) pitcher.value = previous;
     paint();
@@ -171,6 +168,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
 
   });
   pitcher.addEventListener('change', () => { clearCapture(); paint(); });
+  field('weightMode').addEventListener('change', () => { clearCapture(); zeroConfirmed = false; paint(); });
   back.addEventListener('click', async event => {
     if (!active && !pending) return;
     event.preventDefault(); returnAfterRestore = true;
@@ -196,7 +194,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
         try {
           if (Math.abs(captureWeight(samples, now)) <= 0.5) {
             awaitingZero = false; zeroConfirmed = true; samples = [];
-            setScaleMessage('Scale: 0.0 g · Zero confirmed');
+            setScaleMessage('Scale reading: 0.0 g - stable');
             scaleHelp.textContent = milk.textContent = 'Zero confirmed. Now place the pitcher on the scale.';
           }
         } catch {}

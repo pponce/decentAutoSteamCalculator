@@ -3,7 +3,7 @@
   "name": "Auto Steam Calculator",
   "author": "pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)",
   "description": "Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.",
-  "version": "0.11.2",
+  "version": "0.12.0",
   "apiVersion": 1,
   "permissions": [
     "api",
@@ -57,9 +57,9 @@
     },
     "targetTemperatureC": {
       "type": "number",
-      "label": "Target calibration temperature (°C)",
-      "description": "Optional milk-temperature note only. It does not control the heater, stop steam or adjust calculated time. Aim for this same temperature for every reading. Update it and repeat the readings if you calibrate at a different temperature.",
-      "default": 0
+      "label": "Target temp (°C) — required",
+      "description": "Required target milk temperature for this calibration set. Readings are matched by target temperature and flow.",
+      "default": 60
     },
     "referenceMilkGrams": {
       "type": "number",
@@ -79,6 +79,18 @@
       "description": "Fixed flow for single calibration, or default flow within the multiple-calibration range (0.4\u20132.5 ml/s).",
       "default": 0.4
     },
+    "minimumFlow": {
+      "type": "number",
+      "label": "Minimum flow (ml/s)",
+      "description": "Lowest flow used by Multiple flow support. A saved reading is required at this exact flow.",
+      "default": 0.4
+    },
+    "maximumFlow": {
+      "type": "number",
+      "label": "Maximum flow (ml/s)",
+      "description": "Highest flow used by Multiple flow support. A saved reading is required at this exact flow.",
+      "default": 2.5
+    },
     "autoDetect": {
       "type": "boolean",
       "label": "Offer Auto pitcher selection",
@@ -93,13 +105,13 @@
         "multiple"
       ],
       "default": "single",
-      "description": "Single flow is fixed. Multiple flows interpolate between 2\u20134 measured calibrations."
+      "description": "Single uses one selected default. Multiple uses every matching saved calibration within the selected flow range."
     },
     "flowReadings": {
       "type": "string",
       "label": "Measured flow calibrations",
       "default": "[]",
-      "description": "Managed by the Calibration page. JSON readings with flow, milkGrams and seconds."
+      "description": "Managed by the Calibration page. Saved readings include flow, targetTemperatureC, milkGrams and seconds."
     }
   },
   "api": [

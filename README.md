@@ -63,10 +63,17 @@ Select **Open settings**:
 - Enter at least one empty Small, Medium or Large pitcher weight, manually or
   using **Tare empty scale** and **Set from scale**.
 - Optionally enable Auto pitcher selection and complete its required settings.
-- In **Calibration**, choose one **Scale weight mode**. It applies to both
-  single-flow and multiple-flow calculations.
-- Choose single-flow or multiple-flow calibration. Record the **actual milk-only
-  weight for every reading**, manually or with guided calibration.
+- In **Calibration**, choose one **Scale weight mode**. **Gross** subtracts a
+  selected empty pitcher; **Tared** expects the empty pitcher to be on the scale
+  when you tare. The setting applies to every calibration.
+- Enter the required target milk temperature. Choose **Single** to use one saved
+  reading as the default, or **Multiple** to use every saved reading at that
+  target temperature inside the selected flow range.
+- Multiple requires the exact minimum, exact maximum, and at least one interior
+  reading. More matching readings are retained and used to improve interpolation.
+- Record the **actual milk-only weight for every reading**, manually or with
+  guided calibration. Guided capture arms timing; start and stop steam using the
+  physical machine controls.
 - Select **Save calibration**.
 
 ### 6. Test it
