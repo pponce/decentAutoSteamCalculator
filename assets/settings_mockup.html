@@ -34,7 +34,7 @@
 
     #auto-steam-settings-aligned .steam-header {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) 250px;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
       gap: 12px;
     }
@@ -48,9 +48,10 @@
     #auto-steam-settings-aligned h2 { margin-bottom: 3px; font-size: 17px; font-weight: 500; }
     #auto-steam-settings-aligned h3 { margin-bottom: 7px; font-size: 14px; font-weight: 500; }
 
-    #auto-steam-settings-aligned .steam-title { min-width: 0; text-align: center; }
+    #auto-steam-settings-aligned .steam-title { grid-column: 2; min-width: 0; text-align: center; }
     #auto-steam-settings-aligned .steam-title h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #auto-steam-settings-aligned .steam-version { color: var(--steam-muted); font-size: 12px; }
+    #auto-steam-settings-aligned .steam-version { color: var(--steam-muted); font-size: 12px; white-space: nowrap; }
+    #auto-steam-settings-aligned .steam-header-actions { grid-column: 3; display: flex; align-items: center; justify-self: end; gap: 8px; }
 
     #auto-steam-settings-aligned button,
     #auto-steam-settings-aligned input,
@@ -70,7 +71,7 @@
     #auto-steam-settings-aligned select { width: 100%; height: 40px; min-width: 0; padding: 7px 9px; font-size: 16px; }
     #auto-steam-settings-aligned input[type="checkbox"] { width: 22px; min-height: 22px; accent-color: var(--steam-blue); }
 
-    #auto-steam-settings-aligned .steam-back { justify-self: start; background: var(--steam-panel); }
+    #auto-steam-settings-aligned .steam-back { grid-column: 1; justify-self: start; background: var(--steam-panel); }
     #auto-steam-settings-aligned .steam-update {
       justify-self: end;
       width: max-content;
@@ -541,7 +542,6 @@
     }
 
     @media (max-width: 790px) {
-      #auto-steam-settings-aligned .steam-header { grid-template-columns: auto minmax(0, 1fr) auto; }
       #auto-steam-settings-aligned .steam-summary { justify-self: end; }
       #auto-steam-settings-aligned .steam-pitcher-row { grid-template-columns: 82px minmax(90px, 1fr) 120px; }
       #auto-steam-settings-aligned .steam-pitcher-row .steam-result { grid-column: 2 / -1; }
@@ -556,10 +556,10 @@
 
     @media (max-width: 560px) {
       #auto-steam-settings-aligned .steam-page { padding: 12px; }
-      #auto-steam-settings-aligned .steam-header { grid-template-columns: auto 1fr; }
-      #auto-steam-settings-aligned .steam-title { grid-column: 1 / -1; grid-row: 1; padding: 0 86px; }
+      #auto-steam-settings-aligned .steam-header { row-gap: 8px; }
+      #auto-steam-settings-aligned .steam-title { grid-column: 2; grid-row: 1; padding: 0; }
       #auto-steam-settings-aligned .steam-back { grid-column: 1; grid-row: 1; z-index: 1; }
-      #auto-steam-settings-aligned .steam-update { grid-column: 2; grid-row: 2; }
+      #auto-steam-settings-aligned .steam-header-actions { grid-column: 1 / -1; grid-row: 2; justify-self: end; }
       #auto-steam-settings-aligned .steam-subnav { margin-top: -50px; }
       #auto-steam-settings-aligned .steam-tabs { padding-right: 150px; }
       #auto-steam-settings-aligned .steam-summary { margin-top: 3px; justify-self: stretch; flex-wrap: wrap; }
@@ -593,9 +593,11 @@
       <button class="steam-back" type="button">← Settings</button>
       <div class="steam-title">
         <h1>Auto Steam Calculator</h1>
-        <span class="steam-version">Version 0.12.7</span>
       </div>
-      <button class="steam-update" id="steam-mock-update" type="button" hidden>Update</button>
+      <div class="steam-header-actions">
+        <span class="steam-version">Version 0.12.7</span>
+        <button class="steam-update" id="steam-mock-update" type="button" hidden>Update</button>
+      </div>
     </header>
 
     <div class="steam-subnav">

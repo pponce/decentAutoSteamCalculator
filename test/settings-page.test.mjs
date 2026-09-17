@@ -190,6 +190,8 @@ test('Pitchers and Calibration use the recovered mockup component structure', as
   assert.match(source, /#setting-autoDetect\{flex:0 0 30px;width:30px;height:30px/);
   assert.match(source, /\.pitcher-grid\{display:grid;grid-template-columns:repeat\(3/);
   assert.match(source, /\.calibration-library-header\{display:flex/);
+  assert.match(source, /header\{display:grid;grid-template-columns:minmax\(0,1fr\) auto minmax\(0,1fr\)/);
+  assert.match(source, /<div class="extension-title"><h1>Auto Steam Calculator<\/h1><\/div><div class="extension-actions"><span id="extension-version">/);
 });
 
 test('inline editor matches the mockup manual and guided states', async () => {
@@ -326,7 +328,7 @@ test('the header hides its update action when the installed extension is current
 
 test('a newer branch version shows Update and updates only Auto Steam Calculator', async () => {
   const p = await page(partial, { remoteVersion: '0.12.8' });
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.7 · 0.12.8 available');
+  assert.equal(p.ids['extension-version'].textContent, 'Current 0.12.7 → New 0.12.8');
   assert.equal(p.ids['check-extension-update'].hidden, false);
   assert.equal(p.ids['check-extension-update'].textContent, 'Update');
   await p.ids['check-extension-update'].handlers.click();
@@ -337,6 +339,7 @@ test('a newer branch version shows Update and updates only Auto Steam Calculator
 
 test('new permissions require a named approval before updating', async () => {
   const p = await page(partial, { remoteVersion: '0.12.8', remotePermissions: ['api', 'events.machine', 'events.shots'] });
+  assert.equal(p.ids['extension-version'].textContent, 'Current 0.12.7 → New 0.12.8');
   assert.equal(p.ids['approve-extension-update'].hidden, false);
   assert.equal(p.ids['approve-extension-update'].textContent, 'Approve & Update');
   await p.ids['approve-extension-update'].handlers.click();
