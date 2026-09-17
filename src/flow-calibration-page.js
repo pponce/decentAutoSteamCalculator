@@ -4,7 +4,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const make = (tag, text) => { const element = document.createElement(tag); if (text !== undefined) element.textContent = text; return element; };
   const panel = labels.referenceMilkGrams.closest('fieldset').parentElement;
   const manual = labels.referenceMilkGrams.closest('fieldset');
-  const config = make('fieldset'); config.className = 'flow-setup';
+  const config = make('fieldset'); config.className = 'flow-setup settings-section';
   const configGrid = make('div'); configGrid.className = 'calibration-config-grid full-width'; config.append(configGrid);
   const support = make('div'); support.className = 'field flow-support'; support.append(make('label', 'Flow support:'));
   const supportButtons = make('div'); supportButtons.className = 'calibration-actions'; support.append(supportButtons); configGrid.append(support);
@@ -16,10 +16,12 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const note = make('p'); note.className = 'local-status full-width'; note.setAttribute('role', 'status'); config.append(note);
   panel.insertBefore(config, manual);
 
-  const main = make('section'); main.id = 'active-calibrations'; panel.insertBefore(main, manual);
+  const main = make('section'); main.id = 'active-calibrations'; main.className = 'calibration-library settings-section'; panel.insertBefore(main, manual);
   const others = make('details'); others.id = 'other-calibrations';
   others.append(make('summary', 'Other saved calibrations'));
-  const otherRows = make('div'); others.append(otherRows); panel.insertBefore(others, manual);
+  const otherHelp = make('p', 'Readings at another target temperature or outside the selected flow range. They remain saved until deleted.');
+  otherHelp.className = 'other-calibrations-help';
+  const otherRows = make('div'); others.append(otherHelp, otherRows); panel.insertBefore(others, manual);
   const editor = make('section'); editor.id = 'calibration-editor'; editor.className = 'calibration-editor'; editor.hidden = true;
   const editorHome = make('div'); editorHome.hidden = true; panel.insertBefore(editorHome, manual); editorHome.append(editor);
   const editorHeader = make('div'); editorHeader.className = 'editor-header';

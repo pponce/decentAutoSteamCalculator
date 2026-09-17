@@ -44,7 +44,7 @@ async function page(settings = partial, { guided = false, updateVersion = null, 
     return null;
   } };
   const calls = [], savedSettings = [], calibrationCalls = [];
-  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.2', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
+  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.3', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
   let session = null;
   const fetch = async (url, options = {}) => {
     const endpoint = url.split('/').at(-1);
@@ -134,6 +134,24 @@ test('compact calibration controls omit inline help retained by instructions and
   }
   assert.match(p.ids['panel-instructions'].textContent, /Scale weight mode/);
   assert.match(p.ids['panel-glossary'].textContent, /Display preference for calibration targets/);
+});
+
+test('recovered tablet layout keeps quick-reference tabs compact and two-column', async () => {
+  const p = await page();
+  assert.equal(p.ids['panel-instructions'].className, 'settings-panel');
+  assert.equal(p.ids['panel-glossary'].className, 'settings-panel');
+  const helpList = p.ids['panel-instructions'].children.find(child => child.className === 'help-list');
+  assert.ok(helpList);
+  assert.equal(helpList.children.length, 8);
+  assert.equal(helpList.children.every(child => child.className === 'help-section'), true);
+  const glossary = p.ids['panel-glossary'].children.find(child => child.className === 'glossary');
+  assert.ok(glossary);
+  assert.equal(glossary.children.length, 12);
+  assert.equal(glossary.children.every(child => child.className === 'glossary-term'), true);
+  assert.match(source, /#settings-toolbar\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/);
+  assert.match(source, /\.help-list\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(source, /\.glossary\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(source, /@media\(pointer:coarse\)\{button,input,select\{min-height:44px/);
 });
 
 test('multiple mode separates out-of-range and different-temperature readings', async () => {
@@ -229,7 +247,7 @@ test('the settings page requires a target temperature before saving', async () =
 
 test('Check & Update remains in the header and reports GitHub rate limits', async () => {
   const p = await page(partial, { updateError: 'failed 403' });
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.2');
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.3');
   await p.ids['check-extension-update'].handlers.click();
   assert.equal(p.ids['extension-update-dialog'].hidden, false);
   assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);
