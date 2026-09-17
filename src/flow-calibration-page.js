@@ -18,30 +18,43 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
 
   const main = make('section'); main.id = 'active-calibrations'; main.className = 'calibration-library settings-section'; panel.insertBefore(main, manual);
   const others = make('details'); others.id = 'other-calibrations';
-  others.append(make('summary', 'Other saved calibrations'));
+  const otherSummary = make('summary', 'Other saved calibrations'); others.append(otherSummary);
   const otherHelp = make('p', 'Readings at another target temperature or outside the selected flow range. They remain saved until deleted.');
   otherHelp.className = 'other-calibrations-help';
   const otherRows = make('div'); others.append(otherHelp, otherRows); panel.insertBefore(others, manual);
   const editor = make('section'); editor.id = 'calibration-editor'; editor.className = 'calibration-editor'; editor.hidden = true;
   const editorHome = make('div'); editorHome.hidden = true; panel.insertBefore(editorHome, manual); editorHome.append(editor);
   const editorHeader = make('div'); editorHeader.className = 'editor-header';
-  const editorTitle = make('h2'); const editorCancel = make('button', 'Cancel'); editorCancel.type = 'button';
+  const editorHeading = make('div'); editorHeading.className = 'editor-heading';
+  const editorTitleRow = make('div'); editorTitleRow.className = 'editor-title-row';
+  const editorTitle = make('h3');
+  const editorNavigation = make('div'); editorNavigation.className = 'reading-navigation';
+  const previousReading = make('button', '↑'), nextReading = make('button', '↓');
+  previousReading.type = nextReading.type = 'button';
+  previousReading.setAttribute('aria-label', 'Previous reading above'); nextReading.setAttribute('aria-label', 'Next reading below');
+  editorNavigation.append(previousReading, nextReading); editorTitleRow.append(editorTitle, editorNavigation);
+  const editorIdentityHelp = make('span'); editorIdentityHelp.className = 'editor-identity-help';
+  editorHeading.append(editorTitleRow, editorIdentityHelp);
+  const methods = make('div'); methods.className = 'calibration-actions entry-methods';
+  const manualButton = make('button', 'Enter measured time'), guidedButton = make('button', 'Guided calibration');
+  guidedButton.type = manualButton.type = 'button'; methods.append(manualButton, guidedButton);
+  editorHeader.append(editorHeading, methods); editor.append(editorHeader);
+  const identityFields = make('div'); identityFields.className = 'editor-identity-fields';
   const editorFlowLabel = make('label', 'Flow (ml/s)'); editorFlowLabel.className = 'field editor-flow';
-  const editorFlow = make('input'); editorFlow.type = 'number'; editorFlow.min = '0.4'; editorFlow.max = '2.5'; editorFlow.step = '0.1'; editorFlowLabel.append(editorFlow);
-  editorHeader.append(editorTitle, editorFlowLabel, editorCancel); editor.append(editorHeader);
-  const methods = make('div'); methods.className = 'calibration-actions';
-  const guidedButton = make('button', 'Guided calibration'), manualButton = make('button', 'Enter measured time');
-  guidedButton.type = manualButton.type = 'button'; methods.append(guidedButton, manualButton); editor.append(methods);
+  const editorFlow = make('input'); editorFlow.type = 'number'; editorFlow.min = '0.4'; editorFlow.max = '2.5'; editorFlow.step = '0.1';
+  const editorFlowHelp = make('small', 'ml/s · required'); editorFlowLabel.append(editorFlow, editorFlowHelp);
+  const editorTargetLabel = make('label', 'Target temp'); editorTargetLabel.className = 'field editor-target';
+  const editorTarget = make('input'); editorTarget.readOnly = true; const editorTargetHelp = make('small'); editorTargetLabel.append(editorTarget, editorTargetHelp);
+  identityFields.append(editorFlowLabel, editorTargetLabel); editor.append(identityFields);
   const methodHost = make('div'); editor.append(methodHost);
-  const editorActions = make('div'); editorActions.className = 'calibration-actions';
+  const editorActions = make('div'); editorActions.className = 'calibration-actions editor-save-row';
   const update = make('button', 'Update saved flow'), close = make('button', 'Close without update');
-  update.type = close.type = 'button'; editorActions.append(update, close); editor.append(editorActions);
-  const newRow = make('div'); newRow.className = 'calibration-actions'; panel.insertBefore(newRow, manual);
-  const newCalibration = make('button', 'New calibration'); newCalibration.type = 'button'; newRow.append(newCalibration);
+  update.type = close.type = 'button'; update.className = 'primary-action'; editorActions.append(close, update); editor.append(editorActions);
+  const newCalibration = make('button', '+ New calibration'); newCalibration.type = 'button'; newCalibration.className = 'new-calibration';
 
   let displayedUnit = field('temperatureUnit').value || 'F';
   let readings = calibrationLibrary(settings()) || [];
-  let openKey = null, draftFlow = NaN, draftTarget = NaN, guidedMode = true, locked = false;
+  let openKey = null, draftFlow = NaN, draftTarget = NaN, guidedMode = false, locked = false;
   let guide = null, review = null, clearGuided = () => {}, measurementReady = false;
 
   function settings() {
@@ -57,6 +70,17 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const same = (a, b) => Math.abs(Number(a) - Number(b)) < 0.000001;
   function activeAndOther() {
     return partitionFlowReadings({ ...settings(), flowReadings: JSON.stringify(readings) });
+  }
+  function navigationTargets() {
+    if (field('calibrationMode').value !== 'multiple') return [];
+    const { active } = activeAndOther();
+    const required = multipleCalibrationRequirements({ ...settings(), flowReadings: JSON.stringify(readings) });
+    const targets = active.map(reading => ({ key: calibrationKey(reading), flow: reading.flow, reading }));
+    const min = Number(field('minimumFlow').value), max = Number(field('maximumFlow').value);
+    if (!required.hasMinimum) targets.push({ key: 'new:Minimum', flow: min });
+    if (!required.hasInterior) targets.push({ key: 'new:Interior', flow: Math.round(((min + max) / 2) * 10) / 10 });
+    if (!required.hasMaximum) targets.push({ key: 'new:Maximum', flow: max });
+    return targets.sort((a, b) => a.flow - b.flow);
   }
   function defaultReading() {
     const current = settings();
@@ -79,12 +103,15 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     field('referenceSeconds').value = reading.seconds;
     syncFlow(reading.flow, true); syncStored(); render();
   }
-  function readingLabel(reading) {
-    return reading.flow.toFixed(1) + ' ml/s · ' + formatTemperature(reading.targetTemperatureC, displayedUnit) + ' · ' + reading.milkGrams + ' g · ' + reading.seconds + ' s';
+  function readingDetails(reading) {
+    const details = make('div'); details.className = 'saved-calibration-details';
+    const flow = make('span', reading.flow.toFixed(1) + ' ml/s'); flow.className = 'saved-calibration-flow';
+    const meta = make('span', formatTemperature(reading.targetTemperatureC, displayedUnit) + ' · ' + reading.milkGrams + ' g milk · ' + reading.seconds + ' s'); meta.className = 'saved-calibration-meta';
+    details.append(flow, meta); return details;
   }
   function rowFor(reading, allowDefault = true) {
     const wrapper = make('div'); wrapper.className = 'saved-calibration';
-    const row = make('div'); row.className = 'saved-calibration-row'; row.append(make('span', readingLabel(reading)));
+    const row = make('div'); row.className = 'saved-calibration-row'; row.append(readingDetails(reading));
     const edit = make('button', openKey === calibrationKey(reading) ? 'Cancel' : 'Edit'); edit.type = 'button';
     edit.addEventListener('click', () => openKey === calibrationKey(reading) ? cancelEditor() : openEditor(reading)); row.append(edit);
     const remove = make('button', 'Delete'); remove.type = 'button'; remove.addEventListener('click', () => {
@@ -106,7 +133,10 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   function missingRow(kind, flow) {
     const wrapper = make('div'); wrapper.className = 'saved-calibration missing-calibration';
     const row = make('div'); row.className = 'saved-calibration-row';
-    row.append(make('span', kind + ' reading · ' + flow.toFixed(1) + ' ml/s · required'));
+    const details = make('div'); details.className = 'saved-calibration-details';
+    const title = make('span', kind + ' reading · ' + flow.toFixed(1) + ' ml/s'); title.className = 'saved-calibration-flow';
+    const meta = make('span', formatTemperature(settings().targetTemperatureC, displayedUnit) + ' · required'); meta.className = 'saved-calibration-meta';
+    details.append(title, meta); row.append(details);
     const key = 'new:' + kind;
     const button = make('button', openKey === key ? 'Cancel' : 'Create reading'); button.type = 'button';
     button.addEventListener('click', () => openKey === key ? cancelEditor() : openEditor(null, flow, key)); row.append(button);
@@ -122,13 +152,37 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   }
   function cancelEditor() { openKey = null; editor.hidden = true; measurementReady = false; clearGuided(); syncStored(); render(); }
   function setMethod(guidedSelected) { guidedMode = guidedSelected; paintEditor(); }
+  function navigateEditor(direction) {
+    const targets = navigationTargets(), index = targets.findIndex(target => target.key === openKey);
+    const target = targets[index + direction]; if (!target) return;
+    openEditor(target.reading || null, target.flow, target.key);
+  }
   function paintEditor() {
     if (!openKey) return;
-    editorTitle.textContent = (openKey.startsWith('new:') ? 'New calibration · ' : 'Edit calibration · ') + draftFlow.toFixed(1) + ' ml/s · ' + formatTemperature(draftTarget, displayedUnit);
-    editorFlowLabel.hidden = !openKey.startsWith('new:'); editorFlow.disabled = locked;
+    const targets = navigationTargets(), readingIndex = targets.findIndex(target => target.key === openKey);
+    const navigable = field('calibrationMode').value === 'multiple' && readingIndex >= 0;
+    const interior = openKey === 'new:Interior';
+    if (openKey === 'new:single') editorTitle.textContent = 'New saved calibration · ' + formatTemperature(draftTarget, displayedUnit);
+    else if (interior) editorTitle.textContent = '';
+    else if (navigable) editorTitle.textContent = 'Reading ' + (readingIndex + 1) + ' of ' + targets.length + ' · ' + draftFlow.toFixed(1) + ' ml/s · ' + formatTemperature(draftTarget, displayedUnit);
+    else editorTitle.textContent = 'Editing ' + draftFlow.toFixed(1) + ' ml/s · ' + formatTemperature(draftTarget, displayedUnit);
+    editorIdentityHelp.textContent = interior
+      ? 'Target ' + formatTemperature(draftTarget, displayedUnit) + ' · midpoint suggested; choose any interior flow.'
+      : 'Flow and target temperature uniquely identify this calibration.';
+    editorNavigation.hidden = !navigable;
+    previousReading.disabled = locked || readingIndex <= 0; nextReading.disabled = locked || readingIndex < 0 || readingIndex >= targets.length - 1;
+    const editableFlow = openKey === 'new:single' || interior;
+    editorTitle.hidden = interior;
+    if (interior) editorTitleRow.insertBefore(editorFlowLabel, editorNavigation);
+    else identityFields.insertBefore(editorFlowLabel, editorTargetLabel);
+    editorFlowLabel.className = interior ? 'field editor-flow inline-editor-flow' : 'field editor-flow';
+    editorFlowHelp.textContent = interior ? 'ml/s · ' + field('minimumFlow').value + '–' + field('maximumFlow').value : 'ml/s · required';
+    editorFlowLabel.hidden = !editableFlow; editorTargetLabel.hidden = openKey !== 'new:single'; identityFields.hidden = openKey !== 'new:single';
+    editorFlow.disabled = locked; editorTarget.value = temperatureFromC(draftTarget, displayedUnit); editorTargetHelp.textContent = '°' + displayedUnit + ' · from required setting above';
     guidedButton.setAttribute('aria-pressed', String(guidedMode)); manualButton.setAttribute('aria-pressed', String(!guidedMode));
-    if (guide && review) { guide.hidden = !guidedMode; review.hidden = guidedMode; review.open = true; }
+    if (guide && review) { guide.hidden = !guidedMode; review.hidden = guidedMode; }
     update.disabled = locked || (guidedMode && !measurementReady && !validFlowReading({ flow: draftFlow, targetTemperatureC: draftTarget, milkGrams: Number(field('referenceMilkGrams').value), seconds: Number(field('referenceSeconds').value) }));
+    update.textContent = openKey.startsWith('new:') ? 'Create saved calibration' : 'Update saved flow';
   }
   function saveEditor() {
     const reading = { flow: draftFlow, targetTemperatureC: draftTarget, milkGrams: Number(field('referenceMilkGrams').value), seconds: Number(field('referenceSeconds').value) };
@@ -140,6 +194,14 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     if (!defaultReading() || field('calibrationMode').value === 'single' && readings.length === 1) setDefault(reading);
     openKey = null; editor.hidden = true; syncStored(); render();
   }
+  function libraryHeader(title, help, valid) {
+    const header = make('div'); header.className = 'calibration-library-header';
+    const heading = make('div'); const name = make('h3', title); const description = make('span', help); description.className = 'calibration-library-help';
+    heading.append(name, description);
+    const actions = make('div'); actions.className = 'calibration-library-actions';
+    const validation = make('span', valid ? 'Ready to save' : 'More readings needed'); validation.className = 'calibration-validation' + (valid ? '' : ' invalid');
+    actions.append(validation, newCalibration); header.append(heading, actions); return header;
+  }
   function render() {
     if (!openKey) { editor.hidden = true; editorHome.append(editor); }
     const isMultiple = field('calibrationMode').value === 'multiple';
@@ -148,26 +210,36 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     main.replaceChildren(); otherRows.replaceChildren();
     const { active, other } = activeAndOther();
     if (!isMultiple) {
-      main.append(make('p', readings.length ? 'Saved calibrations' : 'No saved calibrations yet. Create the first calibration.'));
+      const selected = defaultReading();
+      main.append(libraryHeader('Saved calibrations (' + readings.length + ')', 'Single uses only the calibration checked as Default.', Boolean(selected)));
+      if (!readings.length) { const empty = make('p', 'No saved calibrations yet. Create the first calibration.'); empty.className = 'empty-calibrations'; main.append(empty); }
       readings.forEach(reading => main.append(rowFor(reading, true)));
-      newCalibration.textContent = openKey === 'new:single' ? 'Cancel' : (readings.length ? 'New calibration' : 'Create first calibration');
+      newCalibration.textContent = openKey === 'new:single' ? 'Cancel' : (readings.length ? '+ New calibration' : 'Create first calibration');
+      if (openKey === 'new:single') {
+        const wrapper = make('div'); wrapper.className = 'saved-calibration new-calibration-editor';
+        const row = make('div'); row.className = 'saved-calibration-row editing';
+        const details = make('div'); details.className = 'saved-calibration-details';
+        const title = make('span', 'New calibration'); title.className = 'saved-calibration-flow';
+        const meta = make('span', 'Target ' + formatTemperature(draftTarget, displayedUnit)); meta.className = 'saved-calibration-meta';
+        details.append(title, meta); row.append(details); wrapper.append(row, editor); main.append(wrapper);
+      }
       others.hidden = true;
       note.textContent = 'Single uses only the calibration checked as Default.';
     } else {
-      main.append(make('p', 'Calibrations used for ' + formatTemperature(settings().targetTemperatureC, displayedUnit) + ' within the selected range'));
-      active.forEach((reading, index) => { main.append(rowFor(reading, true)); if (index < active.length - 1) { const arrow = make('div', '↓'); arrow.className = 'reading-arrow'; main.append(arrow); } });
       const required = multipleCalibrationRequirements({ ...settings(), flowReadings: JSON.stringify(readings) });
-      const min = Number(field('minimumFlow').value), max = Number(field('maximumFlow').value);
-      if (!required.hasMinimum) main.append(missingRow('Minimum', min));
-      if (!required.hasInterior) main.append(missingRow('Interior', Math.round(((min + max) / 2) * 10) / 10));
-      if (!required.hasMaximum) main.append(missingRow('Maximum', max));
+      const complete = required.active.length >= 3 && required.hasMinimum && required.hasMaximum && required.hasInterior;
+      main.append(libraryHeader('Active readings (' + active.length + ')', 'Used by Multiple at ' + formatTemperature(settings().targetTemperatureC, displayedUnit) + ' within the selected range.', complete));
+      for (const target of navigationTargets()) {
+        if (target.reading) main.append(rowFor(target.reading, true));
+        else main.append(missingRow(target.key.slice(4), target.flow));
+      }
       other.forEach(reading => otherRows.append(rowFor(reading, false)));
+      otherSummary.textContent = 'Other saved calibrations (' + other.length + ')';
       others.hidden = !other.length;
-      note.textContent = required.active.length >= 3 && required.hasMinimum && required.hasMaximum && required.hasInterior
+      note.textContent = complete
         ? 'All ' + required.active.length + ' matching calibrations will be used for piecewise interpolation.'
         : 'Add the exact minimum, exact maximum, and at least one interior reading. A reading near the middle is recommended.';
     }
-    if (openKey && openKey === 'new:single') newRow.append(editor);
     paintEditor(); updateChoices();
   }
   function mode(value) {
@@ -180,7 +252,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   }
   single.addEventListener('click', () => mode('single')); multipleButton.addEventListener('click', () => mode('multiple'));
   newCalibration.addEventListener('click', () => openKey === 'new:single' ? cancelEditor() : openEditor(null, Number(field('referenceFlow').value), 'new:single'));
-  editorCancel.addEventListener('click', cancelEditor); close.addEventListener('click', cancelEditor);
+  close.addEventListener('click', cancelEditor); previousReading.addEventListener('click', () => navigateEditor(-1)); nextReading.addEventListener('click', () => navigateEditor(1));
   guidedButton.addEventListener('click', () => setMethod(true)); manualButton.addEventListener('click', () => setMethod(false)); update.addEventListener('click', saveEditor);
   editorFlow.addEventListener('input', () => { draftFlow = Number(editorFlow.value); measurementReady = false; clearGuided(); paintEditor(); });
   function applyTemperaturePresentation() {
@@ -206,7 +278,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
       guide = guided; review = measured; clearGuided = clear;
       flowLabel.hidden = true; methodHost.append(guided, measured); paintEditor();
     },
-    lock(value) { locked = value; for (const button of [single, multipleButton, newCalibration, editorCancel, close, update, guidedButton, manualButton]) button.disabled = value; paintEditor(); },
+    lock(value) { locked = value; for (const button of [single, multipleButton, newCalibration, close, update, guidedButton, manualButton, previousReading, nextReading]) button.disabled = value; paintEditor(); },
     acceptMeasurement(result) {
       if (!same(result.flow, draftFlow)) throw new Error('The measurement flow changed. Repeat this reading.');
       field('referenceMilkGrams').value = result.milkGrams; field('referenceSeconds').value = result.seconds;

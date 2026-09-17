@@ -44,7 +44,7 @@ async function page(settings = partial, { guided = false, updateVersion = null, 
     return null;
   } };
   const calls = [], savedSettings = [], calibrationCalls = [];
-  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.3', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
+  const managed = { id: 'calibrated-steam.reaplugin', version: '0.12.4', source: { kind: 'github_branch', lastError: null }, pendingUpdate: null };
   let session = null;
   const fetch = async (url, options = {}) => {
     const endpoint = url.split('/').at(-1);
@@ -107,7 +107,7 @@ test('single saved calibrations edit inline and every opener toggles to Cancel',
   await p.buttons('Update saved flow')[0].handlers.click();
   assert.equal(p.ids['calibration-editor'].hidden, true);
   assert.match(p.ids['active-calibrations'].textContent, /27 s/);
-  await p.buttons('New calibration')[0].handlers.click();
+  await p.buttons('+ New calibration')[0].handlers.click();
   assert.equal(p.buttons('Cancel').length >= 1, true);
   await p.buttons('Cancel')[0].handlers.click();
   assert.equal(p.ids['calibration-editor'].hidden, true);
@@ -154,6 +154,45 @@ test('recovered tablet layout keeps quick-reference tabs compact and two-column'
   assert.match(source, /@media\(pointer:coarse\)\{button,input,select\{min-height:44px/);
 });
 
+test('Pitchers and Calibration use the recovered mockup component structure', async () => {
+  const p = await page();
+  assert.equal(p.ids['panel-pitchers'].children[0].className, 'panel-intro');
+  assert.equal(p.ids['panel-calibration'].children[0].className, 'panel-intro');
+  assert.equal(p.fields.smallPitcherGrams.parent.parent.className, 'pitcher-grid full-width');
+  assert.equal(p.fields.autoDetect.className, undefined);
+  assert.equal(p.fields.autoDetect.parent.className, 'automatic-switch');
+  assert.match(source, /#setting-autoDetect\{flex:0 0 30px;width:30px;height:30px/);
+  assert.match(source, /\.pitcher-grid\{display:grid;grid-template-columns:repeat\(3/);
+  assert.match(source, /\.calibration-library-header\{display:flex/);
+});
+
+test('inline editor matches the mockup manual and guided states', async () => {
+  const p = await page(); await p.buttons('Edit')[0].handlers.click();
+  assert.equal(p.buttons('Enter measured time')[0]['aria-pressed'], 'true');
+  assert.equal(p.buttons('Guided calibration')[0]['aria-pressed'], 'false');
+  const manual = p.elements().find(item => item.className === 'manual-workspace');
+  const guided = p.elements().find(item => item.className === 'guided-calibration guided-workspace');
+  assert.equal(manual.hidden, false);
+  assert.equal(guided.hidden, true);
+  assert.doesNotMatch(p.ids['calibration-editor'].textContent, /Steaming: 0\.0 s/);
+  assert.match(p.ids['calibration-editor'].textContent, /0\.0 sWaiting for milk capture/);
+  await p.buttons('Guided calibration')[0].handlers.click();
+  assert.equal(manual.hidden, true);
+  assert.equal(guided.hidden, false);
+});
+
+test('multiple-flow editor restores the mockup up and down reading navigation', async () => {
+  const settings = { ...partial, calibrationMode: 'multiple', minimumFlow: 0.6, maximumFlow: 2.0, referenceFlow: 0.6,
+    flowReadings: JSON.stringify([saved(0.6, 40), saved(1.2, 30), saved(2.0, 20)]) };
+  const p = await page(settings); await p.buttons('Edit')[0].handlers.click();
+  assert.match(p.ids['calibration-editor'].textContent, /Reading 1 of 3/);
+  assert.equal(p.buttons('↑')[0].disabled, true);
+  assert.equal(p.buttons('↓')[0].disabled, false);
+  await p.buttons('↓')[0].handlers.click();
+  assert.match(p.ids['calibration-editor'].textContent, /Reading 2 of 3/);
+  assert.equal(p.buttons('↑')[0].disabled, false);
+});
+
 test('multiple mode separates out-of-range and different-temperature readings', async () => {
   const settings = { ...partial, calibrationMode: 'multiple', minimumFlow: 0.6, maximumFlow: 2.0, referenceFlow: 1.2,
     flowReadings: JSON.stringify([saved(0.4, 45), saved(0.6, 40), saved(1.2, 30), saved(2.0, 20), saved(2.4, 18), saved(1.0, 32, 55)]) };
@@ -173,19 +212,22 @@ test('missing multiple requirements have Create reading buttons that toggle to C
   assert.equal(p.buttons('Create reading').length, 3);
   await p.buttons('Create reading')[1].handlers.click();
   assert.equal(p.buttons('Cancel').length >= 1, true);
-  assert.match(p.ids['calibration-editor'].textContent, /1\.5 ml\/s/);
-  const flow = p.elements().find(item => item.parent?.className === 'field editor-flow');
+  const flow = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  assert.equal(flow.value, '1.5');
+  assert.match(p.ids['calibration-editor'].textContent, /ml\/s · 0\.4–2\.5/);
   flow.value = '1.3'; await flow.handlers.input();
-  assert.match(p.ids['calibration-editor'].textContent, /1\.3 ml\/s/);
+  assert.equal(flow.value, '1.3');
   await p.buttons('Cancel')[0].handlers.click();
   assert.equal(p.buttons('Create reading').length, 3);
 });
 
 test('gross and tared guided modes expose the correct capture experience', async () => {
   const gross = await page(); await gross.buttons('Edit')[0].handlers.click();
+  await gross.buttons('Guided calibration')[0].handlers.click();
   assert.equal(gross.buttons('Capture pitcher + milk (g)').length, 1);
   assert.equal(gross.elements().some(item => item.tag === 'select' && item['aria-label'] === 'Calibration pitcher' && !item.parent.hidden), true);
   const tared = await page({ ...partial, weightMode: 'tared' }); await tared.buttons('Edit')[0].handlers.click();
+  await tared.buttons('Guided calibration')[0].handlers.click();
   assert.equal(tared.buttons('Capture milk only (g)').length, 1);
   const pitcher = tared.elements().find(item => item.tag === 'select' && item['aria-label'] === 'Calibration pitcher');
   assert.equal(pitcher.parent.hidden, true);
@@ -193,6 +235,7 @@ test('gross and tared guided modes expose the correct capture experience', async
 
 test('capture arms calibration and physical machine start/stop completes timing without software start/stop buttons', async () => {
   const p = await page(partial, { guided: true }); await p.buttons('Edit')[0].handlers.click();
+  await p.buttons('Guided calibration')[0].handlers.click();
   await p.buttons('Tare')[0].handlers.click(); for (let i = 0; i < 12; i++) p.scale(0); for (let i = 0; i < 12; i++) p.scale(380);
   await p.buttons('Capture pitcher + milk (g)')[0].handlers.click();
   assert.equal(p.calibrationCalls[0].action, 'begin'); assert.equal(p.calibrationCalls[0].milkGrams, 230);
@@ -247,7 +290,7 @@ test('the settings page requires a target temperature before saving', async () =
 
 test('Check & Update remains in the header and reports GitHub rate limits', async () => {
   const p = await page(partial, { updateError: 'failed 403' });
-  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.3');
+  assert.equal(p.ids['extension-version'].textContent, 'Version 0.12.4');
   await p.ids['check-extension-update'].handlers.click();
   assert.equal(p.ids['extension-update-dialog'].hidden, false);
   assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);

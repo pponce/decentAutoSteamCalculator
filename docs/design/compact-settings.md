@@ -7,3 +7,5 @@ Keep one Auto session for the Streamline application lifetime. Leaving the main 
 The physical machine Steam button remains unchanged. No flow-based time compensation is introduced.
 
 The responsive controls retain a 44 px minimum touch target on coarse-pointer devices. The saved-calibration library opens each editor directly below its row, while other target temperatures and out-of-range flows stay in the collapsed Other saved calibrations section.
+
+The Pitchers & Auto tab follows the mockup's three-card pitcher grid and switch row; the Auto checkbox is 30 px normally and 32 px on coarse-pointer tablets. Calibration opens inline editors in Enter measured time mode by default. Guided calibration is an explicit mode with compact scale/milk metrics and a normal-size `Time elapsed` readout, not a large idle timer. Multiple-mode editors retain the mockup's up/down navigation between active and required readings.

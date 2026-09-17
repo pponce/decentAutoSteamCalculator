@@ -1,7 +1,7 @@
 /* Calibrated Steam Timer. GPL-3.0-only. Inspired by Damian / Damian-AU, DSx2. */
 (function () {
 "use strict";
-const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.12.3","apiVersion":1,"permissions":["api","events.machine"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for single- and multiple-flow calculations. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"temperatureUnit":{"type":"enum","label":"Temperature unit","description":"Display preference for calibration targets. Saved calibration temperatures remain stored internally in Celsius.","values":["F","C"],"default":"F"},"targetTemperatureC":{"type":"number","label":"Target temp (°F) — required","description":"Required target milk temperature for this calibration set. Readings are matched by target temperature and flow.","default":60},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow / default (ml/s)","description":"Fixed flow for single calibration, or default flow within the multiple-calibration range (0.4–2.5 ml/s).","default":0.4},"minimumFlow":{"type":"number","label":"Minimum flow (ml/s)","description":"Lowest flow used by Multiple flow support. A saved reading is required at this exact flow.","default":0.4},"maximumFlow":{"type":"number","label":"Maximum flow (ml/s)","description":"Highest flow used by Multiple flow support. A saved reading is required at this exact flow.","default":2.5},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"calibrationMode":{"type":"enum","label":"Calibration type","values":["single","multiple"],"default":"single","description":"Single uses one selected default. Multiple uses every matching saved calibration within the selected flow range."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Managed by the Calibration page. Saved readings include flow, targetTemperatureC, milkGrams and seconds."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}}]};
+const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.12.4","apiVersion":1,"permissions":["api","events.machine"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for single- and multiple-flow calculations. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"temperatureUnit":{"type":"enum","label":"Temperature unit","description":"Display preference for calibration targets. Saved calibration temperatures remain stored internally in Celsius.","values":["F","C"],"default":"F"},"targetTemperatureC":{"type":"number","label":"Target temp (°F) — required","description":"Required target milk temperature for this calibration set. Readings are matched by target temperature and flow.","default":60},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow / default (ml/s)","description":"Fixed flow for single calibration, or default flow within the multiple-calibration range (0.4–2.5 ml/s).","default":0.4},"minimumFlow":{"type":"number","label":"Minimum flow (ml/s)","description":"Lowest flow used by Multiple flow support. A saved reading is required at this exact flow.","default":0.4},"maximumFlow":{"type":"number","label":"Maximum flow (ml/s)","description":"Highest flow used by Multiple flow support. A saved reading is required at this exact flow.","default":2.5},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"calibrationMode":{"type":"enum","label":"Calibration type","values":["single","multiple"],"default":"single","description":"Single uses one selected default. Multiple uses every matching saved calibration within the selected flow range."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Managed by the Calibration page. Saved readings include flow, targetTemperatureC, milkGrams and seconds."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}}]};
 const FLOW_MINIMUM = 0.4;
 const FLOW_MAXIMUM = 2.5;
 const MAX_READINGS = 100;
@@ -443,30 +443,43 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
 
   const main = make('section'); main.id = 'active-calibrations'; main.className = 'calibration-library settings-section'; panel.insertBefore(main, manual);
   const others = make('details'); others.id = 'other-calibrations';
-  others.append(make('summary', 'Other saved calibrations'));
+  const otherSummary = make('summary', 'Other saved calibrations'); others.append(otherSummary);
   const otherHelp = make('p', 'Readings at another target temperature or outside the selected flow range. They remain saved until deleted.');
   otherHelp.className = 'other-calibrations-help';
   const otherRows = make('div'); others.append(otherHelp, otherRows); panel.insertBefore(others, manual);
   const editor = make('section'); editor.id = 'calibration-editor'; editor.className = 'calibration-editor'; editor.hidden = true;
   const editorHome = make('div'); editorHome.hidden = true; panel.insertBefore(editorHome, manual); editorHome.append(editor);
   const editorHeader = make('div'); editorHeader.className = 'editor-header';
-  const editorTitle = make('h2'); const editorCancel = make('button', 'Cancel'); editorCancel.type = 'button';
+  const editorHeading = make('div'); editorHeading.className = 'editor-heading';
+  const editorTitleRow = make('div'); editorTitleRow.className = 'editor-title-row';
+  const editorTitle = make('h3');
+  const editorNavigation = make('div'); editorNavigation.className = 'reading-navigation';
+  const previousReading = make('button', '↑'), nextReading = make('button', '↓');
+  previousReading.type = nextReading.type = 'button';
+  previousReading.setAttribute('aria-label', 'Previous reading above'); nextReading.setAttribute('aria-label', 'Next reading below');
+  editorNavigation.append(previousReading, nextReading); editorTitleRow.append(editorTitle, editorNavigation);
+  const editorIdentityHelp = make('span'); editorIdentityHelp.className = 'editor-identity-help';
+  editorHeading.append(editorTitleRow, editorIdentityHelp);
+  const methods = make('div'); methods.className = 'calibration-actions entry-methods';
+  const manualButton = make('button', 'Enter measured time'), guidedButton = make('button', 'Guided calibration');
+  guidedButton.type = manualButton.type = 'button'; methods.append(manualButton, guidedButton);
+  editorHeader.append(editorHeading, methods); editor.append(editorHeader);
+  const identityFields = make('div'); identityFields.className = 'editor-identity-fields';
   const editorFlowLabel = make('label', 'Flow (ml/s)'); editorFlowLabel.className = 'field editor-flow';
-  const editorFlow = make('input'); editorFlow.type = 'number'; editorFlow.min = '0.4'; editorFlow.max = '2.5'; editorFlow.step = '0.1'; editorFlowLabel.append(editorFlow);
-  editorHeader.append(editorTitle, editorFlowLabel, editorCancel); editor.append(editorHeader);
-  const methods = make('div'); methods.className = 'calibration-actions';
-  const guidedButton = make('button', 'Guided calibration'), manualButton = make('button', 'Enter measured time');
-  guidedButton.type = manualButton.type = 'button'; methods.append(guidedButton, manualButton); editor.append(methods);
+  const editorFlow = make('input'); editorFlow.type = 'number'; editorFlow.min = '0.4'; editorFlow.max = '2.5'; editorFlow.step = '0.1';
+  const editorFlowHelp = make('small', 'ml/s · required'); editorFlowLabel.append(editorFlow, editorFlowHelp);
+  const editorTargetLabel = make('label', 'Target temp'); editorTargetLabel.className = 'field editor-target';
+  const editorTarget = make('input'); editorTarget.readOnly = true; const editorTargetHelp = make('small'); editorTargetLabel.append(editorTarget, editorTargetHelp);
+  identityFields.append(editorFlowLabel, editorTargetLabel); editor.append(identityFields);
   const methodHost = make('div'); editor.append(methodHost);
-  const editorActions = make('div'); editorActions.className = 'calibration-actions';
+  const editorActions = make('div'); editorActions.className = 'calibration-actions editor-save-row';
   const update = make('button', 'Update saved flow'), close = make('button', 'Close without update');
-  update.type = close.type = 'button'; editorActions.append(update, close); editor.append(editorActions);
-  const newRow = make('div'); newRow.className = 'calibration-actions'; panel.insertBefore(newRow, manual);
-  const newCalibration = make('button', 'New calibration'); newCalibration.type = 'button'; newRow.append(newCalibration);
+  update.type = close.type = 'button'; update.className = 'primary-action'; editorActions.append(close, update); editor.append(editorActions);
+  const newCalibration = make('button', '+ New calibration'); newCalibration.type = 'button'; newCalibration.className = 'new-calibration';
 
   let displayedUnit = field('temperatureUnit').value || 'F';
   let readings = calibrationLibrary(settings()) || [];
-  let openKey = null, draftFlow = NaN, draftTarget = NaN, guidedMode = true, locked = false;
+  let openKey = null, draftFlow = NaN, draftTarget = NaN, guidedMode = false, locked = false;
   let guide = null, review = null, clearGuided = () => {}, measurementReady = false;
 
   function settings() {
@@ -482,6 +495,17 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const same = (a, b) => Math.abs(Number(a) - Number(b)) < 0.000001;
   function activeAndOther() {
     return partitionFlowReadings({ ...settings(), flowReadings: JSON.stringify(readings) });
+  }
+  function navigationTargets() {
+    if (field('calibrationMode').value !== 'multiple') return [];
+    const { active } = activeAndOther();
+    const required = multipleCalibrationRequirements({ ...settings(), flowReadings: JSON.stringify(readings) });
+    const targets = active.map(reading => ({ key: calibrationKey(reading), flow: reading.flow, reading }));
+    const min = Number(field('minimumFlow').value), max = Number(field('maximumFlow').value);
+    if (!required.hasMinimum) targets.push({ key: 'new:Minimum', flow: min });
+    if (!required.hasInterior) targets.push({ key: 'new:Interior', flow: Math.round(((min + max) / 2) * 10) / 10 });
+    if (!required.hasMaximum) targets.push({ key: 'new:Maximum', flow: max });
+    return targets.sort((a, b) => a.flow - b.flow);
   }
   function defaultReading() {
     const current = settings();
@@ -504,12 +528,15 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     field('referenceSeconds').value = reading.seconds;
     syncFlow(reading.flow, true); syncStored(); render();
   }
-  function readingLabel(reading) {
-    return reading.flow.toFixed(1) + ' ml/s · ' + formatTemperature(reading.targetTemperatureC, displayedUnit) + ' · ' + reading.milkGrams + ' g · ' + reading.seconds + ' s';
+  function readingDetails(reading) {
+    const details = make('div'); details.className = 'saved-calibration-details';
+    const flow = make('span', reading.flow.toFixed(1) + ' ml/s'); flow.className = 'saved-calibration-flow';
+    const meta = make('span', formatTemperature(reading.targetTemperatureC, displayedUnit) + ' · ' + reading.milkGrams + ' g milk · ' + reading.seconds + ' s'); meta.className = 'saved-calibration-meta';
+    details.append(flow, meta); return details;
   }
   function rowFor(reading, allowDefault = true) {
     const wrapper = make('div'); wrapper.className = 'saved-calibration';
-    const row = make('div'); row.className = 'saved-calibration-row'; row.append(make('span', readingLabel(reading)));
+    const row = make('div'); row.className = 'saved-calibration-row'; row.append(readingDetails(reading));
     const edit = make('button', openKey === calibrationKey(reading) ? 'Cancel' : 'Edit'); edit.type = 'button';
     edit.addEventListener('click', () => openKey === calibrationKey(reading) ? cancelEditor() : openEditor(reading)); row.append(edit);
     const remove = make('button', 'Delete'); remove.type = 'button'; remove.addEventListener('click', () => {
@@ -531,7 +558,10 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   function missingRow(kind, flow) {
     const wrapper = make('div'); wrapper.className = 'saved-calibration missing-calibration';
     const row = make('div'); row.className = 'saved-calibration-row';
-    row.append(make('span', kind + ' reading · ' + flow.toFixed(1) + ' ml/s · required'));
+    const details = make('div'); details.className = 'saved-calibration-details';
+    const title = make('span', kind + ' reading · ' + flow.toFixed(1) + ' ml/s'); title.className = 'saved-calibration-flow';
+    const meta = make('span', formatTemperature(settings().targetTemperatureC, displayedUnit) + ' · required'); meta.className = 'saved-calibration-meta';
+    details.append(title, meta); row.append(details);
     const key = 'new:' + kind;
     const button = make('button', openKey === key ? 'Cancel' : 'Create reading'); button.type = 'button';
     button.addEventListener('click', () => openKey === key ? cancelEditor() : openEditor(null, flow, key)); row.append(button);
@@ -547,13 +577,37 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   }
   function cancelEditor() { openKey = null; editor.hidden = true; measurementReady = false; clearGuided(); syncStored(); render(); }
   function setMethod(guidedSelected) { guidedMode = guidedSelected; paintEditor(); }
+  function navigateEditor(direction) {
+    const targets = navigationTargets(), index = targets.findIndex(target => target.key === openKey);
+    const target = targets[index + direction]; if (!target) return;
+    openEditor(target.reading || null, target.flow, target.key);
+  }
   function paintEditor() {
     if (!openKey) return;
-    editorTitle.textContent = (openKey.startsWith('new:') ? 'New calibration · ' : 'Edit calibration · ') + draftFlow.toFixed(1) + ' ml/s · ' + formatTemperature(draftTarget, displayedUnit);
-    editorFlowLabel.hidden = !openKey.startsWith('new:'); editorFlow.disabled = locked;
+    const targets = navigationTargets(), readingIndex = targets.findIndex(target => target.key === openKey);
+    const navigable = field('calibrationMode').value === 'multiple' && readingIndex >= 0;
+    const interior = openKey === 'new:Interior';
+    if (openKey === 'new:single') editorTitle.textContent = 'New saved calibration · ' + formatTemperature(draftTarget, displayedUnit);
+    else if (interior) editorTitle.textContent = '';
+    else if (navigable) editorTitle.textContent = 'Reading ' + (readingIndex + 1) + ' of ' + targets.length + ' · ' + draftFlow.toFixed(1) + ' ml/s · ' + formatTemperature(draftTarget, displayedUnit);
+    else editorTitle.textContent = 'Editing ' + draftFlow.toFixed(1) + ' ml/s · ' + formatTemperature(draftTarget, displayedUnit);
+    editorIdentityHelp.textContent = interior
+      ? 'Target ' + formatTemperature(draftTarget, displayedUnit) + ' · midpoint suggested; choose any interior flow.'
+      : 'Flow and target temperature uniquely identify this calibration.';
+    editorNavigation.hidden = !navigable;
+    previousReading.disabled = locked || readingIndex <= 0; nextReading.disabled = locked || readingIndex < 0 || readingIndex >= targets.length - 1;
+    const editableFlow = openKey === 'new:single' || interior;
+    editorTitle.hidden = interior;
+    if (interior) editorTitleRow.insertBefore(editorFlowLabel, editorNavigation);
+    else identityFields.insertBefore(editorFlowLabel, editorTargetLabel);
+    editorFlowLabel.className = interior ? 'field editor-flow inline-editor-flow' : 'field editor-flow';
+    editorFlowHelp.textContent = interior ? 'ml/s · ' + field('minimumFlow').value + '–' + field('maximumFlow').value : 'ml/s · required';
+    editorFlowLabel.hidden = !editableFlow; editorTargetLabel.hidden = openKey !== 'new:single'; identityFields.hidden = openKey !== 'new:single';
+    editorFlow.disabled = locked; editorTarget.value = temperatureFromC(draftTarget, displayedUnit); editorTargetHelp.textContent = '°' + displayedUnit + ' · from required setting above';
     guidedButton.setAttribute('aria-pressed', String(guidedMode)); manualButton.setAttribute('aria-pressed', String(!guidedMode));
-    if (guide && review) { guide.hidden = !guidedMode; review.hidden = guidedMode; review.open = true; }
+    if (guide && review) { guide.hidden = !guidedMode; review.hidden = guidedMode; }
     update.disabled = locked || (guidedMode && !measurementReady && !validFlowReading({ flow: draftFlow, targetTemperatureC: draftTarget, milkGrams: Number(field('referenceMilkGrams').value), seconds: Number(field('referenceSeconds').value) }));
+    update.textContent = openKey.startsWith('new:') ? 'Create saved calibration' : 'Update saved flow';
   }
   function saveEditor() {
     const reading = { flow: draftFlow, targetTemperatureC: draftTarget, milkGrams: Number(field('referenceMilkGrams').value), seconds: Number(field('referenceSeconds').value) };
@@ -565,6 +619,14 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     if (!defaultReading() || field('calibrationMode').value === 'single' && readings.length === 1) setDefault(reading);
     openKey = null; editor.hidden = true; syncStored(); render();
   }
+  function libraryHeader(title, help, valid) {
+    const header = make('div'); header.className = 'calibration-library-header';
+    const heading = make('div'); const name = make('h3', title); const description = make('span', help); description.className = 'calibration-library-help';
+    heading.append(name, description);
+    const actions = make('div'); actions.className = 'calibration-library-actions';
+    const validation = make('span', valid ? 'Ready to save' : 'More readings needed'); validation.className = 'calibration-validation' + (valid ? '' : ' invalid');
+    actions.append(validation, newCalibration); header.append(heading, actions); return header;
+  }
   function render() {
     if (!openKey) { editor.hidden = true; editorHome.append(editor); }
     const isMultiple = field('calibrationMode').value === 'multiple';
@@ -573,26 +635,36 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     main.replaceChildren(); otherRows.replaceChildren();
     const { active, other } = activeAndOther();
     if (!isMultiple) {
-      main.append(make('p', readings.length ? 'Saved calibrations' : 'No saved calibrations yet. Create the first calibration.'));
+      const selected = defaultReading();
+      main.append(libraryHeader('Saved calibrations (' + readings.length + ')', 'Single uses only the calibration checked as Default.', Boolean(selected)));
+      if (!readings.length) { const empty = make('p', 'No saved calibrations yet. Create the first calibration.'); empty.className = 'empty-calibrations'; main.append(empty); }
       readings.forEach(reading => main.append(rowFor(reading, true)));
-      newCalibration.textContent = openKey === 'new:single' ? 'Cancel' : (readings.length ? 'New calibration' : 'Create first calibration');
+      newCalibration.textContent = openKey === 'new:single' ? 'Cancel' : (readings.length ? '+ New calibration' : 'Create first calibration');
+      if (openKey === 'new:single') {
+        const wrapper = make('div'); wrapper.className = 'saved-calibration new-calibration-editor';
+        const row = make('div'); row.className = 'saved-calibration-row editing';
+        const details = make('div'); details.className = 'saved-calibration-details';
+        const title = make('span', 'New calibration'); title.className = 'saved-calibration-flow';
+        const meta = make('span', 'Target ' + formatTemperature(draftTarget, displayedUnit)); meta.className = 'saved-calibration-meta';
+        details.append(title, meta); row.append(details); wrapper.append(row, editor); main.append(wrapper);
+      }
       others.hidden = true;
       note.textContent = 'Single uses only the calibration checked as Default.';
     } else {
-      main.append(make('p', 'Calibrations used for ' + formatTemperature(settings().targetTemperatureC, displayedUnit) + ' within the selected range'));
-      active.forEach((reading, index) => { main.append(rowFor(reading, true)); if (index < active.length - 1) { const arrow = make('div', '↓'); arrow.className = 'reading-arrow'; main.append(arrow); } });
       const required = multipleCalibrationRequirements({ ...settings(), flowReadings: JSON.stringify(readings) });
-      const min = Number(field('minimumFlow').value), max = Number(field('maximumFlow').value);
-      if (!required.hasMinimum) main.append(missingRow('Minimum', min));
-      if (!required.hasInterior) main.append(missingRow('Interior', Math.round(((min + max) / 2) * 10) / 10));
-      if (!required.hasMaximum) main.append(missingRow('Maximum', max));
+      const complete = required.active.length >= 3 && required.hasMinimum && required.hasMaximum && required.hasInterior;
+      main.append(libraryHeader('Active readings (' + active.length + ')', 'Used by Multiple at ' + formatTemperature(settings().targetTemperatureC, displayedUnit) + ' within the selected range.', complete));
+      for (const target of navigationTargets()) {
+        if (target.reading) main.append(rowFor(target.reading, true));
+        else main.append(missingRow(target.key.slice(4), target.flow));
+      }
       other.forEach(reading => otherRows.append(rowFor(reading, false)));
+      otherSummary.textContent = 'Other saved calibrations (' + other.length + ')';
       others.hidden = !other.length;
-      note.textContent = required.active.length >= 3 && required.hasMinimum && required.hasMaximum && required.hasInterior
+      note.textContent = complete
         ? 'All ' + required.active.length + ' matching calibrations will be used for piecewise interpolation.'
         : 'Add the exact minimum, exact maximum, and at least one interior reading. A reading near the middle is recommended.';
     }
-    if (openKey && openKey === 'new:single') newRow.append(editor);
     paintEditor(); updateChoices();
   }
   function mode(value) {
@@ -605,7 +677,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   }
   single.addEventListener('click', () => mode('single')); multipleButton.addEventListener('click', () => mode('multiple'));
   newCalibration.addEventListener('click', () => openKey === 'new:single' ? cancelEditor() : openEditor(null, Number(field('referenceFlow').value), 'new:single'));
-  editorCancel.addEventListener('click', cancelEditor); close.addEventListener('click', cancelEditor);
+  close.addEventListener('click', cancelEditor); previousReading.addEventListener('click', () => navigateEditor(-1)); nextReading.addEventListener('click', () => navigateEditor(1));
   guidedButton.addEventListener('click', () => setMethod(true)); manualButton.addEventListener('click', () => setMethod(false)); update.addEventListener('click', saveEditor);
   editorFlow.addEventListener('input', () => { draftFlow = Number(editorFlow.value); measurementReady = false; clearGuided(); paintEditor(); });
   function applyTemperaturePresentation() {
@@ -631,7 +703,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
       guide = guided; review = measured; clearGuided = clear;
       flowLabel.hidden = true; methodHost.append(guided, measured); paintEditor();
     },
-    lock(value) { locked = value; for (const button of [single, multipleButton, newCalibration, editorCancel, close, update, guidedButton, manualButton]) button.disabled = value; paintEditor(); },
+    lock(value) { locked = value; for (const button of [single, multipleButton, newCalibration, close, update, guidedButton, manualButton, previousReading, nextReading]) button.disabled = value; paintEditor(); },
     acceptMeasurement(result) {
       if (!same(result.flow, draftFlow)) throw new Error('The measurement flow changed. Repeat this reading.');
       field('referenceMilkGrams').value = result.milkGrams; field('referenceSeconds').value = result.seconds;
@@ -663,41 +735,49 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
     return element;
   };
   const weights = labels.smallPitcherGrams.closest('fieldset');
-  const scaleBox = make('div'); scaleBox.className = 'pitcher-scale full-width';
+  const scaleBox = make('div'); scaleBox.className = 'pitcher-section-header full-width';
+  const scaleHeading = make('div');
+  const scaleTitle = make('h3', 'Empty pitcher weights');
+  const scaleValue = make('span', 'Scale disconnected. Manual entry is available.'); scaleValue.className = 'scale-reading';
+  scaleHeading.append(scaleTitle, scaleValue);
   const scaleTools = make('div'); scaleTools.className = 'scale-tools';
-  const scaleValue = make('p', 'Scale disconnected. Manual entry is available.');
   const scaleHelp = make('p', 'Tare with nothing on the scale. Wait for zero, then place an empty pitcher.');
-  scaleHelp.className = 'local-status'; scaleHelp.setAttribute('role', 'status');
-  scaleTools.append(scaleValue); scaleBox.append(scaleTools, scaleHelp);
+  scaleHelp.className = 'visually-hidden'; scaleHelp.setAttribute('role', 'status');
+  scaleBox.append(scaleHeading, scaleTools, scaleHelp);
   weights.insertBefore(scaleBox, labels.smallPitcherGrams);
-  const guided = make('fieldset'); guided.className = 'guided-calibration settings-section';
+  const guided = make('div'); guided.className = 'guided-calibration guided-workspace';
   const flowLabel = make('label', 'Auto flow / default (ml/s)'); flowLabel.className = 'field calibration-flow';
   const flow = make('input'); flow.id = 'calibration-flow'; flow.type = 'number'; flow.min = '0.4'; flow.max = '2.5'; flow.step = '0.1'; flow.value = field('referenceFlow').value;
   flow.addEventListener('input', () => syncFlow(flow.value)); flowLabel.append(flow); guided.append(flowLabel);
-  const weighStep = make('div'); weighStep.className = 'guided-step guided-weigh-step';
+  const guidedBlock = make('div'); guidedBlock.className = 'calibration-workspace-block'; guided.append(guidedBlock);
+  const weighStep = make('div'); weighStep.className = 'guided-overview';
   const pitcherLabel = make('label', 'Calibration pitcher'); pitcherLabel.className = 'field';
   const pitcher = make('select'); pitcher.setAttribute('aria-label', 'Calibration pitcher'); pitcherLabel.append(pitcher); weighStep.append(pitcherLabel);
-  const milkTools = make('div'); milkTools.className = 'scale-tools';
   const readings = make('div'); readings.className = 'guided-readouts';
-  const calibrationScaleValue = make('p', 'Scale reading: disconnected');
-  const derivedMilk = make('p', 'Derived milk weight (g): —'); readings.append(calibrationScaleValue, derivedMilk); milkTools.append(readings); weighStep.append(milkTools);
+  const scaleMetric = make('div'); scaleMetric.className = 'guided-metric'; scaleMetric.append(make('b', 'Scale reading:'));
+  const calibrationScaleValue = make('span', 'disconnected'); scaleMetric.append(calibrationScaleValue);
+  const milkMetric = make('div'); milkMetric.className = 'guided-metric'; milkMetric.append(make('b', 'Derived milk weight (g):'));
+  const derivedMilk = make('span', '—'); milkMetric.append(derivedMilk); readings.append(scaleMetric, milkMetric); weighStep.append(readings);
   const milkActions = make('div'); milkActions.className = 'calibration-actions guided-actions'; weighStep.append(milkActions);
   const milk = make('p', 'Tare, then capture a fresh stable milk weight.'); milk.className = 'local-status'; milk.setAttribute('role', 'status'); milk.setAttribute('aria-live', 'polite');
-  weighStep.append(milk); guided.append(weighStep);
-  const steamStep = make('div'); steamStep.className = 'guided-step guided-steam-step';
-  const elapsed = make('p', 'Steaming: 0.0 s'); elapsed.className = 'calibration-timer'; steamStep.append(elapsed);
+  guidedBlock.append(weighStep, milk);
+  const steamStep = make('div'); steamStep.className = 'guided-steam-controls';
+  const elapsedLabel = make('span', 'Time elapsed: '); elapsedLabel.className = 'timer-readout';
+  const elapsed = make('span', '0.0 s'); elapsed.className = 'calibration-timer'; elapsedLabel.append(elapsed); steamStep.append(elapsedLabel);
+  const runStatus = make('span', 'Waiting for milk capture'); runStatus.className = 'machine-state';
+  runStatus.setAttribute('role', 'status'); runStatus.setAttribute('aria-live', 'polite'); steamStep.append(runStatus);
   const actions = make('div'); actions.className = 'calibration-actions'; steamStep.append(actions);
-  const runStatus = make('p', 'Capture the milk weight to arm calibration.'); runStatus.className = 'local-status';
-  runStatus.setAttribute('role', 'status'); runStatus.setAttribute('aria-live', 'polite'); steamStep.append(runStatus); guided.append(steamStep);
-  const help = make('details'); help.append(make('summary', 'Calibration tips'));
-  help.append(make('p', 'Use similar milk, starting temperature, heater setting and technique. Gross mode subtracts the selected empty pitcher. Tared mode expects the empty pitcher to be on the scale when you tare. Capture applies the selected flow and arms timing; use the physical machine controls to start and stop steam. Warm-up is excluded.'));
-  guided.append(help);
+  guidedBlock.append(steamStep);
   const manual = labels.referenceMilkGrams.closest('fieldset');
+  manual.className += ' manual-fields';
   const calibrationPanel = manual.parentElement;
   calibrationPanel.insertBefore(guided, manual);
-  const review = make('details');
+  const review = make('div'); review.className = 'manual-workspace';
   calibrationPanel.insertBefore(review, manual); review.append(manual);
-  function setScaleMessage(text) { scaleValue.textContent = text; calibrationScaleValue.textContent = text; }
+  function setScaleMessage(text) {
+    scaleValue.textContent = text;
+    calibrationScaleValue.textContent = text.replace(/^Scale(?: reading)?:\s*/i, '');
+  }
   const captureButtons = [];
   function weight() {
     if (!zeroConfirmed || tarePending || awaitingZero) throw new Error('Tare the empty scale and wait for a stable zero first.');
@@ -706,8 +786,9 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
   function clearCapture() {
     captured = null;
     milk.textContent = 'Tare, then capture a fresh stable milk weight.';
-    derivedMilk.textContent = 'Derived milk weight (g): —';
-    if (!active && !pending) runStatus.textContent = 'Capture the milk weight to arm calibration.';
+    derivedMilk.textContent = '—';
+    elapsed.textContent = '0.0 s';
+    if (!active && !pending) runStatus.textContent = 'Waiting for milk capture';
   }
   async function tare() {
     if (active || pending) throw new Error('Finish or cancel calibration before taring.');
@@ -720,6 +801,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
     } finally { tarePending = false; paint(); }
   }
   const tarePitchers = button('Tare empty scale', scaleTools, tare, scaleHelp);
+  const pitcherGrid = make('div'); pitcherGrid.className = 'pitcher-grid full-width';
   for (const size of sizes) {
     const result = make('p'); result.className = 'capture-result'; result.setAttribute('role', 'status');
     const capture = button('Set from scale', labels[size + 'PitcherGrams'], () => {
@@ -731,6 +813,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
     }, result);
     capture.className = 'capture-button'; labels[size + 'PitcherGrams'].append(result); captureButtons.push(capture);
   }
+  pitcherGrid.append(...sizes.map(size => labels[size + 'PitcherGrams'])); weights.append(pitcherGrid);
   const tareMilk = button('Tare', milkActions, tare, milk);
   const captureMilk = button('Capture pitcher + milk (g)', milkActions, async () => {
     const tared = field('weightMode').value === 'tared';
@@ -741,7 +824,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
     if (milkGrams < 10) throw new Error('Milk < 10 g · ' + name + ' pitcher');
     if (milkGrams > 1500) throw new Error('Milk > 1500 g · ' + name + ' pitcher');
     captured = { pitcher: tared ? null : size, pitcherGrams, milkGrams };
-    derivedMilk.textContent = 'Derived milk weight (g): ' + milkGrams;
+    derivedMilk.textContent = String(milkGrams);
     milk.textContent = 'Milk weight captured. Start steam now, then stop steam when the milk reaches ' + flowPlan.currentTargetLabel() + '.';
     pending = true; appliedResult = false; paint();
     try {
@@ -775,13 +858,13 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
   function accept(value) {
     sessionPhase = value.phase;
     token = value.token ?? token; active = value.active === true;
-    runStatus.textContent = value.message || ({ armed: 'Ready to start.', starting: 'Waiting for steam to start…', heating: 'Heating — counter will start when steam flows.', steaming: 'Stop when the milk reaches your desired temperature.', restoring: 'Restoring previous steam settings…' }[value.phase] ?? value.phase);
-    elapsed.textContent = 'Steaming: ' + Number(value.seconds || 0).toFixed(1) + ' s';
+    runStatus.textContent = value.message || ({ armed: 'Waiting for machine steam', starting: 'Waiting for machine steam', heating: 'Heating · Timer waiting', steaming: 'Machine steam detected · Timing', restoring: 'Restoring previous steam settings…' }[value.phase] ?? value.phase);
+    elapsed.textContent = Number(value.seconds || 0).toFixed(1) + ' s';
     if (value.result && !appliedResult) {
       appliedResult = true; captured = null;
       flowPlan.acceptMeasurement(value.result);
       review.open = true;
-      runStatus.textContent = 'Measured ' + value.result.milkGrams + ' g milk in ' + value.result.seconds + ' s at ' + value.result.flow + ' ml/s.';
+      runStatus.textContent = 'Machine steam stopped';
       milk.textContent = 'Need to try again? Capture pitcher + milk weight again to start a new timer.';
     }
     paint(); schedule();
@@ -796,9 +879,11 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
     if (!locked) updateChoices();
     for (const control of [tarePitchers, tareMilk, ...captureButtons, captureMilk, pitcher]) control.disabled = locked || tarePending;
     cancel.disabled = !active;
+    cancel.hidden = !active;
     save.disabled = locked;
     const tared = field('weightMode').value === 'tared';
     pitcherLabel.hidden = tared;
+    weighStep.className = 'guided-overview' + (tared ? ' is-tared' : '');
     captureMilk.textContent = tared ? 'Capture milk only (g)' : 'Capture pitcher + milk (g)';
     scaleHelp.textContent = zeroConfirmed ? (tared ? 'Zero confirmed with the empty pitcher. Add milk, then capture.' : 'Zero confirmed. Place pitcher plus milk, then capture.') : (tared ? 'Place the empty pitcher on the scale, then tare.' : 'Tare with nothing on the scale.');
   }
@@ -867,7 +952,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
     scaleSocket?.close();
     if (active && token) fetch(base + '/calibration', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'cancel', token }) }).catch(() => {});
   });
-  flowPlan.attach(guided, review, flowLabel, () => { clearCapture(); zeroConfirmed = false; samples = []; appliedResult = false; elapsed.textContent = 'Steaming: 0.0 s'; paint(); });
+  flowPlan.attach(guided, review, flowLabel, () => { clearCapture(); zeroConfirmed = false; samples = []; appliedResult = false; elapsed.textContent = '0.0 s'; paint(); });
   updatePitchers();
   connectScale();
   return { isActive: () => active || pending, flowChanged() { appliedResult = false; runStatus.textContent = 'Flow changed. Repeat calibration or enter a time measured at this flow.'; }, assertCanSave() { if (active || pending) throw new Error('Finish or cancel calibration before saving.'); } };
@@ -1087,19 +1172,31 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
         ['pitchers', 'Automatic pitcher selection', ['autoDetect', 'singleDrinkGrams', 'singleDrinkPitcher']],
         ['calibration', '', ['weightMode', 'temperatureUnit', 'targetTemperatureC', 'minimumFlow', 'maximumFlow', 'referenceMilkGrams', 'referenceSeconds']],
       ];
-      const captions = { smallPitcherGrams: 'Small (g)', mediumPitcherGrams: 'Medium (g)', largePitcherGrams: 'Large (g)', weightMode: 'Scale weight Mode' };
-      const hints = { smallPitcherGrams: 'Empty pitcher. Blank means unused.', mediumPitcherGrams: 'Empty pitcher. Blank means unused.', largePitcherGrams: 'Empty pitcher. Blank means unused.', weightMode: 'One global choice for single and multiple calibration. Gross: pitcher + milk. Tared: milk only.' };
-      const noInlineHelp = new Set(['weightMode', 'temperatureUnit', 'targetTemperatureC']);
+      panels.pitchers.append(Object.assign(make('p', 'Configure empty pitcher weights manually or capture each one from the connected scale.'), { className: 'panel-intro' }));
+      panels.calibration.append(Object.assign(make('p', 'Set one fixed flow or measure several flows. Changes remain a draft until saved.'), { className: 'panel-intro' }));
+      const captions = { smallPitcherGrams: 'Small', mediumPitcherGrams: 'Medium', largePitcherGrams: 'Large', weightMode: 'Scale weight Mode' };
+      const hints = { smallPitcherGrams: 'Empty pitcher · grams', mediumPitcherGrams: 'Empty pitcher · grams', largePitcherGrams: 'Empty pitcher · grams', weightMode: 'One global choice for single and multiple calibration. Gross: pitcher + milk. Tared: milk only.' };
+      const noInlineHelp = new Set(['weightMode', 'temperatureUnit', 'targetTemperatureC', 'autoDetect']);
       for (const [panelName, heading, keys] of groups) {
-        const section = make('fieldset'); section.className = 'settings-section'; if (heading) section.append(make('legend', heading)); panels[panelName].append(section);
+        const pitcherWeights = keys.includes('smallPitcherGrams'), automatic = keys.includes('autoDetect');
+        const section = make('fieldset'); section.className = 'settings-section' + (pitcherWeights ? ' pitcher-weights-section' : automatic ? ' automatic-section' : ' measured-values');
+        if (heading && !pitcherWeights && !automatic) section.append(make('legend', heading));
+        panels[panelName].append(section);
         let automaticFields;
-        if (keys.includes('autoDetect')) {
-          automaticFields = make('div'); automaticFields.id = 'automatic-fields'; automaticFields.className = 'field-grid';
+        if (automatic) {
+          automaticFields = make('div'); automaticFields.id = 'automatic-fields'; automaticFields.className = 'field-grid automatic-fields';
         }
         for (const key of keys) {
           const item = schema[key]; if (!item) continue;
-          const wrapper = make('div'); wrapper.className = key.endsWith('PitcherGrams') ? 'field pitcher-field' : 'field';
-          const label = make('label', captions[key] || item.label); label.htmlFor = 'setting-' + key; wrapper.append(label);
+          const pitcherField = key.endsWith('PitcherGrams');
+          const wrapper = make(automatic && key === 'autoDetect' ? 'label' : 'div');
+          wrapper.className = pitcherField ? 'field pitcher-field pitcher-card' : key === 'autoDetect' ? 'automatic-switch' : 'field';
+          const label = make(key === 'autoDetect' ? 'span' : 'label'); if (key !== 'autoDetect') label.htmlFor = 'setting-' + key;
+          if (pitcherField) {
+            const badge = make('span', captions[key][0]); badge.className = 'pitcher-card-badge';
+            label.append(badge, make('span', captions[key])); label.className = 'pitcher-card-name';
+          } else label.textContent = captions[key] || item.label;
+          if (key !== 'autoDetect') wrapper.append(label);
           const input = make(item.type === 'enum' ? 'select' : 'input'); input.name = key; input.id = 'setting-' + key;
           if (item.type === 'enum') {
             for (const choice of item.values) {
@@ -1117,12 +1214,15 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
             input.value = item.type === 'number' && savedValue === 0 ? ''
               : key === 'targetTemperatureC' ? temperatureFromC(savedValue, data.settings.temperatureUnit || 'F') : savedValue;
           }
-          wrapper.append(input);
+          if (key === 'autoDetect') wrapper.append(input, label); else wrapper.append(input);
           if (!noInlineHelp.has(key)) wrapper.append(make('small', hints[key] || item.description));
           if (automaticFields && key !== 'autoDetect') automaticFields.append(wrapper); else section.append(wrapper);
           labels[key] = wrapper; fieldPanels[key] = panelName;
         }
-        if (automaticFields) section.append(automaticFields);
+        if (automaticFields) {
+          const help = make('p', 'Optional. Requires Gross mode, all three pitcher weights, and the two values below.'); help.className = 'section-help';
+          section.append(help, automaticFields);
+        }
       }
       panels.instructions.append(Object.assign(make('p', 'The complete workflow, kept concise for quick reference at the machine.'), { className: 'panel-intro' }));
       const instructions = [
@@ -1206,16 +1306,16 @@ function settingsPage() {
 header{display:grid;grid-template-columns:auto minmax(0,1fr) 250px;align-items:center;gap:12px}.extension-title{min-width:0;text-align:center}.extension-title h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#extension-version{display:block;color:var(--muted);font-size:12px}.extension-actions{display:flex;justify-content:flex-end;gap:8px}.extension-actions button{width:max-content;white-space:nowrap;border-color:var(--accent);background:var(--accent);color:#fff}#return-settings{justify-self:start;display:inline-block;min-height:40px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);text-decoration:none}
 .visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.update-dialog{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.55)}.update-dialog-card{width:min(460px,100%);padding:16px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 18px 45px rgba(0,0,0,.3)}.update-dialog-card p{color:var(--muted);overflow-wrap:anywhere}.update-dialog-card button{float:right;min-width:80px;border-color:var(--accent);background:var(--accent);color:#fff}
 #settings-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:10px 0 12px}#settings-tabs{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px}#settings-tabs button{min-height:38px;padding:6px 11px;color:var(--muted)}#settings-tabs [aria-selected=true],button[aria-pressed=true],#save{border-color:var(--accent);background:var(--accent);color:#fff}#configuration-summary{display:flex;align-items:center;justify-self:end;gap:6px;margin:0;color:var(--muted);font-size:12px;white-space:nowrap}.configured-pitcher,.unconfigured-pitcher{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;font-weight:500}.configured-pitcher{background:var(--configured-bg);color:var(--configured-text)}.unconfigured-pitcher{background:var(--unconfigured-bg);color:var(--unconfigured-text)}.configuration-flow{margin-left:5px;color:var(--text);font-weight:500}
-.settings-panel{padding:14px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 5px 17px rgba(43,62,90,.07)}.panel-intro{margin-bottom:11px;color:var(--muted);font-size:12px}.settings-section{margin:0 0 11px;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--soft)}.settings-section:last-child{margin-bottom:0}fieldset.settings-section{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}legend{padding:0 5px;font-size:14px;font-weight:500}.field{display:grid;align-content:start;gap:4px;color:var(--muted);font-size:12px}.field label{color:var(--text);font-weight:500}.field small{color:var(--muted);font-size:12px}.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;grid-column:1/-1}.full-width{grid-column:1/-1}.local-status{margin:8px 0 0;padding:7px 9px;border-radius:7px;background:var(--notice);color:var(--muted);font-size:12px;overflow-wrap:anywhere}
-#panel-pitchers>fieldset:first-child{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}#panel-pitchers>fieldset:first-child .pitcher-field{grid-column:auto;display:grid;grid-template-columns:1fr;grid-template-rows:auto auto auto auto;align-content:start;gap:6px;min-width:0}#panel-pitchers>fieldset:first-child .pitcher-field+.pitcher-field{padding-left:12px;border-left:1px solid var(--border)}#panel-pitchers>fieldset:first-child .pitcher-field button{width:100%}#panel-pitchers>fieldset:first-child .pitcher-field .capture-result{margin:0;color:var(--muted);font-size:12px}.pitcher-scale{grid-column:1/-1}.pitcher-scale .scale-tools{min-height:24px}.scale-tools{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}.scale-tools p{margin:0}#panel-pitchers>fieldset:nth-of-type(2)>.field:first-of-type{display:flex;align-items:center;gap:9px;min-height:38px}#automatic-fields{margin-top:2px}
-.calibration-config-grid{display:grid;grid-template-columns:1.05fr .9fr .68fr 1.15fr;align-items:end;gap:9px}.flow-support{align-self:end}.flow-support .calibration-actions{margin:4px 0 0;flex-wrap:nowrap}.calibration-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:8px 0}.calibration-actions button{min-height:36px;padding:5px 9px}.flow-setup>.field-grid{margin-top:1px}.calibration-library>p:first-child{margin:0 0 4px;font-weight:500}.saved-calibration{border-top:1px solid var(--border)}.saved-calibration:first-of-type{border-top:0}.saved-calibration-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto auto;align-items:center;gap:7px;padding:7px 0}.saved-calibration-row>span{min-width:0}.saved-calibration-row button{min-height:36px;padding:5px 9px}.default-choice{display:flex;align-items:center;gap:6px;min-height:36px;white-space:nowrap;font-size:12px}.default-choice input{width:22px}.missing-calibration{border-top-style:dashed}.reading-arrow{text-align:center;color:var(--muted);font-size:20px;line-height:1}.calibration-editor{margin:0 -7px 8px;padding:10px;border-radius:0 0 8px 8px;background:var(--notice)}.editor-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px}.editor-header h2{margin:0}.editor-flow{width:120px}.calibration-editor .guided-calibration{margin-bottom:8px}.calibration-editor>.calibration-actions:last-child{margin-bottom:0}#other-calibrations{margin:10px 0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}#other-calibrations summary{min-height:40px;padding:9px 11px;cursor:pointer;font-weight:500}#other-calibrations[open]{padding-bottom:7px}#other-calibrations[open] summary{border-bottom:1px solid var(--border)}#other-calibrations>div,#other-calibrations>.other-calibrations-help{margin-right:11px;margin-left:11px}.other-calibrations-help{margin-top:7px;margin-bottom:4px;color:var(--muted);font-size:12px}
-.guided-calibration{display:block}.guided-step{padding:9px 0;border-top:1px solid var(--border)}.guided-weigh-step{display:grid;grid-template-columns:minmax(130px,.58fr) minmax(205px,.92fr) minmax(245px,1.1fr);align-items:stretch;gap:9px}.guided-weigh-step>.field,.guided-weigh-step>.scale-tools,.guided-weigh-step>.guided-actions{min-width:0}.guided-weigh-step>.local-status{grid-column:1/-1}.guided-readouts{display:grid;grid-template-rows:repeat(2,minmax(0,1fr));gap:4px;width:100%}.guided-readouts p{display:flex;align-items:center;min-height:0;padding:4px 9px;border-radius:7px;background:var(--soft);font-variant-numeric:tabular-nums}.guided-actions{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;margin:0}.guided-actions button{width:100%}.guided-steam-step{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.guided-steam-step .calibration-timer{margin:0 auto 0 0;font-size:24px}.guided-steam-step .calibration-actions{margin:0}.guided-steam-step .local-status{flex-basis:100%}.calibration-flow{max-width:220px;margin-bottom:8px}.guided-calibration details{margin-top:8px}.guided-calibration details p{color:var(--muted);font-size:12px}.guided-calibration summary{min-height:36px;padding:7px 0;cursor:pointer}
+.settings-panel{padding:14px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 5px 17px rgba(43,62,90,.07)}.panel-intro{margin-bottom:11px;color:var(--muted);font-size:12px}.settings-section{min-width:0;margin:0 0 11px;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--soft)}.settings-section:last-child{margin-bottom:0}fieldset.settings-section{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.field{display:grid;align-content:start;gap:4px;color:var(--muted);font-size:12px}.field label{color:var(--text);font-weight:500}.field small,.section-help{color:var(--muted);font-size:12px}.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;grid-column:1/-1}.full-width{grid-column:1/-1}.local-status{margin:8px 0 0;padding:7px 9px;border-radius:7px;background:var(--notice);color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.pitcher-weights-section,.automatic-section{display:block!important}.pitcher-section-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.pitcher-section-header h3{margin:0}.scale-reading{color:var(--muted);font-size:12px}.scale-tools{display:flex;align-items:center;gap:8px}.pitcher-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.pitcher-card{display:grid;grid-template-columns:1fr;grid-template-rows:auto auto auto auto;align-content:start;gap:6px;min-width:0}.pitcher-card+.pitcher-card{padding-left:12px;border-left:1px solid var(--border)}.pitcher-card-name{display:flex;align-items:center;gap:7px;color:var(--text)!important}.pitcher-card-badge{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--configured-bg);color:var(--configured-text);font-weight:500}.pitcher-card button{width:100%}.pitcher-card .capture-result{margin:0;color:var(--muted);font-size:12px}.automatic-switch{display:flex;align-items:center;gap:10px;min-height:40px;font-weight:500}.automatic-switch>span{color:var(--text)}#setting-autoDetect{flex:0 0 30px;width:30px;height:30px;min-height:30px}.section-help{margin:4px 0 9px}.automatic-fields{margin-top:0}
+.flow-setup{display:block!important}.calibration-config-grid{display:grid;grid-template-columns:1.05fr .9fr .68fr 1.15fr;align-items:end;gap:9px}.flow-support{align-self:end}.flow-support .calibration-actions{margin:4px 0 0;flex-wrap:nowrap}.calibration-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:8px 0}.calibration-actions button{min-height:36px;padding:5px 9px}.flow-setup>.field-grid{margin-top:10px}.flow-setup>.local-status{margin-top:9px}.calibration-library-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}.calibration-library-header h3{margin:0}.calibration-library-help{color:var(--muted);font-size:12px}.calibration-library-actions{display:flex;align-items:center;gap:8px}.calibration-validation{color:var(--green);font-size:12px}.calibration-validation.invalid{color:var(--danger)}.new-calibration{min-height:36px;padding:5px 9px}.empty-calibrations{margin:8px 0;color:var(--muted);font-size:12px}.saved-calibration{border-top:1px solid var(--border)}.calibration-library-header+.saved-calibration{border-top:0}.saved-calibration-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto auto;align-items:center;gap:7px;padding:7px 0}.saved-calibration-details{min-width:0}.saved-calibration-flow{display:block;font-weight:500}.saved-calibration-meta{display:block;color:var(--muted);font-size:12px}.saved-calibration-row button{min-height:36px;padding:5px 9px}.default-choice{display:flex;align-items:center;gap:6px;min-height:36px;white-space:nowrap;font-size:12px}.default-choice input{width:22px}.missing-calibration{border-top-style:dashed}.saved-calibration-row.editing{margin:0 -7px;padding-right:7px;padding-left:7px;border-radius:8px 8px 0 0;background:var(--notice)}.calibration-editor{margin:0 -7px 8px;padding:10px;border-radius:0 0 8px 8px;background:var(--notice)}.editor-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px}.editor-heading{min-width:0}.editor-title-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.editor-title-row h3{margin:0}.editor-identity-help{color:var(--muted);font-size:12px}.reading-navigation{display:flex;gap:5px}.reading-navigation button{min-width:40px;min-height:36px;padding:4px 9px;font-size:17px}.entry-methods{margin:0;flex-wrap:nowrap}.editor-identity-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:8px}.editor-flow{width:auto}.inline-editor-flow{display:flex;align-items:center;grid-template-columns:none;flex-wrap:wrap;gap:7px;color:var(--text);font-weight:500}.inline-editor-flow input{width:92px;height:36px;min-height:36px}.inline-editor-flow small{font-weight:400}.manual-workspace,.guided-workspace{display:block}.manual-fields,.calibration-workspace-block{margin:0 0 8px!important;padding:10px!important;border:1px solid var(--border)!important;border-radius:8px!important;background:var(--surface)!important}.manual-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important}.editor-save-row{justify-content:space-between;margin:8px 0 0}.primary-action,#save{border-color:var(--accent);background:var(--accent);color:#fff}#other-calibrations{margin:10px 0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}#other-calibrations summary{min-height:40px;padding:9px 11px;cursor:pointer;font-weight:500}#other-calibrations[open]{padding-bottom:7px}#other-calibrations[open] summary{border-bottom:1px solid var(--border)}#other-calibrations>div,#other-calibrations>.other-calibrations-help{margin-right:11px;margin-left:11px}.other-calibrations-help{margin-top:7px;margin-bottom:4px;color:var(--muted);font-size:12px}
+.guided-overview{display:grid;grid-template-columns:minmax(130px,.58fr) minmax(205px,.92fr) minmax(245px,1.1fr);align-items:stretch;gap:9px;margin-bottom:8px}.guided-overview.is-tared{grid-template-columns:minmax(225px,.95fr) minmax(245px,1.05fr)}.guided-overview>*{min-width:0}.guided-readouts{display:grid;grid-template-rows:repeat(2,minmax(0,1fr));gap:4px;width:100%}.guided-metric{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:0;padding:4px 9px;border-radius:7px;background:var(--soft)}.guided-metric b{font-weight:500}.guided-metric span{font-variant-numeric:tabular-nums}.guided-actions{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;margin:0}.guided-actions button{width:100%}.guided-steam-controls{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:8px}.timer-readout{margin-right:auto;font-weight:500;font-variant-numeric:tabular-nums}.calibration-timer{font:inherit}.machine-state{color:var(--muted);font-size:12px}.guided-steam-controls .calibration-actions{margin:0}.calibration-flow{max-width:220px;margin-bottom:8px}
 .help-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.help-section{padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--soft)}.help-section h3{margin-bottom:4px}.help-section p{margin-bottom:0;color:var(--muted);font-size:12px}.glossary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px;margin:0}.glossary-term{padding:9px 0;border-bottom:1px solid var(--border)}.glossary-term dt{margin-bottom:3px;font-weight:500}.glossary-term dd{margin:0;color:var(--muted);font-size:12px}
 #status{min-height:1.5em;margin:0;color:var(--muted);font-size:12px;overflow-wrap:anywhere}.save-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;min-height:40px;margin-top:11px}footer{margin-top:11px;color:var(--muted);font-size:12px}
-@media(pointer:coarse){button,input,select{min-height:44px}input,select{height:44px}#settings-tabs button{min-height:44px}.calibration-actions button,.saved-calibration-row button{min-height:44px}}
-@media(max-width:790px){header{grid-template-columns:auto minmax(0,1fr) auto}.guided-weigh-step{grid-template-columns:1fr}.guided-weigh-step>.local-status{grid-column:1}.calibration-config-grid{grid-template-columns:1fr .9fr .7fr 1.1fr}}
+@media(pointer:coarse){button,input,select{min-height:44px}input,select{height:44px}#settings-tabs button{min-height:44px}.calibration-actions button,.saved-calibration-row button{min-height:44px}#setting-autoDetect{width:32px;height:32px;min-height:32px;flex-basis:32px}}
+@media(max-width:790px){header{grid-template-columns:auto minmax(0,1fr) auto}.calibration-config-grid{grid-template-columns:1fr .9fr .7fr 1.1fr}}
 @media(max-width:680px){#settings-toolbar{grid-template-columns:1fr}#configuration-summary{justify-self:end}.calibration-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){body{padding:12px}header{grid-template-columns:auto 1fr}.extension-title{grid-column:1/-1;grid-row:1;padding:0 86px}.extension-actions{grid-column:2;grid-row:2}#return-settings{grid-column:1;grid-row:1;z-index:1}#settings-toolbar{margin-top:-50px}#settings-tabs{padding-right:150px}#configuration-summary{justify-self:stretch;flex-wrap:wrap}fieldset.settings-section,.field-grid,.calibration-config-grid,#panel-pitchers>fieldset:first-child,.help-list,.glossary{grid-template-columns:1fr}#panel-pitchers>fieldset:first-child .pitcher-field+.pitcher-field{padding-top:10px;padding-left:0;border-top:1px solid var(--border);border-left:0}.saved-calibration-row{grid-template-columns:minmax(0,1fr) auto auto}.saved-calibration-row>span{grid-column:1/-1}.default-choice{grid-column:1/-1;justify-self:end}.editor-header{align-items:stretch}.editor-flow{width:100%}}
+@media(max-width:560px){body{padding:12px}header{grid-template-columns:auto 1fr}.extension-title{grid-column:1/-1;grid-row:1;padding:0 86px}.extension-actions{grid-column:2;grid-row:2}#return-settings{grid-column:1;grid-row:1;z-index:1}#settings-toolbar{margin-top:-50px}#settings-tabs{padding-right:150px}#configuration-summary{justify-self:stretch;flex-wrap:wrap}.field-grid,.calibration-config-grid,.pitcher-grid,.help-list,.glossary,.editor-identity-fields,.guided-overview,.guided-overview.is-tared{grid-template-columns:1fr}.pitcher-card+.pitcher-card{padding-top:10px;padding-left:0;border-top:1px solid var(--border);border-left:0}.calibration-library-header{align-items:stretch;flex-direction:column}.calibration-library-actions{justify-content:space-between}.saved-calibration-row{grid-template-columns:minmax(0,1fr) auto auto}.saved-calibration-details{grid-column:1/-1}.default-choice{grid-column:1/-1;justify-self:end}.editor-header{align-items:stretch}.entry-methods{justify-content:flex-start}.editor-save-row{align-items:stretch}.editor-save-row button{flex:1}}
 </style></head><body>
 <header><a id="return-settings" href="/api/v1/plugins/settings.reaplugin/ui">← Settings</a><div class="extension-title"><h1>Auto Steam Calculator</h1><span id="extension-version">Version …</span></div><div class="extension-actions"><button id="check-extension-update" type="button" disabled>Check &amp; Update</button><button id="approve-extension-update" type="button" hidden>Approve Update</button></div></header>
 <p id="extension-update-status" class="visually-hidden" role="status" aria-live="polite">Loading update status…</p>
