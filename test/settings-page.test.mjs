@@ -282,6 +282,8 @@ test('capture arms calibration and physical machine start/stop completes timing 
 
 test('instructions document matching, interpolation and physical calibration controls', async () => {
   const p = await page();
+  assert.match(p.ids['panel-instructions'].textContent, /Begin with Single flow and one calibration reading/);
+  assert.match(p.ids['panel-instructions'].textContent, /at least three calibration measurements/);
   assert.match(p.ids['panel-instructions'].textContent, /every saved reading at the equivalent target temperature inside the selected range/);
   assert.match(p.ids['panel-instructions'].textContent, /More matching readings improve/);
   assert.match(p.ids['panel-instructions'].textContent, /machine controls/);

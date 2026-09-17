@@ -328,7 +328,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
           section.append(help, automaticFields);
         }
       }
-      panels.instructions.append(Object.assign(make('p', 'The complete workflow, kept concise for quick reference at the machine.'), { className: 'panel-intro' }));
+      panels.instructions.append(Object.assign(make('p', 'Getting started: Begin with Single flow and one calibration reading. When Auto Steam is selected on the main shot page, the extension uses that fixed steam flow. Later, if you want to choose different flows, switch to Multiple and save at least three calibration measurements—the minimum, maximum, and one in between—all at the same target temperature.'), { className: 'panel-intro' }));
       const instructions = [
         ['1 · Configure pitchers', 'Enter at least one empty pitcher weight. To measure one, tare the empty scale, wait for stable zero, place the pitcher on the scale, then select its Set from scale button.'],
         ['2 · Scale weight mode', 'Gross captures pitcher plus milk and subtracts the selected empty-pitcher weight. Tared captures milk only after taring with the empty pitcher already on the scale. One choice applies to every calibration.'],
