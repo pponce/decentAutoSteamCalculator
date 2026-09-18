@@ -566,7 +566,7 @@ test('instructions document matching, interpolation and physical calibration con
   assert.match(p.ids['panel-instructions'].textContent, /dividing line between simple exact calibrations and advanced flow modeling/);
   assert.match(p.ids['panel-instructions'].textContent, /middle ground between a single simple calibration and Interpolate/);
   assert.match(p.ids['panel-instructions'].textContent, /at least three readings/);
-  assert.match(p.ids['panel-instructions'].textContent, /every saved reading at the selected milk target inside the selected range/);
+  assert.match(p.ids['panel-instructions'].textContent, /every saved reading at one selected milk target inside the selected range/);
   assert.match(p.ids['panel-instructions'].textContent, /More matching readings improve/);
   assert.match(p.ids['panel-instructions'].textContent, /machine controls/);
   assert.match(p.ids['panel-glossary'].textContent, /All targets/);

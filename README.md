@@ -168,7 +168,19 @@ npm run build
 Edit `src/` and `manifest.src.json`. Commit the generated root `manifest.json`
 and `plugin.js` with the source. Their root placement is required by Decaid's
 GitHub branch installer. Keep the package and manifest versions equal and keep
-the plugin ID stable. Calculator API version is 5; the Decaid host manifest API
+the plugin ID stable.
+
+### Release-channel promotion
+
+Develop prereleases on `beta` with versions such as `0.13.4-beta.1`. When a beta
+is ready for stable, promote the tested work to `main`, remove the prerelease
+suffix, and wait for the stable `main` CI run to pass. After that stable run is
+green, fast-forward `beta` to the exact same stable commit. This keeps beta
+subscribers enrolled on the beta branch while allowing them to receive the newly
+released stable version. Start the next beta series from that shared stable
+commit. Never move `beta` backward to an older stable commit.
+
+Calculator API version is 5; the Decaid host manifest API
 is 1.
 
 CI runs the tests, checks generated-file consistency, and uploads an installable
