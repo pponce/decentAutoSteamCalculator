@@ -32,8 +32,9 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const smoothCurve = make('input'); smoothCurve.type = 'checkbox'; smoothLabel.append(smoothCurve, make('span', 'Smooth curve fit'));
   const useTarget = make('button', 'Use this milk target'); useTarget.type = 'button'; useTarget.className = 'primary-action';
   previewOptions.append(smoothLabel, useTarget);
-  const previewMethod = make('p'); previewMethod.className = 'interpolation-preview-method';
-  previewCard.append(previewHeader, graph, previewOptions, previewMethod); previewDialog.append(previewCard); panel.append(previewDialog);
+  const previewMethod = make('span'); previewMethod.className = 'interpolation-preview-method';
+  previewOptions.prepend(previewMethod);
+  previewCard.append(previewHeader, graph, previewOptions); previewDialog.append(previewCard); panel.append(previewDialog);
 
   const main = make('section'); main.id = 'active-calibrations'; main.className = 'calibration-library settings-section'; panel.insertBefore(main, manual);
   const others = make('details'); others.id = 'other-calibrations';
@@ -106,6 +107,8 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     const previewSettings = { ...settings(), targetTemperatureC: target, interpolate: true, flowReadings: JSON.stringify(readings), curveFitTargets };
     const active = partitionFlowReadings(previewSettings).active;
     const model = interpolationModel(previewSettings, target);
+    const smoothProbe = interpolationModel({ ...previewSettings, curveFitTargets: [target] }, target);
+    const smoothAvailable = smoothProbe.kind !== 'linear';
     const minimum = Number(field('minimumFlow').value), maximum = Number(field('maximumFlow').value);
     const weights = [100, 150, 200, 250], width = 760, height = 390, left = 58, top = 20, plotWidth = 560, plotHeight = 300;
     const samples = Array.from({ length: 61 }, (_, index) => minimum + (maximum - minimum) * index / 60);
@@ -129,8 +132,8 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
       parts.push(`<path d="${path}" fill="none" stroke="${colors[index]}" stroke-width="3"/><line x1="640" y1="${47 + index * 28}" x2="666" y2="${47 + index * 28}" stroke="${colors[index]}" stroke-width="3"/><text x="675" y="${51 + index * 28}">${weight} g milk</text>`);
     });
     active.forEach(reading => parts.push(`<circle cx="${x(reading.flow).toFixed(1)}" cy="${y(reading.seconds).toFixed(1)}" r="4" class="graph-reading"><title>${reading.flow.toFixed(1)} ml/s · ${reading.milkGrams} g · ${reading.seconds} s</title></circle>`));
-    parts.push(`<circle cx="648" cy="177" r="4" class="graph-reading"/><text x="675" y="181">Measured reading</text><text x="${left + plotWidth / 2}" y="${height - 12}" text-anchor="middle" class="graph-label">Steam flow (ml/s)</text><text x="16" y="${top + plotHeight / 2}" text-anchor="middle" class="graph-label" transform="rotate(-90 16 ${top + plotHeight / 2})">Calculated time</text></svg>`);
-    return { markup: parts.join(''), model, active, minimum, maximum };
+    parts.push(`<circle cx="648" cy="177" r="4" class="graph-reading"/><text x="675" y="174"><tspan x="675" dy="0">Measured</tspan><tspan x="675" dy="14">reading</tspan></text><text x="${left + plotWidth / 2}" y="${height - 12}" text-anchor="middle" class="graph-label">Steam flow (ml/s)</text><text x="16" y="${top + plotHeight / 2}" text-anchor="middle" class="graph-label" transform="rotate(-90 16 ${top + plotHeight / 2})">Calculated time</text></svg>`);
+    return { markup: parts.join(''), model, smoothAvailable, active, minimum, maximum };
   }
   function renderPreview() {
     const targets = completeTargets();
@@ -141,13 +144,11 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     previewTitle.textContent = 'Preview';
     previewPosition.textContent = 'Milk target ' + formatTemperature(previewTarget, displayedUnit) + (targets.length > 1 ? ' · ' + (index + 1) + ' of ' + targets.length : '');
     previousTarget.disabled = index <= 0; nextTarget.disabled = index >= targets.length - 1;
-    smoothCurve.checked = curveFitTargets.some(target => same(target, previewTarget));
-    const selected = same(Number(field('targetTemperatureC').value), previewTarget);
-    useTarget.disabled = selected; useTarget.textContent = 'Use this milk target';
+    smoothLabel.hidden = !result.smoothAvailable;
+    smoothCurve.checked = result.smoothAvailable && curveFitTargets.some(target => same(target, previewTarget));
+    useTarget.disabled = false; useTarget.textContent = 'Use this milk target';
     graph.innerHTML = result.markup;
-    previewMethod.textContent = result.model.requested
-      ? (result.model.kind === 'linear' ? 'Straight lines are being used because no safe smooth fit improved prediction.' : 'A safe smooth curve was selected automatically from these readings.')
-      : 'Straight-line interpolation is selected.';
+    previewMethod.textContent = result.model.kind === 'linear' ? 'Straight-line interpolation' : 'Smooth curve interpolation';
   }
   function openPreview() {
     previewTarget = Number(field('targetTemperatureC').value || 0);
@@ -363,7 +364,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     curveFitDirty = true; renderPreview();
   });
   useTarget.addEventListener('click', () => {
-    field('targetTemperatureC').value = String(previewTarget); cancelEditor(); renderPreview();
+    field('targetTemperatureC').value = String(previewTarget); cancelEditor(); closePreview(); render();
   });
   newCalibration.addEventListener('click', () => openKey === 'new:saved' ? cancelEditor() : openEditor(null, Number(field('referenceFlow').value), 'new:saved'));
   close.addEventListener('click', cancelEditor); previousReading.addEventListener('click', () => navigateEditor(-1)); nextReading.addEventListener('click', () => navigateEditor(1));

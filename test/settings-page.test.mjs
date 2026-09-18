@@ -338,18 +338,43 @@ test('interpolation preview browses complete milk targets and saves Smooth curve
   assert.equal(p.ids['interpolation-preview-title'].textContent, 'Preview');
   assert.match(p.ids['interpolation-preview-dialog'].textContent, /Milk target 140\.0 °F/);
   assert.match(p.ids['interpolation-preview-graph'].innerHTML, /100 g milk/);
-  assert.match(p.ids['interpolation-preview-graph'].innerHTML, /Measured reading/);
+  assert.match(p.ids['interpolation-preview-graph'].innerHTML, /Measured<\/tspan><tspan[^>]*>reading/);
   await p.buttons('‹')[0].handlers.click();
   assert.equal(p.ids['interpolation-preview-title'].textContent, 'Preview');
   assert.match(p.ids['interpolation-preview-dialog'].textContent, /Milk target 131\.0 °F/);
+  const smooth = p.elements().find(item => item.parent?.className === 'smooth-curve-option');
+  assert.equal(smooth.parent.hidden, false);
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Straight-line interpolation|Smooth curve interpolation/);
+  smooth.checked = true; await smooth.handlers.change();
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Smooth curve interpolation/);
   await p.buttons('Use this milk target')[0].handlers.click();
   assert.equal(p.fields.targetTemperatureC.value, '55');
-  const smooth = p.elements().find(item => item.parent?.className === 'smooth-curve-option');
-  smooth.checked = true; await smooth.handlers.change();
-  assert.match(p.ids['interpolation-preview-dialog'].textContent, /safe smooth curve was selected automatically/);
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, true);
   await p.submit();
   assert.deepEqual(p.persistedLibraries.at(-1).curveFitTargets, [55]);
   assert.equal(p.savedSettings.at(-1).targetTemperatureC, 55);
+});
+
+test('Use this milk target remains actionable for the already-selected only target', async () => {
+  const readings = [saved(0.5, 80, 55), saved(1.5, 40, 55), saved(2.5, 32, 55)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 55, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('Preview')[0].handlers.click();
+  const use = p.buttons('Use this milk target')[0];
+  assert.equal(use.disabled, false);
+  await use.handlers.click();
+  assert.equal(p.fields.targetTemperatureC.value, '55');
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, true);
+});
+
+test('Smooth curve fit is hidden when no safe smooth model is available', async () => {
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('Preview')[0].handlers.click();
+  const smooth = p.elements().find(item => item.parent?.className === 'smooth-curve-option');
+  assert.equal(smooth.parent.hidden, true);
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Straight-line interpolation/);
 });
 
 test('Preview stays hidden for an incomplete selected target', async () => {
