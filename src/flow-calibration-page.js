@@ -316,25 +316,27 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     const validation = make('span', valid ? 'Ready to save' : 'More readings needed'); validation.className = 'calibration-validation' + (valid ? '' : ' invalid');
     actions.append(validation, newCalibration); header.append(heading, actions); return header;
   }
+  function appendNewCalibrationEditor() {
+    if (openKey !== 'new:saved') return;
+    const wrapper = make('div'); wrapper.className = 'saved-calibration new-calibration-editor';
+    const row = make('div'); row.className = 'saved-calibration-row editing';
+    const details = make('div'); details.className = 'saved-calibration-details';
+    const title = make('span', 'New calibration'); title.className = 'saved-calibration-flow';
+    const meta = make('span', 'Milk target ' + formatTemperature(draftTarget, displayedUnit)); meta.className = 'saved-calibration-meta';
+    details.append(title, meta); row.append(details); wrapper.append(row, editor); main.append(wrapper);
+  }
   function render() {
     if (!openKey) { editor.hidden = true; editorHome.append(editor); }
     const interpolate = field('interpolate').checked;
-    range.hidden = !interpolate; newCalibration.hidden = interpolate;
+    range.hidden = !interpolate; newCalibration.hidden = false;
+    newCalibration.textContent = openKey === 'new:saved' ? 'Cancel' : (readings.length ? '+ New calibration' : 'Create first calibration');
     main.replaceChildren(); otherRows.replaceChildren();
     const { active, other } = activeAndOther();
     if (!interpolate) {
       main.append(libraryHeader('Available calibrations (' + active.length + ')', active.length > 0));
       if (!active.length) { const empty = make('p', 'No saved calibrations match this milk target. Create the first calibration or choose All targets.'); empty.className = 'empty-calibrations'; main.append(empty); }
       active.forEach(reading => main.append(rowFor(reading)));
-      newCalibration.textContent = openKey === 'new:saved' ? 'Cancel' : (readings.length ? '+ New calibration' : 'Create first calibration');
-      if (openKey === 'new:saved') {
-        const wrapper = make('div'); wrapper.className = 'saved-calibration new-calibration-editor';
-        const row = make('div'); row.className = 'saved-calibration-row editing';
-        const details = make('div'); details.className = 'saved-calibration-details';
-        const title = make('span', 'New calibration'); title.className = 'saved-calibration-flow';
-        const meta = make('span', 'Milk target ' + formatTemperature(draftTarget, displayedUnit)); meta.className = 'saved-calibration-meta';
-        details.append(title, meta); row.append(details); wrapper.append(row, editor); main.append(wrapper);
-      }
+      appendNewCalibrationEditor();
       note.textContent = active.length > 1
         ? 'The shot page will cycle through these saved calibrations.'
         : 'Create one calibration to get started.';
@@ -346,6 +348,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
         if (target.reading) main.append(rowFor(target.reading));
         else main.append(missingRow(target.key.slice(4), target.flow));
       }
+      appendNewCalibrationEditor();
       note.textContent = complete
         ? 'All ' + required.active.length + ' matching calibrations will be used for interpolation.'
         : 'Add the exact minimum, exact maximum, and at least one interior reading.';

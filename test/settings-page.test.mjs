@@ -398,6 +398,24 @@ test('Preview stays hidden for an incomplete selected target', async () => {
   assert.equal(p.buttons('Preview')[0].hidden, true);
 });
 
+test('Interpolate still allows creating an additional saved calibration', async () => {
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  assert.equal(p.buttons('+ New calibration').length, 1);
+  await p.buttons('+ New calibration')[0].handlers.click();
+  assert.equal(p.ids['calibration-editor'].hidden, false);
+  assert.equal(p.buttons('Cancel').length >= 1, true);
+  assert.match(p.ids['calibration-editor'].textContent, /New saved calibration/);
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  flowInput.value = '2.0'; await flowInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '27';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+  assert.match(p.ids['active-calibrations'].textContent, /2\.0 ml\/s/);
+  assert.equal(p.persistedLibraries.length, 1);
+});
+
 test('missing interpolation requirements have Create reading buttons that toggle to Cancel', async () => {
   const p = await page({ ...partial, interpolate: true, targetTemperatureC: 0, flowReadings: '[]', referenceMilkGrams: 0, referenceSeconds: 0 });
   assert.equal(p.buttons('Create reading').length, 3);
