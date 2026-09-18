@@ -101,10 +101,11 @@ test('disabled, wrong-method and unknown endpoints are explicit failures', () =>
   assert.equal(call(instance, 'calculate', 'POST', {}).status, 503);
 });
 
-test('settings UI is self-contained and credits Damian', () => {
+test('settings UI is self-contained and credits Damian in Instructions', () => {
   const response = call(plugin(), 'ui');
   assert.equal(response.status, 200);
-  assert.match(response.body, /github.com\/Damian-AU\/DSx2/);
+  assert.match(response.body, /Damian \/ Damian-AU’s DSx2/);
+  assert.doesNotMatch(response.body, /<footer>Calculation and automatic pitcher detection inspired by/);
   assert.match(response.body, /form="settings"/);
   assert.match(response.body, /role="alertdialog"/);
   assert.match(response.body, /Interpolate/);
