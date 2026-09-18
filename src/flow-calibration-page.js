@@ -399,6 +399,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     },
     flowChanged() { render(); },
     reveal() { render(); },
+    isEditing: () => Boolean(openKey),
     async assertCanSave() {
       if (openKey) throw Object.assign(new Error('Update or close the open calibration before saving.'), { field: 'flowReadings' });
       syncStored();

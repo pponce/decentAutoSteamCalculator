@@ -3,7 +3,7 @@
   "name": "Auto Steam Calculator",
   "author": "pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)",
   "description": "Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.",
-  "version": "0.13.2-beta.1",
+  "version": "0.13.2-beta.2",
   "apiVersion": 1,
   "permissions": [
     "api",
@@ -87,7 +87,7 @@
     "referenceFlow": {
       "type": "number",
       "label": "Calibration flow (ml/s)",
-      "description": "Flow used while creating or editing a saved calibration (0.4\u20132.5 ml/s).",
+      "description": "Flow used while creating or editing a saved calibration (0.4–2.5 ml/s).",
       "default": 0.4
     },
     "minimumFlow": {
@@ -105,7 +105,7 @@
     "autoDetect": {
       "type": "boolean",
       "label": "Offer Auto pitcher selection",
-      "description": "Enable automatic detection using Damian\u2019s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.",
+      "description": "Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.",
       "default": false
     },
     "interpolate": {

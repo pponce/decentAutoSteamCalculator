@@ -129,10 +129,11 @@ Calculator only. Decaid, skins and other plugins remain on their current update
 sources. Beta builds use prerelease versions and each beta update advances that
 version so the calculator's normal update check can offer it.
 
-Beta `0.13.2-beta.1` adds the interpolation graph and per-target **Smooth curve
+Beta `0.13.2-beta.2` adds the interpolation graph and per-target **Smooth curve
 fit** preference. The extension chooses among safe simple curve candidates from
 the saved readings and retains straight-line interpolation when no curve predicts
 better. Calculations never extrapolate beyond the measured flow range.
+This beta also prevents Android keyboard **Go** / implicit form submission from closing an open calibration editor or disturbing the saved calibration library; use **Update saved calibration** to commit that reading.
 
 Stable version `0.13.0` introduces the saved-calibration selector and interpolation
 model tested in the 0.13.0 betas. It deliberately starts a new

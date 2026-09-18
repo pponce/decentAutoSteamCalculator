@@ -189,6 +189,34 @@ test('saved calibrations edit inline and persist independently', async () => {
   assert.equal(p.ids['calibration-editor'].hidden, true);
 });
 
+test('implicit form submit while editing keeps existing calibrations and the editor open', async () => {
+  const readings = [saved(1.0, 31, 60), saved(1.5, 25, 60)];
+  const p = await page({ ...partial, targetTemperatureC: 0, flowReadings: JSON.stringify(readings) });
+  await p.buttons('Edit')[0].handlers.click();
+  p.fields.referenceSeconds.value = '33';
+  await p.ids.settings.handlers.input({ target: p.fields.referenceSeconds });
+  await p.submit();
+  assert.equal(p.ids['calibration-editor'].hidden, false);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.equal(p.persistedLibraries.length, 0);
+  assert.equal(p.savedSettings.length, 0);
+  assert.equal(p.navigations.length, 0);
+  assert.equal(p.ids.status.textContent, 'Update or close the open calibration before saving.');
+});
+
+test('implicit form submit while creating a calibration keeps the library and draft open', async () => {
+  const p = await page();
+  await p.buttons('+ New calibration')[0].handlers.click();
+  assert.equal(p.ids['calibration-editor'].hidden, false);
+  await p.submit();
+  assert.equal(p.ids['calibration-editor'].hidden, false);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.equal(p.persistedLibraries.length, 0);
+  assert.equal(p.savedSettings.length, 0);
+  assert.equal(p.navigations.length, 0);
+});
+
 test('closed calibration editor stays form-owned so initialization, tare, edit and delete work', async () => {
   const p = await page();
   assert.doesNotMatch(p.ids.status.textContent, /null/i);

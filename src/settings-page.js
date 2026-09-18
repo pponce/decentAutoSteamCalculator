@@ -511,6 +511,11 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
   }
   form.addEventListener('submit', async event => {
     event.preventDefault(); if (!loaded) return;
+    if (flowPlan?.isEditing()) {
+      document.activeElement?.blur?.();
+      status.textContent = 'Update or close the open calibration before saving.';
+      return;
+    }
     save.disabled = true;
     try {
       guided?.assertCanSave();
