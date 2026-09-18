@@ -16,21 +16,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Build generated files
+        run: node build.mjs
+      - name: Test calibration runtime
+        run: node --test test/calibration-runtime.test.mjs
+      - name: Test calibration session
+        run: node --test test/calibration-session.test.mjs
+      - name: Test calibration storage
+        run: node --test test/calibration-storage.test.mjs
+      - name: Test core
+        run: node --test test/core.test.mjs
+      - name: Test flow calibration
+        run: node --test test/flow-calibration.test.mjs
+      - name: Test navigation
+        run: node --test test/navigation.test.mjs
+      - name: Test package contract
+        run: node --test test/package-contract.test.mjs
       - name: Test plugin
-        shell: bash
-        run: |
-          set +e
-          npm test 2>&1 | tee /tmp/test-output.log
-          status=${PIPESTATUS[0]}
-          if [ "$status" -ne 0 ]; then
-            {
-              echo '### Test failure output'
-              echo '\`\`\`text'
-              tail -n 160 /tmp/test-output.log
-              echo '\`\`\`'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit "$status"
+        run: node --test test/plugin.test.mjs
+      - name: Test settings page
+        run: node --test test/settings-page.test.mjs
       - name: Check generated files
         run: git diff --exit-code -- manifest.json plugin.js
       - name: Package plugin
