@@ -129,11 +129,11 @@ Calculator only. Decaid, skins and other plugins remain on their current update
 sources. Beta builds use prerelease versions and each beta update advances that
 version so the calculator's normal update check can offer it.
 
-Beta `0.13.2-beta.7` adds the interpolation graph and per-target **Smooth curve
+Beta `0.13.2-beta.8` adds the interpolation graph and per-target **Smooth curve
 fit** preference. The extension chooses among safe simple curve candidates from
 the saved readings and retains straight-line interpolation when no curve predicts
 better. Calculations never extrapolate beyond the measured flow range.
-This beta also prevents Android keyboard **Go** / implicit form submission from closing an open calibration editor or disturbing the saved calibration library; use **Update saved calibration** to commit that reading. The preview centers milk-target navigation, keeps the interpolation method and actions on one bottom row, hides Smooth curve fit when no safe smooth model is available, wraps the measured-reading legend, and lets **Use this milk target** close the preview even when that target is already selected. The preview is modal: tapping outside no longer closes it, and background settings scrolling is locked until **Close** or **Use this milk target** is pressed. **+ New calibration** remains available while Interpolate is enabled, so additional readings can be added without switching modes.
+This beta also prevents Android keyboard **Go** / implicit form submission from closing an open calibration editor or disturbing the saved calibration library; use **Update saved calibration** to commit that reading. The preview centers milk-target navigation, keeps the interpolation method and actions on one bottom row, hides Smooth curve fit when no safe smooth model is available, wraps the measured-reading legend, and lets **Use this milk target** close the preview even when that target is already selected. The preview is modal: tapping outside no longer closes it, and background settings scrolling is locked until **Close** or **Use this milk target** is pressed. **+ New calibration** remains available while Interpolate is enabled, so additional readings can be added without switching modes. If the new reading uses a different milk target, that target becomes active immediately; previous-target readings stay saved under the collapsed **Other saved calibrations** group until the user selects that target again.
 
 Stable version `0.13.0` introduces the saved-calibration selector and interpolation
 model tested in the 0.13.0 betas. It deliberately starts a new

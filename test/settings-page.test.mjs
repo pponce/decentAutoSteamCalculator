@@ -398,6 +398,36 @@ test('Preview stays hidden for an incomplete selected target', async () => {
   assert.equal(p.buttons('Preview')[0].hidden, true);
 });
 
+test('new interpolation calibration at a different milk target becomes active and older targets move to Other', async () => {
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('+ New calibration')[0].handlers.click();
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  const targetInput = p.elements().find(item => item.parent?.className?.includes('editor-target'));
+  flowInput.value = '1.0'; await flowInput.handlers.input();
+  targetInput.value = '150'; await targetInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '35';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+
+  assert.equal(p.fields.targetTemperatureC.value, String(65.6));
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /More readings needed/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /0\.5 ml\/s|1\.5 ml\/s|2\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /0\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /2\.5 ml\/s/);
+  assert.equal(p.ids['other-calibrations'].open, undefined);
+
+  p.fields.targetTemperatureC.value = '60';
+  await p.fields.targetTemperatureC.handlers.change();
+  assert.match(p.ids['active-calibrations'].textContent, /0\.5 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /2\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /1\.0 ml\/s/);
+});
+
 test('Interpolate still allows creating an additional saved calibration', async () => {
   const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
   const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
