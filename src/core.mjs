@@ -1,4 +1,4 @@
-import { validateFlowCalibration, flowCalibration, secondsPerGram } from './flow-calibration.mjs';
+import { validateFlowCalibration, flowCalibration, formatTemperature, secondsPerGram, selectedCalibration } from './flow-calibration.mjs';
 
 export class CalculationError extends Error {
   constructor(code, message) {
@@ -35,12 +35,7 @@ export function validateSettings(settings) {
       errors.push({ field: key, message: `${names[key]} must be ${integer ? 'a whole number ' : ''}between ${minimum} and ${maximum}.` });
     }
   };
-  if (settings.calibrationMode !== 'multiple') {
-    range('referenceMilkGrams', 10, 1500);
-    range('referenceSeconds', 1, 255);
-  }
   errors.push(...validateFlowCalibration(settings));
-  range('referenceFlow', 0.4, 2.5);
   for (const key of ['smallPitcherGrams', 'mediumPitcherGrams', 'largePitcherGrams']) range(key, settings[key] === 0 ? 0 : 1, 3000);
   if (!configuredPitchers(settings).length) errors.push({ field: 'pitchers', message: 'Enter at least one empty pitcher weight (1–3000 g).' });
   if (!['gross', 'tared'].includes(settings.weightMode)) errors.push({ field: 'weightMode', message: 'Choose gross or tared scale weight.' });
@@ -102,13 +97,25 @@ export function calculate(settings, input) {
   if (milkGrams < 10) fail('invalid_milk_weight', 'Milk < 10 g · ' + pitcherLabel);
   if (milkGrams > 1500) fail('invalid_milk_weight', 'Milk > 1500 g · ' + pitcherLabel);
   const calibration = flowCalibration(settings);
-  const flow = input.flow === undefined ? settings.referenceFlow : input.flow;
-  if (!Number.isFinite(flow) || flow < calibration.minimum || flow > calibration.maximum) fail('flow_out_of_range', 'Choose a flow within the calibrated range.');
-  const durationSeconds = Math.round(secondsPerGram(settings, flow) * milkGrams);
+  let flow, calibrationKey = null, targetTemperatureC;
+  if (calibration.mode === 'saved') {
+    if (typeof input.calibrationKey !== 'string') fail('calibration_required', 'Choose a saved calibration before calculating.');
+    const reading = selectedCalibration(settings, input.calibrationKey);
+    if (!reading) fail('calibration_required', 'The selected calibration is no longer available.');
+    calibrationKey = input.calibrationKey;
+    flow = reading.flow;
+    targetTemperatureC = reading.targetTemperatureC;
+  } else {
+    flow = input.flow === undefined ? calibration.defaultFlow : input.flow;
+    if (!Number.isFinite(flow) || flow < calibration.minimum || flow > calibration.maximum) fail('flow_out_of_range', 'Choose a flow within the calibrated range.');
+    targetTemperatureC = Number(settings.targetTemperatureC);
+  }
+  const durationSeconds = Math.round(secondsPerGram(settings, flow, calibrationKey) * milkGrams);
   if (durationSeconds < 1 || durationSeconds > 255) fail('duration_out_of_range', `Calculated time ${durationSeconds}s is outside the supported timer range of 1–255 seconds. Check the calibration and milk amount.`);
   return {
-    apiVersion: 4, pitcher, pitcherSource: tared ? 'tared' : (choice === 'auto' ? 'heuristic' : 'manual'),
-    scaleGrams, pitcherGrams, milkGrams, durationSeconds,
+    apiVersion: 5, pitcher, pitcherSource: tared ? 'tared' : (choice === 'auto' ? 'heuristic' : 'manual'),
+    scaleGrams, pitcherGrams, milkGrams, durationSeconds, calibrationKey, targetTemperatureC,
+    targetLabel: formatTemperature(targetTemperatureC, settings.temperatureUnit || 'F'),
     workflowPatch: { steamSettings: { duration: durationSeconds, flow } },
   };
 }

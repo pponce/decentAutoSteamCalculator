@@ -24,7 +24,7 @@ function mountCalibrationPage({ form, labels, save, back, status, request, base,
   scaleBox.append(scaleHeading, scaleTools, scaleHelp);
   weights.insertBefore(scaleBox, labels.smallPitcherGrams);
   const guided = make('div'); guided.className = 'guided-calibration guided-workspace';
-  const flowLabel = make('label', 'Auto flow / default (ml/s)'); flowLabel.className = 'field calibration-flow';
+  const flowLabel = make('label', 'Calibration flow (ml/s)'); flowLabel.className = 'field calibration-flow';
   const flow = make('input'); flow.id = 'calibration-flow'; flow.type = 'number'; flow.min = '0.4'; flow.max = '2.5'; flow.step = '0.1'; flow.value = field('referenceFlow').value;
   flow.addEventListener('input', () => syncFlow(flow.value)); flowLabel.append(flow); guided.append(flowLabel);
   const guidedBlock = make('div'); guidedBlock.className = 'calibration-workspace-block'; guided.append(guidedBlock);

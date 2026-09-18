@@ -3,11 +3,12 @@
   "name": "Auto Steam Calculator",
   "author": "pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)",
   "description": "Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.",
-  "version": "0.12.10",
+  "version": "0.13.0",
   "apiVersion": 1,
   "permissions": [
     "api",
-    "events.machine"
+    "events.machine",
+    "pluginStorage"
   ],
   "settings": {
     "smallPitcherGrams": {
@@ -48,7 +49,7 @@
     "weightMode": {
       "type": "enum",
       "label": "Scale weight mode",
-      "description": "One global choice for single- and multiple-flow calculations. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.",
+      "description": "One global choice for every calibration. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.",
       "values": [
         "gross",
         "tared"
@@ -67,9 +68,9 @@
     },
     "targetTemperatureC": {
       "type": "number",
-      "label": "Target temp (°F) — required",
-      "description": "Required target milk temperature for this calibration set. Readings are matched by target temperature and flow.",
-      "default": 60
+      "label": "Milk target",
+      "description": "Filters which saved calibrations are available. All targets is available when Interpolate is off.",
+      "default": 0
     },
     "referenceMilkGrams": {
       "type": "number",
@@ -85,20 +86,20 @@
     },
     "referenceFlow": {
       "type": "number",
-      "label": "Calibration flow / default (ml/s)",
-      "description": "Fixed flow for single calibration, or default flow within the multiple-calibration range (0.4–2.5 ml/s).",
+      "label": "Calibration flow (ml/s)",
+      "description": "Flow used while creating or editing a saved calibration (0.4–2.5 ml/s).",
       "default": 0.4
     },
     "minimumFlow": {
       "type": "number",
       "label": "Minimum flow (ml/s)",
-      "description": "Lowest flow used by Multiple flow support. A saved reading is required at this exact flow.",
+      "description": "Lowest flow used by Interpolate. A saved reading is required at this exact flow.",
       "default": 0.4
     },
     "maximumFlow": {
       "type": "number",
       "label": "Maximum flow (ml/s)",
-      "description": "Highest flow used by Multiple flow support. A saved reading is required at this exact flow.",
+      "description": "Highest flow used by Interpolate. A saved reading is required at this exact flow.",
       "default": 2.5
     },
     "autoDetect": {
@@ -107,21 +108,17 @@
       "description": "Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.",
       "default": false
     },
-    "calibrationMode": {
-      "type": "enum",
-      "label": "Calibration type",
-      "values": [
-        "single",
-        "multiple"
-      ],
-      "default": "single",
-      "description": "Single uses one selected default. Multiple uses every matching saved calibration within the selected flow range."
+    "interpolate": {
+      "type": "boolean",
+      "label": "Interpolate",
+      "default": false,
+      "description": "Use piecewise interpolation between at least three saved readings at one milk target."
     },
     "flowReadings": {
       "type": "string",
       "label": "Measured flow calibrations",
       "default": "[]",
-      "description": "Managed by the Calibration page. Saved readings include flow, targetTemperatureC, milkGrams and seconds."
+      "description": "Compatibility shadow managed by the Calibration page while saved readings migrate to Decaid plugin storage. Do not edit this JSON directly."
     }
   },
   "api": [
@@ -147,6 +144,11 @@
     },
     {
       "id": "calibration",
+      "type": "http",
+      "data": {}
+    },
+    {
+      "id": "library",
       "type": "http",
       "data": {}
     }

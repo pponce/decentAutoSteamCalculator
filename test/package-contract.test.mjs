@@ -10,13 +10,14 @@ test('repository root is a directly installable Decaid plugin with a stable iden
   assert.equal(manifest.id, 'calibrated-steam.reaplugin');
   assert.equal(manifest.version, pkg.version);
   assert.equal(manifest.apiVersion, 1);
-  assert.deepEqual(manifest.permissions, ['api', 'events.machine']);
+  assert.deepEqual(manifest.permissions, ['api', 'events.machine', 'pluginStorage']);
   const runtime = vm.createContext({});
   vm.runInContext(readFileSync(new URL('plugin.js', root), 'utf8'), runtime);
   const plugin = runtime.createPlugin();
-  plugin.onLoad({ mediumPitcherGrams: 220, referenceMilkGrams: 158, referenceSeconds: 25, referenceFlow: 0.4 });
+  plugin.onLoad({ mediumPitcherGrams: 220, interpolate: false, targetTemperatureC: 0,
+    flowReadings: JSON.stringify([{ flow: 0.4, targetTemperatureC: 60, milkGrams: 158, seconds: 25 }]) });
   const status = JSON.parse(plugin.__httpRequestHandler({ endpoint: 'status', method: 'GET' }).body);
-  assert.equal(status.apiVersion, 4);
+  assert.equal(status.apiVersion, 5);
   assert.equal(status.ready, true);
-  assert.equal(status.settings.referenceMilkGrams, 158);
+  assert.equal(JSON.parse(status.settings.flowReadings)[0].milkGrams, 158);
 });

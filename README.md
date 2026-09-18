@@ -66,17 +66,16 @@ Select **Open settings**:
 - In **Calibration**, choose one **Scale weight mode**. **Gross** subtracts a
   selected empty pitcher; **Tared** expects the empty pitcher to be on the scale
   when you tare. The setting applies to every calibration.
-- Choose **F** or **C** for temperature display, then enter the required target
-  milk temperature. Fahrenheit is the default and the preference is remembered;
-  calibration temperatures remain stored internally in Celsius. Choose **Single** to use one saved
-  reading as the default, or **Multiple** to use every saved reading at that
-  target temperature inside the selected flow range.
-- Multiple requires the exact minimum, exact maximum, and at least one interior
-  reading. More matching readings are retained and used to improve interpolation.
+- Choose **F** or **C** for temperature display. Each saved calibration keeps its
+  own milk target. With **Interpolate** off, **Milk target** may be **All targets**
+  or filter the exact saved calibrations offered on the shot page.
+- Turn on **Interpolate** only when you want adjustable flow. It requires one
+  specific milk target plus the exact minimum, exact maximum, and at least one
+  interior reading. More matching readings improve interpolation.
 - Record the **actual milk-only weight for every reading**, manually or with
   guided calibration. Guided capture arms timing; start and stop steam using the
   physical machine controls.
-- Select **Save calibration**.
+- Select **Save settings** to activate the complete setup.
 
 ### 6. Test it
 
@@ -84,9 +83,11 @@ Return to the main shot page and tap the Steam heading to select **Auto**.
 Place the filled pitcher on the scale, then tap its pitcher preset to calculate
 the steaming time. Review the calculated time and start steaming normally.
 
-Single-flow Auto fixes the calibrated flow. Multiple-flow Auto permits adjustment
-within the measured range; after changing flow, tap the pitcher preset again to
-calculate from the current milk weight. Manual Flow and Time remain available.
+With Interpolate off, Auto cycles through exact saved calibrations. Their saved
+flow is fixed, and their milk target is shown briefly in the existing time
+position before it returns to 0s. With Interpolate on, Auto permits 0.1 ml/s
+adjustment within the measured range; after changing flow, tap the pitcher preset
+again to calculate from the current milk weight. Manual Flow and Time remain available.
 Off prompts recalculation between drinks; it is not a hard start interlock and
 a physical start may produce a brief burst.
 
@@ -116,6 +117,25 @@ versions may be less stable, and Decaid does not currently allow downgrades, so
 **Return to stable** becomes available only when the stable version is equal to
 or newer than the installed beta. Saved settings are preserved when changing
 channels.
+
+### Beta testing
+
+Beta enrollment is per plugin: installing the `beta` branch changes Auto Steam
+Calculator only. Decaid, skins and other plugins remain on their current update
+sources. Beta builds use prerelease versions and each beta update advances that
+version so the calculator's normal update check can offer it.
+
+Stable version `0.13.0` introduces the saved-calibration selector and interpolation
+model tested in the 0.13.0 betas. It deliberately starts a new
+`calibration-library.v2` record instead of importing older calibration semantics,
+so users upgrading from 0.12.x must recreate their calibration readings. Each
+reading is stored immediately; **Save settings** activates only a complete valid
+setup.
+
+Do not remove the beta merely to switch branches: removal clears manifest
+settings even though Decaid leaves namespaced plugin storage intact. Return to a
+stable build after a stable version at least as new as the beta is available, or
+make a settings backup before testing a removal/reinstall rollback.
 
 If you previously installed the skin from a branch or a ZIP URL, install it once
 using `pponce/streamline-js` in the dashboard to switch to release updates.

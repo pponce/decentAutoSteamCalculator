@@ -727,7 +727,7 @@
         <section class="steam-help-item"><h3>5 · How Multiple chooses readings</h3><p>Multiple uses every saved reading at the equivalent target temperature inside the selected range. Other temperatures and out-of-range flows remain under Other saved calibrations.</p></section>
         <section class="steam-help-item"><h3>6 · Range and accuracy</h3><p>Multiple requires exact minimum and maximum readings plus at least one interior reading. A reading near the middle is recommended. More matching readings improve piecewise interpolation accuracy.</p></section>
         <section class="steam-help-item"><h3>7 · Measure manually or with guidance</h3><p>Manual entry uses actual milk-only weight and steaming time. Guided capture arms timing; start and stop steam with the machine controls. The counter excludes warm-up and stops when the machine stops steaming.</p></section>
-        <section class="steam-help-item"><h3>8 · Review, save and make a drink</h3><p>Edit opens a calibration beneath its row; Update saved flow closes it. Save the complete setup, then select Auto on the shot page, weigh the filled pitcher and tap S, M, L or Auto to calculate.</p></section>
+        <section class="steam-help-item"><h3>8 · Review, save and make a drink</h3><p>Edit opens a calibration beneath its row; Update saved calibration stores it immediately. Save settings activates the complete setup, then select Auto on the shot page, weigh the filled pitcher and tap S, M, L or Auto to calculate.</p></section>
       </div>
     </section>
 
@@ -745,13 +745,13 @@
         <div class="steam-term"><dt>Other saved calibrations</dt><dd>Readings at a different target temperature or outside the selected flow range. They remain available for later configurations until deleted.</dd></div>
         <div class="steam-term"><dt>S / M / L / Auto</dt><dd>Green means that choice is configured; red means it is not. Some skins do not use Auto pitcher selection, so it is off by default.</dd></div>
         <div class="steam-term"><dt>Tare / capture</dt><dd>In Gross mode, tare with the scale empty. In Tared mode, tare with the empty pitcher on the scale. Capture derives the milk weight and arms automatic timing for the next physical steam run.</dd></div>
-        <div class="steam-term"><dt>Update saved flow / Save calibration</dt><dd>Update closes one inline editor and keeps the reading in the draft library. Save calibration applies the complete valid configuration.</dd></div>
+        <div class="steam-term"><dt>Update saved calibration / Save settings</dt><dd>Update stores one reading immediately, including an incomplete interpolation set. Save settings activates only a complete valid setup.</dd></div>
       </dl>
     </section>
 
     <div class="steam-save-row">
       <p class="steam-global-status" id="steam-mock-global-status" role="status" aria-live="polite">Draft changes apply only after saving.</p>
-      <button class="steam-primary" id="steam-mock-save" type="button">Save calibration</button>
+      <button class="steam-primary" id="steam-mock-save" type="button">Save settings</button>
     </div>
 
     <div class="steam-modal" id="steam-mock-modal" hidden>

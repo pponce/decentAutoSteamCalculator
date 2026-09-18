@@ -1,27 +1,34 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { calculate, validateSettings, availablePitchers } from '../src/core.mjs';
+import { calibrationKey } from '../src/flow-calibration.mjs';
 
+const saved = (flow = 1.5, seconds = 25, targetTemperatureC = 60, milkGrams = 150) =>
+  ({ flow, targetTemperatureC, milkGrams, seconds });
+const primary = saved();
 export const settings = {
   smallPitcherGrams: 150, mediumPitcherGrams: 220, largePitcherGrams: 300,
   autoDetect: true, singleDrinkGrams: 160, singleDrinkPitcher: 'small', weightMode: 'gross',
-  referenceMilkGrams: 150, referenceSeconds: 25,
-  referenceFlow: 1.5,
+  temperatureUnit: 'F', interpolate: false, targetTemperatureC: 0,
+  referenceMilkGrams: 0, referenceSeconds: 0, referenceFlow: 0.4,
+  minimumFlow: 0.4, maximumFlow: 2.5, flowReadings: JSON.stringify([primary]),
 };
 export function request(weightGrams, extra = {}) {
   return {
     samples: [800, 400, 0].map(ageMs => ({ weightGrams, ageMs })),
     pitcher: 'auto', steamFlow: 1.5, steamTemperature: 150,
-    stopAtTemperature: 0, machineState: 'idle', ...extra,
+    stopAtTemperature: 0, machineState: 'idle', calibrationKey: calibrationKey(primary), ...extra,
   };
 }
 const throwsCode = (run, code) => assert.throws(run, e => e.code === code);
 
-test('calibrated ratio subtracts pitcher weight and rounds to whole seconds', () => {
+test('saved calibration ratio subtracts pitcher weight and rounds to whole seconds', () => {
   const result = calculate(settings, request(330));
   assert.equal(result.pitcher, 'small');
   assert.equal(result.milkGrams, 180);
   assert.equal(result.durationSeconds, 30);
+  assert.equal(result.targetTemperatureC, 60);
+  assert.equal(result.calibrationKey, calibrationKey(primary));
   assert.deepEqual(result.workflowPatch, { steamSettings: { duration: 30, flow: 1.5 } });
 });
 
@@ -44,16 +51,15 @@ test('manual pitcher override corrects an inference', () => {
 });
 
 test('tared mode never subtracts a pitcher or pretends to infer its size', () => {
-  const result = calculate({ ...settings, autoDetect: false, weightMode: 'tared' }, request(180, { pitcher: 'small' }));
+  const configured = { ...settings, autoDetect: false, weightMode: 'tared' };
+  const result = calculate(configured, request(180, { pitcher: 'small' }));
   assert.equal(result.durationSeconds, 30);
-  assert.equal(result.pitcher, 'small');
   assert.equal(result.pitcherSource, 'tared');
-  assert.equal(calculate({ ...settings, autoDetect: false, weightMode: 'tared' }, request(180, { pitcher: 'large' })).milkGrams, 180);
+  assert.equal(calculate(configured, request(180, { pitcher: 'large' })).milkGrams, 180);
 });
 
 test('stable readings use the median instead of a single outlying final digit', () => {
-  const input = request(330);
-  input.samples[2].weightGrams = 331;
+  const input = request(330); input.samples[2].weightGrams = 331;
   assert.equal(calculate(settings, input).milkGrams, 180);
 });
 
@@ -68,36 +74,31 @@ test('rejects stale, too few, unordered, invalid and unstable readings', () => {
   ]) throwsCode(() => calculate(settings, request(330, { samples })), 'scale_not_ready');
 });
 
-test('rejects invalid configuration without silently substituting a calibration', () => {
-  for (const invalid of [{ referenceMilkGrams: 0 }, { referenceSeconds: 0 },
-    { referenceFlow: Infinity }, { smallPitcherGrams: -1 },
+test('rejects invalid configuration without inventing a calibration', () => {
+  for (const invalid of [
+    { flowReadings: '[]' }, { flowReadings: '{bad' }, { smallPitcherGrams: -1 },
     { weightMode: 'guess' }, { temperatureUnit: 'K' }, { singleDrinkPitcher: 'large' },
-    { referenceSeconds: '25' },
   ]) {
     assert.ok(validateSettings({ ...settings, ...invalid }).length);
     throwsCode(() => calculate({ ...settings, ...invalid }, request(330)), 'configuration_required');
   }
 });
 
-test('refuses nonpositive milk, excessive milk and duration beyond the configured limit', () => {
+test('refuses missing calibration selection, nonpositive milk, excessive milk and excessive duration', () => {
+  throwsCode(() => calculate(settings, request(330, { calibrationKey: undefined })), 'calibration_required');
   throwsCode(() => calculate(settings, request(150, { pitcher: 'small' })), 'invalid_milk_weight');
   throwsCode(() => calculate(settings, request(3000, { pitcher: 'small' })), 'invalid_milk_weight');
-  throwsCode(() => calculate({ ...settings, referenceSeconds: 255 }, request(330)), 'duration_out_of_range');
+  const long = saved(1.5, 255);
+  throwsCode(() => calculate({ ...settings, flowReadings: JSON.stringify([long]) }, request(330, { calibrationKey: calibrationKey(long) })), 'duration_out_of_range');
 });
 
-test('heater temperatures do not change the calculated time or appear in the patch', () => {
+test('heater temperatures do not change calculated time or appear in the patch', () => {
   for (const steamTemperature of [undefined, 0, 135, 150, 165]) {
     const result = calculate(settings, request(330, { steamTemperature }));
     assert.equal(result.durationSeconds, 30);
     assert.deepEqual(result.workflowPatch.steamSettings, { duration: 30, flow: 1.5 });
   }
   throwsCode(() => calculate(settings, request(330, { stopAtTemperature: 60 })), 'probe_stop_active');
-});
-
-test('no configurable maximum or stored calibration heater is needed or used', () => {
-  const result = calculate({ ...settings, referenceSeconds: 120, maxSeconds: 20, referenceSteamTemperature: 0 }, request(330));
-  assert.equal(result.durationSeconds, 144);
-  assert.equal(calculate({ ...settings, referenceSeconds: 255 }, request(300)).durationSeconds, 255);
 });
 
 test('only an idle machine can accept a calculated timer', () => {
@@ -111,14 +112,12 @@ test('bad request shapes and unknown pitcher values fail without producing a dur
   throwsCode(() => calculate(settings, request(330, { pitcher: 'huge' })), 'invalid_request');
 });
 
-
 test('one configured pitcher is sufficient without automatic detection', () => {
   const partial = { ...settings, autoDetect: false, smallPitcherGrams: 0, largePitcherGrams: 0, singleDrinkGrams: 0, singleDrinkPitcher: '' };
   assert.deepEqual(validateSettings(partial), []);
   assert.deepEqual(availablePitchers(partial), ['medium']);
   assert.equal(calculate(partial, request(400, { pitcher: 'medium' })).milkGrams, 180);
   throwsCode(() => calculate(partial, request(400, { pitcher: 'small' })), 'pitcher_not_configured');
-  throwsCode(() => calculate(partial, request(400)), 'pitcher_not_configured');
 });
 
 test('saving requires at least one configured pitcher', () => {
@@ -134,24 +133,21 @@ test('automatic detection is explicit and requires its inputs and all heuristic 
   }
 });
 
-
-test('calibration flow accepts 0.4 through 2.5 ml/s, including both endpoints', () => {
-  for (const referenceFlow of [0.4, 1.5, 2.5]) {
-    assert.deepEqual(validateSettings({ ...settings, referenceFlow }), []);
-    assert.equal(calculate({ ...settings, referenceFlow }, request(330)).workflowPatch.steamSettings.flow, referenceFlow);
-  }
-  for (const referenceFlow of [0, 0.3, 2.6]) {
-    assert.ok(validateSettings({ ...settings, referenceFlow }).some(error => error.field === 'referenceFlow'));
+test('exact saved calibrations may use both flow endpoints', () => {
+  for (const flow of [0.4, 1.5, 2.5]) {
+    const reading = saved(flow);
+    const configured = { ...settings, flowReadings: JSON.stringify([reading]) };
+    assert.deepEqual(validateSettings(configured), []);
+    assert.equal(calculate(configured, request(330, { calibrationKey: calibrationKey(reading) })).workflowPatch.steamSettings.flow, flow);
   }
 });
 
 test('low milk errors name the manually selected or inferred pitcher concisely', () => {
-  const settings = { autoDetect: true, smallPitcherGrams: 150, mediumPitcherGrams: 400, largePitcherGrams: 500,
-    singleDrinkGrams: 100, singleDrinkPitcher: 'small', weightMode: 'gross',
-    referenceMilkGrams: 150, referenceSeconds: 25, referenceFlow: 0.4 };
+  const configured = { ...settings, smallPitcherGrams: 150, mediumPitcherGrams: 400, largePitcherGrams: 500,
+    singleDrinkGrams: 100 };
   for (const pitcher of ['medium', 'auto']) {
-    assert.throws(() => calculate(settings, { pitcher, machineState: 'idle', stopAtTemperature: 0,
-      samples: [800, 400, 0].map(ageMs => ({ weightGrams: 405, ageMs })) }),
+    assert.throws(() => calculate(configured, request(405, { pitcher })),
       error => error.code === 'invalid_milk_weight' && error.message === 'Milk < 10 g · Medium pitcher');
   }
 });
+

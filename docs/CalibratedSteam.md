@@ -14,17 +14,15 @@ enable the extension (install it first if needed), then choose **Open**. Streaml
 builds this plugin row and details page generically from `GET /api/v1/plugins` and
 the manifest; no calculator-specific settings page is required in the skin. The
 standalone page provides a return address:
-**Return to settings** leaves without saving, and a successful **Save calibration**
+**Return to settings** leaves without saving, and a successful **Save settings**
 returns to the calling settings page. Validation or save errors keep the form open.
 
 The settings page uses compact **Pitchers & Auto**, **Calibration**,
-**Instructions**, and **Glossary** tabs. Calibration keeps its flow/default,
-required target temperature and one global scale weight mode together. The compact
-summary shares the tab row and updates as the draft changes. It always shows S,
-M, L and Auto: available choices are green and unavailable choices are red, with
-the current set flow shown to their right in Single mode. Multiple mode omits the
-set-flow label because the calibrated range is adjustable. Save is required to
-persist changes.
+**Instructions**, and **Glossary** tabs. Each calibration stores its flow, milk
+target, actual milk weight and measured time. The compact summary shares the tab
+row and updates as the draft changes. It always shows S, M, L and Auto: available
+choices are green and unavailable choices are red. Calibration readings are
+stored immediately; **Save settings** activates the overall valid setup.
 
 The page keeps **Auto Steam Calculator** centered in its header and checks the
 recorded GitHub branch when it opens. When the installed version is current, that
@@ -51,11 +49,13 @@ and first invalid setting.
    Damian's existing heuristic needs all three pitcher weights and gross scale
    weight. Auto is not offered until these inputs are valid; it is opt-in.
 3. In Calibration, choose **Gross** or **Tared** once. This global choice applies
-   to single- and multiple-flow calculations. The supporting skin owns and
+   to every calibration. The supporting skin owns and
    remembers the current pitcher preset; the plugin no longer has a separate
    starting-pitcher setting.
-4. Enter a required target milk temperature and choose **Single** or **Multiple**
-   flow support (details below). For guided Gross calibration, tare the empty
+4. Leave **Interpolate** off for the simplest setup and create one saved
+   calibration. **Milk target** may be **All targets** or one saved target.
+   Turn on **Interpolate** only to calculate between multiple flow readings at
+   one specific milk target. For guided Gross calibration, tare the empty
    scale, choose a configured pitcher, and **Capture pitcher + milk (g)**. For
    Tared calibration, put the empty pitcher on the scale, select **Tare**, add
    milk, and **Capture milk only (g)**. Capture arms the session. Start and stop
@@ -63,7 +63,7 @@ and first invalid setting.
    buttons. The page fills the actual milk weight, time and flow after the machine
    stops and prior steam settings are restored.
    Alternatively, choose **Enter measured time** for each reading and enter values
-   measured using normal manual steam controls, then select **Update saved flow**.
+   measured using normal manual steam controls, then select **Update saved calibration**.
 5. Save. Use similar milk, starting temperature and technique on later runs.
 
 Only configured sizes appear in the steam presets. With no setup, top-level Auto
@@ -77,9 +77,10 @@ Place the filled pitcher on the scale and tap a preset to calculate and apply. T
 an already-selected preset recalculates; no preview dialog or Use time button is
 involved. Success shows pitcher, milk mass and seconds; start steam normally afterward.
 
-Auto flow is configurable from **0.4 to 2.5 ml/s**, with **0.4 ml/s** as the
-default. Single-flow calibration fixes Auto at that measured flow. Multiple-flow
-calibration permits adjustment only between its lowest and highest measured flows.
+Saved calibration flows may be **0.4 to 2.5 ml/s**. With Interpolate off, the
+skin cycles through exact saved calibrations and applies each reading's measured
+flow. With Interpolate on, flow is adjustable in 0.1 ml/s steps only inside the
+selected measured range.
 
 Auto applies the calibration flow. After calculation, Streamline restores its
 normal heater setting from before Auto was entered (or its existing remembered
@@ -98,29 +99,34 @@ The skin saves the previous manual duration, flow, heater target and probe-stop
 setting before entering Auto and restores them on exit or plugin disable. A disable
 during steaming defers restoration until idle. Auto values do not replace manual
 preferences or profile values. While Auto is active, use pitcher presets to set the
-time. Manual number editors stay inactive in Auto. Single-flow Auto hides only the − / + icons, keeping their gray button backgrounds visible and disabled.
-Multiple-flow Auto shows them for flow adjustment in 0.1 ml/s steps within the
-calibrated range, while the machine is idle. Changing flow resets time to Off; tap
-the pitcher again to calculate from the current scale weight. The selected Auto
-flow is remembered separately from manual flow and resets to the default when
-calibration settings change. Normal Flow and Time modes keep − / +.
+time. Manual number editors stay inactive in Auto. With one available saved
+calibration, Auto hides only the − / + icons, keeping their gray button
+backgrounds visible and disabled. With several, the buttons cycle through exact
+calibrations. The selected milk target briefly replaces the existing 0s display,
+then that display returns to 0s; the Streamline layout does not change.
+Interpolate uses the same buttons for 0.1 ml/s flow adjustment within the
+calibrated range while the machine is idle. Any selection or flow change resets
+time to Off; tap the pitcher again to calculate from the current scale weight.
+The skin remembers the Auto selection separately from manual settings. Normal
+Flow and Time modes keep − / +.
 
 **Gross** means pitcher plus milk: start with the empty scale at zero and do not tare
 the pitcher. **Tared** means milk only: no pitcher weight is subtracted and automatic pitcher
 identification is unavailable. The software cannot detect a physical tare button
 press; the selected mode must match the scale display.
 
-## Single and multiple flow calibration
+## Saved calibrations and Interpolate
 
 Every saved calibration contains flow, target temperature, actual milk weight and
 measured seconds. A flow/temperature pair is unique. The library is not limited
 to nine readings and keeps measurements until the user deletes them.
 
-Single flow lists the whole library and uses only the reading checked as
-**Default**. If one reading exists it becomes the default; when choosing among
-several readings, the selected reading supplies the fixed Auto flow.
+With Interpolate off, **Milk target** defaults to **All targets**. The active
+list and shot page include every saved reading allowed by that filter. There is
+no default checkbox: the skin remembers the last selected calibration on that
+device and falls back to the first currently available choice.
 
-Multiple flow asks for a minimum and maximum between 0.4 and 2.5 ml/s. Its active
+Interpolate asks for a minimum and maximum between 0.4 and 2.5 ml/s. Its active
 set contains every saved reading whose target temperature matches the selected
 target and whose flow is inside the selected range. It requires at least three
 active readings: one at the exact minimum, one at the exact maximum, and at least
@@ -135,13 +141,13 @@ the scale after subtracting the selected pitcher. Each reading stores and uses
 its own actual weight. Editing a saved reading retains its measured values.
 
 **Temperature unit** is a remembered display preference with Fahrenheit as the
-default. It sits immediately left of the required Target temp field. Switching
-between F and C converts the visible target, saved-calibration labels and guided
-instructions to the equivalent temperature. Every reading remains stored
+default. Switching between F and C converts Milk target options,
+saved-calibration labels and guided instructions to the equivalent temperature.
+Every reading remains stored
 canonically in Celsius, so changing the display unit does not create a different
 calibration or alter its measured weight, time or flow. Target temperature does
 not set the steam heater or stop steam. It selects which readings belong to the
-active Multiple set, so readings at different target temperatures are never mixed.
+active Interpolate set, so readings at different target temperatures are never mixed.
 
 For each point, use the same pitcher,
 milk starting temperature, target temperature, heater setting and technique. Use
@@ -155,12 +161,14 @@ rechecks the workflow's flow, duration and probe-stop settings before requesting
 steam. No successful result is returned until prior steam settings are restored.
 
 Each **Edit** button opens that calibration directly below its row. Only one
-editor is open at a time. **Update saved flow** closes it after accepting the
+editor is open at a time. **Update saved calibration** closes it after accepting the
 measurement; **Close without update** and the opener's **Cancel** state discard
-the draft. Missing Multiple requirements have **Create reading** controls, which
+the draft. Missing Interpolate requirements have **Create reading** controls, which
 also toggle to **Cancel** while open. Delete removes only that library entry. If
-deletion makes Multiple incomplete, recreate the missing endpoint/interior entry
-or switch to Single before saving.
+deletion makes Interpolate incomplete, recreate the missing endpoint/interior
+entry or turn Interpolate off before saving. Individual readings are written to
+plugin storage immediately, so an incomplete interpolation set can be completed
+across later visits without activating an invalid setup.
 
 ## Guided calibration details
 
@@ -210,9 +218,10 @@ The formula and pitcher-selection heuristic are inspired by Damian / Damian-AU's
 `code/procs_vars.tcl`. This is a new JavaScript implementation; it does not copy
 DSx2's Tcl UI or artwork. Damian is credited in the manifest and settings UI.
 
-Single flow: `seconds = round(referenceSeconds × milkGrams / referenceMilkGrams)`.
+An exact saved calibration uses
+`seconds = round(readingSeconds × milkGrams / readingMilkGrams)`.
 
-Multiple flows normalize each reading to `rate = seconds / milkGrams`. For a
+Interpolate normalizes each reading to `rate = seconds / milkGrams`. For a
 requested flow between adjacent measured flows `f0` and `f1`, let
 `p = (flow - f0) / (f1 - f0)`. Every active reading participates through its
 adjacent segment. Then
@@ -250,6 +259,7 @@ proof that the plugin is running. Restore the skin's usual steam UI if disabled.
 | POST | `validate` | Validate a complete settings object without storing it |
 | POST | `calculate` | Return a calculation and duration/flow workflow patch; performs no write |
 | POST | `calibration` | Prepare, start, stop, cancel or renew an owned guided calibration session |
+| POST | `library` | Validate and persist saved readings independently of overall setup readiness |
 
 `calculate` is calculation-only: it never writes workflow or machine settings and
 never starts steaming. The supporting skin owns the separate, validated and
@@ -284,37 +294,48 @@ has no dependency on Streamline routes. Streamline supplies its `?page=settings`
 URL and restores the selected settings category from its existing navigation state.
 
 
-### Multiple-flow capability
+### Calibration-selection capability
 
-Status includes `flowCalibration`, either null for invalid
-calibration data or `{mode, adjustable, minimum, maximum, defaultFlow, readings}`.
-Each reading is `{flow, targetTemperatureC, milkGrams, seconds}`. Also require `ready`; valid flow
-readings alone do not establish valid pitcher settings.
+Status uses contract `apiVersion: 5` and includes `flowCalibration`, either null
+for an invalid setup or one of these capability-driven shapes:
 
-Persist `calibrationMode` (`single` by default, or `multiple`) and `flowReadings`
-(a JSON string containing the saved calibration library). A string is used
-because the existing plugin setting schema supports primitive types. Generic manifest-driven settings pages will expose this primitive field as text;
-skins should direct calibration edits to the plugin's **Open** page instead of
-asking users to edit the serialized library. The
-`referenceMilkGrams` and `referenceSeconds` fields define the single calibration;
-in both modes the selected library entry is mirrored to the legacy reference
-fields. `referenceFlow` is the fixed/default flow. `minimumFlow` and `maximumFlow`
-select the active Multiple range; changing them does not delete readings.
+- Interpolate off: `{mode: "saved", adjustable, defaultCalibrationKey, choices, readings}`.
+  Each choice is `{key, flow, targetTemperatureC, targetLabel}`. The key is opaque
+  to the skin. Cycle this ordered list, remember the key device-locally, and fall
+  back to `defaultCalibrationKey` when the remembered key is absent.
+- Interpolate on: `{mode: "interpolate", adjustable: true, minimum, maximum,
+  step: 0.1, defaultFlow, readings}`. Keep the existing 0.1 ml/s controls and
+  never extrapolate beyond the returned range.
 
-`referenceMilkGrams` and each reading's `milkGrams` store actual measured milk
-weight. `temperatureUnit` is `F` by default or `C` and affects display only.
-`targetTemperatureC` remains the canonical stored value, is required for new saves, and filters the active
-Multiple readings. It is not sent as a machine setting. Legacy single-flow data
-without a target is preserved at the migration target instead of being discarded.
+Each full reading is `{flow, targetTemperatureC, milkGrams, seconds}`. Also
+require `ready`; valid calibration data alone does not establish valid pitcher
+settings. A selection change invalidates any armed duration and writes the safe
+Off state before another calculation.
 
-A `calculate` body may include optional numeric `flow`. If omitted, the plugin
-uses `referenceFlow`. Single mode
-requires its fixed flow. Multiple mode rejects values outside measured bounds
-with `flow_out_of_range`; invalid calibration returns `configuration_required`.
-Pass the selected flow on every preview and revalidation, compare the returned
-flow as well as duration/revision, and apply that exact duration/flow pair. A flow
-change invalidates an armed calculation. Never retain its previous duration or
-reuse a prior milk measurement silently. Keep manual steam preferences separate.
+Persist `interpolate` (false by default). `targetTemperatureC: 0` means
+**All targets** only when Interpolate is off. Interpolate requires a specific
+target with exact minimum and maximum readings plus at least one interior reading.
+The v5 beta intentionally starts a new Decaid plugin-storage record at
+`calibration-library.v2` and does not import older calibration semantics.
+Beta testers recreate their readings. The `library` endpoint validates and
+stores individual library changes even when an interpolation set is incomplete;
+the complete extension setup remains unready until normal validation succeeds.
+
+Generic manifest-driven settings pages expose the serialized compatibility field
+as text; skins should direct calibration edits to the plugin's **Open** page.
+`referenceFlow`, `referenceMilkGrams` and `referenceSeconds` are editor
+working values, not a default calibration. `minimumFlow` and `maximumFlow`
+select the Interpolate range without deleting readings. `temperatureUnit` is
+`F` by default or `C` and affects display only.
+
+With Interpolate off, a `calculate` body must include a current
+`calibrationKey`. The plugin selects both the exact calibration ratio and its
+flow; stale or filtered keys return `calibration_required`. With Interpolate on,
+send numeric `flow`; values outside the measured range return
+`flow_out_of_range`. The response includes `calibrationKey` (null for
+Interpolate), `targetTemperatureC`, `targetLabel`, and the exact duration/flow
+workflow patch. Never retain a previous duration or reuse a prior milk measurement
+silently. Keep manual steam preferences separate.
 
 ### Reusing guided calibration in another skin
 
@@ -367,6 +388,7 @@ Example request body for `calculate`:
     {"weightGrams": 330, "ageMs": 0}
   ],
   "pitcher": "auto",
+  "calibrationKey": "1.500@60.000",
   "machineState": "idle",
   "stopAtTemperature": 0
 }
@@ -389,12 +411,13 @@ With a 150 g small pitcher and a 150 g / 25 s calibration, the example returns
 {"steamSettings": {"duration": 30, "flow": 1.5}}
 ```
 
-The response also contains `scaleGrams`, `pitcherGrams`, `apiVersion: 4` and an opaque
+The response also contains `scaleGrams`, `pitcherGrams`, `targetTemperatureC`,
+`targetLabel`, `apiVersion: 5` and an opaque
 `calibrationRevision`. Do not parse the revision: compare it to invalidate a
 preview when the settings change. `pitcherSource` is `heuristic`, `manual` or `tared`.
 Tared mode requires an explicit configured pitcher choice; Auto detection is unavailable.
 
-Check `status.apiVersion` before using the calculator; the current contract is 4.
+Check `status.apiVersion` before using the calculator; the current contract is 5.
 The plugin manifest's `apiVersion` identifies the Decaid host API and remains 1.
 The workflow patch contains duration and flow only; the skin owns heater handling.
 There is no configurable maximum duration; results must fit the supported

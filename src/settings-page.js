@@ -31,7 +31,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     const input = field(key);
     const number = input.value.trim() === '' ? 0 : Number(input.value);
     return [key, item.type === 'boolean' ? input.checked : item.type === 'number'
-      ? (key === 'targetTemperatureC' && number !== 0 ? temperatureToC(number, field('temperatureUnit')?.value || 'F') : number)
+      ? number
       : input.value];
   }));
   function showTab(name) {
@@ -341,11 +341,6 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       badge.setAttribute('aria-label', descriptions[choice] + (configured ? ' configured' : ' not configured'));
       summary.append(badge);
     }
-    if (current.calibrationMode !== 'multiple') {
-      const flow = Number(current.referenceFlow);
-      const flowSummary = make('span', 'Set flow: ' + (Number.isFinite(flow) && flow >= 0.4 && flow <= 2.5 ? flow.toFixed(1) + ' ml/s' : '—'));
-      flowSummary.className = 'configuration-flow'; summary.append(flowSummary);
-    }
   }
   function syncFlow(value, measured = false) {
     const changed = Number(value) !== Number(flowValue);
@@ -353,7 +348,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     const mirror = document.getElementById('calibration-flow');
     if (mirror) mirror.value = value;
     flowValue = String(value);
-    if (changed && !measured && field('calibrationMode').value !== 'multiple') {
+    if (changed && !measured && !field('interpolate')?.checked) {
       field('referenceSeconds').value = '';
       status.textContent = 'Flow changed. Measure a new calibration time at this flow.';
       guided?.flowChanged();
@@ -381,13 +376,13 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       const groups = [
         ['pitchers', 'Empty pitcher weights', ['smallPitcherGrams', 'mediumPitcherGrams', 'largePitcherGrams']],
         ['pitchers', 'Automatic pitcher selection', ['autoDetect', 'singleDrinkGrams', 'singleDrinkPitcher']],
-        ['calibration', '', ['weightMode', 'temperatureUnit', 'targetTemperatureC', 'minimumFlow', 'maximumFlow', 'referenceMilkGrams', 'referenceSeconds']],
+        ['calibration', '', ['interpolate', 'weightMode', 'temperatureUnit', 'targetTemperatureC', 'minimumFlow', 'maximumFlow', 'referenceMilkGrams', 'referenceSeconds']],
       ];
       panels.pitchers.append(Object.assign(make('p', 'Configure empty pitcher weights manually or capture each one from the connected scale.'), { className: 'panel-intro' }));
-      panels.calibration.append(Object.assign(make('p', 'Set one fixed flow or measure several flows. Changes remain a draft until saved.'), { className: 'panel-intro' }));
+      panels.calibration.append(Object.assign(make('p', 'Create saved calibrations, or interpolate between several readings at one milk target.'), { className: 'panel-intro' }));
       const captions = { smallPitcherGrams: 'Small', mediumPitcherGrams: 'Medium', largePitcherGrams: 'Large', weightMode: 'Scale weight Mode' };
-      const hints = { smallPitcherGrams: 'Empty pitcher · grams', mediumPitcherGrams: 'Empty pitcher · grams', largePitcherGrams: 'Empty pitcher · grams', weightMode: 'One global choice for single and multiple calibration. Gross: pitcher + milk. Tared: milk only.' };
-      const noInlineHelp = new Set(['weightMode', 'temperatureUnit', 'targetTemperatureC', 'autoDetect']);
+      const hints = { smallPitcherGrams: 'Empty pitcher · grams', mediumPitcherGrams: 'Empty pitcher · grams', largePitcherGrams: 'Empty pitcher · grams', weightMode: 'One global choice for every calibration. Gross: pitcher + milk. Tared: milk only.' };
+      const noInlineHelp = new Set(['interpolate', 'weightMode', 'temperatureUnit', 'targetTemperatureC', 'autoDetect']);
       for (const [panelName, heading, keys] of groups) {
         const pitcherWeights = keys.includes('smallPitcherGrams'), automatic = keys.includes('autoDetect');
         const section = make('fieldset'); section.className = 'settings-section' + (pitcherWeights ? ' pitcher-weights-section' : automatic ? ' automatic-section' : ' measured-values');
@@ -408,7 +403,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
             label.append(badge, make('span', captions[key])); label.className = 'pitcher-card-name';
           } else label.textContent = captions[key] || item.label;
           if (key !== 'autoDetect') wrapper.append(label);
-          const input = make(item.type === 'enum' ? 'select' : 'input'); input.name = key; input.id = 'setting-' + key;
+          const input = make(item.type === 'enum' || key === 'targetTemperatureC' ? 'select' : 'input'); input.name = key; input.id = 'setting-' + key;
           if (item.type === 'enum') {
             for (const choice of item.values) {
               const display = key === 'weightMode' && choice ? choice[0].toUpperCase() + choice.slice(1) : (choice || 'Choose a pitcher');
@@ -423,7 +418,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
           if (item.type !== 'boolean') {
             const savedValue = data.settings[key];
             input.value = item.type === 'number' && savedValue === 0 ? ''
-              : key === 'targetTemperatureC' ? temperatureFromC(savedValue, data.settings.temperatureUnit || 'F') : savedValue;
+              : savedValue;
           }
           if (key === 'autoDetect') wrapper.append(input, label); else wrapper.append(input);
           if (!noInlineHelp.has(key)) wrapper.append(make('small', hints[key] || item.description));
@@ -437,17 +432,17 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       }
       const gettingStarted = make('section'); gettingStarted.className = 'getting-started';
       const gettingStartedText = make('p');
-      gettingStartedText.append(make('strong', 'Getting started:'), make('span', ' Begin with Single flow and one calibration reading. When Auto Steam is selected on the main shot page, the extension uses that fixed steam flow. Later, if you want to choose different flows, switch to Multiple and save at least three calibration measurements—the minimum, maximum, and one in between—all at the same target temperature.'));
+      gettingStartedText.append(make('strong', 'Getting started:'), make('span', ' Leave Interpolate off and create one calibration reading. That is enough to use Auto Steam at the saved flow. Later, turn on Interpolate if you want 0.1 ml/s flow adjustment, then save at least three readings—the minimum, maximum, and one in between—at the same milk target.'));
       gettingStarted.append(gettingStartedText); panels.instructions.append(gettingStarted);
       const instructions = [
         ['1 · Configure pitchers', 'Enter at least one empty pitcher weight. To measure one, tare the empty scale, wait for stable zero, place the pitcher on the scale, then select its Set from scale button.'],
         ['2 · Scale weight mode', 'Gross captures pitcher plus milk and subtracts the selected empty-pitcher weight. Tared captures milk only after taring with the empty pitcher already on the scale. One choice applies to every calibration.'],
-        ['3 · Set the target temperature', 'Choose Fahrenheit or Celsius for display, then enter the required target. The preference is remembered, while saved calibration temperatures remain stored internally in Celsius.'],
-        ['4 · Build a calibration library', 'Single can create as many flow readings as wanted. Each flow and target-temperature combination is saved independently until deleted; choose one saved reading as the Default.'],
-        ['5 · How Multiple chooses readings', 'Multiple uses every saved reading at the equivalent target temperature inside the selected range. Other temperatures and out-of-range flows remain under Other saved calibrations.'],
-        ['6 · Range and accuracy', 'Multiple requires exact minimum and maximum readings plus at least one interior reading. A reading near the middle is recommended. More matching readings improve piecewise interpolation accuracy.'],
+        ['3 · Choose the milk target filter', 'Choose Fahrenheit or Celsius for display. With Interpolate off, Milk target can show All targets or one saved target. The preference is remembered, while calibration temperatures remain stored internally in Celsius.'],
+        ['4 · Build a calibration library', 'Each flow and milk-target combination is saved independently until deleted. With Interpolate off, the shot page cycles through every calibration allowed by the Milk target filter.'],
+        ['5 · How Interpolate chooses readings', 'Interpolate uses every saved reading at the selected milk target inside the selected range. Other targets and out-of-range flows remain under Other saved calibrations.'],
+        ['6 · Range and accuracy', 'Interpolate requires exact minimum and maximum readings plus at least one interior reading. A reading near the middle is recommended. More matching readings improve piecewise interpolation accuracy.'],
         ['7 · Measure manually or with guidance', 'Manual entry uses actual milk-only weight and steaming time. Guided capture arms timing; start and stop steam with the machine controls. The counter excludes warm-up and stops when the machine stops steaming.'],
-        ['8 · Review, save and make a drink', 'Edit opens a calibration beneath its row; Update saved flow closes it. Save the complete setup, then select Auto on the shot page, weigh the filled pitcher and tap S, M, L or Auto to calculate.'],
+        ['8 · Review, save and make a drink', 'Edit opens a calibration beneath its row; Update saved calibration stores it immediately. Save settings activates the complete setup, then select Auto on the shot page, weigh the filled pitcher and tap S, M, L or Auto to calculate.'],
       ];
       const helpList = make('div'); helpList.className = 'help-list';
       for (const [heading, text] of instructions) {
@@ -469,23 +464,24 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       panels.glossary.append(Object.assign(make('p', 'Definitions for the settings and calibration controls.'), { className: 'panel-intro' }));
       const glossary = make('dl'); glossary.className = 'glossary';
       for (const [term, meaning] of [
-        ['Default measured flow', 'The saved calibration used by Single and the initial shot-page flow. The lowest saved flow starts as the default, and exactly one remains selected.'],
+        ['Interpolate', 'Off cycles through exact saved calibrations. On uses piecewise interpolation at one milk target and keeps 0.1 ml/s shot-page flow steps.'],
         ['Temperature unit', 'Display preference for calibration targets in Fahrenheit or Celsius. Changing it converts every displayed target without changing the calibration stored internally in Celsius.'],
-        ['Target temperature', 'Required for every reading. Flow plus target temperature uniquely identifies a saved calibration. It guides your physical stop point; the machine does not measure milk temperature.'],
+        ['Milk target', 'Filters the calibrations shown here and offered on the shot page. All targets is available when Interpolate is off.'],
+        ['All targets', 'Includes saved calibrations across every milk target. Each calibration still keeps its own target temperature.'],
         ['Scale weight mode', schema.weightMode.description],
         ['Empty pitcher weight', 'The untared pitcher weight used to subtract the pitcher from a Gross scale reading. Blank means that pitcher is not configured.'],
         ['Automatic pitcher selection', 'Damian’s heuristic infers S, M or L from gross weight and typical drink size. It is off by default, and some skins will not benefit from enabling it.'],
-        ['Minimum / maximum flow', 'The active Multiple range where Auto may interpolate. Readings outside the range are kept under Other saved calibrations until deleted.'],
-        ['Active readings', 'Every saved calibration with the selected target temperature and a flow inside the current range. Multiple uses all active readings for piecewise interpolation.'],
-        ['Other saved calibrations', 'Readings at a different target temperature or outside the selected flow range. They remain available for later configurations until deleted.'],
+        ['Minimum / maximum flow', 'The active range where Interpolate may calculate. Readings outside the range are kept under Other saved calibrations until deleted.'],
+        ['Available calibrations', 'With Interpolate off, these exact saved readings are offered on the shot page in flow and milk-target order.'],
+        ['Other saved calibrations', 'Readings excluded by the current milk target or interpolation range. They remain available for later configurations until deleted.'],
         ['S / M / L / Auto', 'Green means that choice is configured; red means it is not. Some skins do not use Auto pitcher selection, so it is off by default.'],
         ['Tare / capture', 'In Gross mode, tare with the scale empty. In Tared mode, tare with the empty pitcher on the scale. Capture derives the milk weight and arms timing for the next physical steam run.'],
-        ['Update saved flow / Save calibration', 'Update closes one inline editor and keeps the reading in the draft library. Save calibration applies the complete valid configuration.'],
+        ['Update saved calibration / Save settings', 'Update stores one reading immediately, including an incomplete interpolation set. Save settings activates only a complete valid setup.'],
       ]) {
         const item = make('div'); item.className = 'glossary-term'; item.append(make('dt', term), make('dd', meaning)); glossary.append(item);
       }
       panels.glossary.append(glossary);
-      for (const key of ['referenceFlow', 'calibrationMode', 'flowReadings']) {
+      for (const key of ['referenceFlow', 'flowReadings']) {
         const input = make('input'); input.type = 'hidden'; input.name = key; input.value = data.settings[key];
         form.append(input); fieldPanels[key] = 'calibration';
       }
@@ -497,7 +493,13 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       form.addEventListener('change', updateChoices);
       updateChoices(); showTab('pitchers'); loaded = true; save.disabled = false;
       status.textContent = data.ready ? 'Calibration is ready.' : 'Configure a pitcher and calibration before using Auto steam.';
-      flowPlan = mountFlowPlan({ form, labels, field, updateChoices, syncFlow }, { calibrationLibrary, partitionFlowReadings, multipleCalibrationRequirements, calibrationKey, validFlowReading, temperatureToC, temperatureFromC, formatTemperature });
+      const persistLibrary = flowReadings => request(base + '/library', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ flowReadings }),
+      });
+      flowPlan = mountFlowPlan({ form, labels, field, updateChoices, syncFlow, persistLibrary }, {
+        calibrationLibrary, partitionFlowReadings, interpolationRequirements, availableTargets, calibrationKey,
+        validFlowReading, temperatureToC, temperatureFromC, formatTemperature,
+      });
       guided = mountCalibration({ form, labels, save, back, status, request, base, field, updateChoices, syncFlow, flowPlan }, captureWeight);
       const plugin = await refreshUpdateState();
       await refreshBetaChannel(plugin);
@@ -510,7 +512,14 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       guided?.assertCanSave();
       flowPlan?.assertCanSave();
       const errors = validateConfiguration(values());
-      if (errors.length) { reveal(errors[0].field); throw new Error(errors.map(error => error.message).join(' ')); }
+      if (errors.length) {
+        reveal(errors[0].field);
+        const message = errors.map(error => error.message).join(' ');
+        if (field('interpolate')?.checked && errors.some(error => error.field === 'flowReadings' || error.field === 'targetTemperatureC')) {
+          showUpdateDialog('Interpolation setup incomplete', message);
+        }
+        throw new Error(message);
+      }
       const options = { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(values()) };
       await request(base + '/validate', options); await request(base + '/settings', options);
       window.location.assign(back.href);
@@ -534,7 +543,7 @@ header{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"hea
 #settings-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:10px 0 12px}#settings-tabs{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px}#settings-tabs button{min-height:38px;padding:6px 11px;color:var(--muted)}#settings-tabs [aria-selected=true],button[aria-pressed=true],#save{border-color:var(--accent);background:var(--accent);color:#fff}#configuration-summary{display:flex;align-items:center;justify-self:end;gap:6px;margin:0;color:var(--muted);font-size:12px;white-space:nowrap}.configured-pitcher,.unconfigured-pitcher{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;font-weight:500}.configured-pitcher{background:var(--configured-bg);color:var(--configured-text)}.unconfigured-pitcher{background:var(--unconfigured-bg);color:var(--unconfigured-text)}.configuration-flow{margin-left:5px;color:var(--text);font-weight:500}
 .settings-panel{padding:14px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 5px 17px rgba(43,62,90,.07)}.panel-intro{margin-bottom:11px;color:var(--muted);font-size:12px}.settings-section{min-width:0;margin:0 0 11px;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--soft)}.settings-section:last-child{margin-bottom:0}fieldset.settings-section{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.field{display:grid;align-content:start;gap:4px;color:var(--muted);font-size:12px}.field label{color:var(--text);font-weight:500}.field small,.section-help{color:var(--muted);font-size:12px}.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;grid-column:1/-1}.full-width{grid-column:1/-1}.local-status{margin:8px 0 0;padding:7px 9px;border-radius:7px;background:var(--notice);color:var(--muted);font-size:12px;overflow-wrap:anywhere}
 .pitcher-weights-section,.automatic-section{display:block!important}.pitcher-section-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.pitcher-section-header h3{margin:0}.scale-reading{color:var(--muted);font-size:12px}.scale-tools{display:flex;align-items:center;gap:8px}.pitcher-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.pitcher-card{display:grid;grid-template-columns:1fr;grid-template-rows:auto auto auto auto;align-content:start;gap:6px;min-width:0}.pitcher-card+.pitcher-card{padding-left:12px;border-left:1px solid var(--border)}.pitcher-card-name{display:flex;align-items:center;gap:7px;color:var(--text)!important}.pitcher-card-badge{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--configured-bg);color:var(--configured-text);font-weight:500}.pitcher-card button{width:100%}.pitcher-card .capture-result{margin:0;color:var(--muted);font-size:12px}.automatic-switch{display:flex;align-items:center;gap:10px;min-height:40px;font-weight:500}.automatic-switch>span{color:var(--text)}#setting-autoDetect{flex:0 0 30px;width:30px;height:30px;min-height:30px}.section-help{margin:4px 0 9px}.automatic-fields{margin-top:0}
-.flow-setup{display:block!important}.calibration-config-grid{display:grid;grid-template-columns:1.05fr .9fr .68fr 1.15fr;align-items:end;gap:9px}.flow-support{align-self:end}.flow-support .calibration-actions{margin:4px 0 0;flex-wrap:nowrap}.calibration-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:8px 0}.calibration-actions button{min-height:36px;padding:5px 9px}.flow-setup>.field-grid{margin-top:10px}.flow-setup>.local-status{margin-top:9px}.calibration-library-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}.calibration-library-header h3{margin:0}.calibration-library-help{color:var(--muted);font-size:12px}.calibration-library-actions{display:flex;align-items:center;gap:8px}.calibration-validation{color:var(--green);font-size:12px}.calibration-validation.invalid{color:var(--danger)}.new-calibration{min-height:36px;padding:5px 9px}.empty-calibrations{margin:8px 0;color:var(--muted);font-size:12px}.saved-calibration{border-top:1px solid var(--border)}.calibration-library-header+.saved-calibration{border-top:0}.saved-calibration-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto auto;align-items:center;gap:7px;padding:7px 0}.saved-calibration-details{min-width:0}.saved-calibration-flow{display:block;font-weight:500}.saved-calibration-meta{display:block;color:var(--muted);font-size:12px}.saved-calibration-row button{min-height:36px;padding:5px 9px}.default-choice{display:flex;align-items:center;gap:6px;min-height:36px;white-space:nowrap;font-size:12px}.default-choice input{width:22px}.missing-calibration{border-top-style:dashed}.saved-calibration-row.editing{margin:0 -7px;padding-right:7px;padding-left:7px;border-radius:8px 8px 0 0;background:var(--notice)}.calibration-editor{margin:0 -7px 8px;padding:10px;border-radius:0 0 8px 8px;background:var(--notice)}.editor-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px}.editor-heading{min-width:0}.editor-title-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.editor-title-row h3{margin:0}.editor-identity-help{color:var(--muted);font-size:12px}.reading-navigation{display:flex;gap:5px}.reading-navigation button{min-width:40px;min-height:36px;padding:4px 9px;font-size:17px}.entry-methods{margin:0;flex-wrap:nowrap}.editor-identity-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:8px}.editor-flow{width:auto}.inline-editor-flow{display:flex;align-items:center;grid-template-columns:none;flex-wrap:wrap;gap:7px;color:var(--text);font-weight:500}.inline-editor-flow input{width:92px;height:36px;min-height:36px}.inline-editor-flow small{font-weight:400}.manual-workspace,.guided-workspace{display:block}.manual-fields,.calibration-workspace-block{margin:0 0 8px!important;padding:10px!important;border:1px solid var(--border)!important;border-radius:8px!important;background:var(--surface)!important}.manual-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important}.editor-save-row{justify-content:space-between;margin:8px 0 0}.primary-action,#save{border-color:var(--accent);background:var(--accent);color:#fff}#other-calibrations{margin:10px 0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}#other-calibrations summary{min-height:40px;padding:9px 11px;cursor:pointer;font-weight:500}#other-calibrations[open]{padding-bottom:7px}#other-calibrations[open] summary{border-bottom:1px solid var(--border)}#other-calibrations>div,#other-calibrations>.other-calibrations-help{margin-right:11px;margin-left:11px}.other-calibrations-help{margin-top:7px;margin-bottom:4px;color:var(--muted);font-size:12px}
+.flow-setup{display:block!important}.calibration-config-grid{display:grid;grid-template-columns:1.05fr .9fr .68fr 1.15fr;align-items:end;gap:9px}.interpolate-switch{display:flex;align-items:center;gap:10px;min-height:40px;color:var(--text);font-weight:500}.interpolate-switch input{flex:0 0 30px;width:30px;height:30px;min-height:30px}.calibration-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:8px 0}.calibration-actions button{min-height:36px;padding:5px 9px}.flow-setup>.field-grid{margin-top:10px}.flow-setup>.local-status{margin-top:9px}.calibration-library-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}.calibration-library-header h3{margin:0}.calibration-library-help{color:var(--muted);font-size:12px}.calibration-library-actions{display:flex;align-items:center;gap:8px}.calibration-validation{color:var(--green);font-size:12px}.calibration-validation.invalid{color:var(--danger)}.new-calibration{min-height:36px;padding:5px 9px}.empty-calibrations{margin:8px 0;color:var(--muted);font-size:12px}.saved-calibration{border-top:1px solid var(--border)}.calibration-library-header+.saved-calibration{border-top:0}.saved-calibration-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;align-items:center;gap:7px;padding:7px 0}.saved-calibration-details{min-width:0}.saved-calibration-flow{display:block;font-weight:500}.saved-calibration-meta{display:block;color:var(--muted);font-size:12px}.saved-calibration-row button{min-height:36px;padding:5px 9px}.missing-calibration{border-top-style:dashed}.saved-calibration-row.editing{margin:0 -7px;padding-right:7px;padding-left:7px;border-radius:8px 8px 0 0;background:var(--notice)}.calibration-editor{margin:0 -7px 8px;padding:10px;border-radius:0 0 8px 8px;background:var(--notice)}.editor-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px}.editor-heading{min-width:0}.editor-title-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.editor-title-row h3{margin:0}.editor-identity-help{color:var(--muted);font-size:12px}.reading-navigation{display:flex;gap:5px}.reading-navigation button{min-width:40px;min-height:36px;padding:4px 9px;font-size:17px}.entry-methods{margin:0;flex-wrap:nowrap}.editor-identity-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:8px}.editor-flow{width:auto}.inline-editor-flow{display:flex;align-items:center;grid-template-columns:none;flex-wrap:wrap;gap:7px;color:var(--text);font-weight:500}.inline-editor-flow input{width:92px;height:36px;min-height:36px}.inline-editor-flow small{font-weight:400}.manual-workspace,.guided-workspace{display:block}.manual-fields,.calibration-workspace-block{margin:0 0 8px!important;padding:10px!important;border:1px solid var(--border)!important;border-radius:8px!important;background:var(--surface)!important}.manual-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important}.editor-save-row{justify-content:space-between;margin:8px 0 0}.primary-action,#save{border-color:var(--accent);background:var(--accent);color:#fff}#other-calibrations{margin:10px 0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}#other-calibrations summary{min-height:40px;padding:9px 11px;cursor:pointer;font-weight:500}#other-calibrations[open]{padding-bottom:7px}#other-calibrations[open] summary{border-bottom:1px solid var(--border)}#other-calibrations>div,#other-calibrations>.other-calibrations-help{margin-right:11px;margin-left:11px}.other-calibrations-help{margin-top:7px;margin-bottom:4px;color:var(--muted);font-size:12px}
 .guided-overview{display:grid;grid-template-columns:minmax(130px,.58fr) minmax(205px,.92fr) minmax(245px,1.1fr);align-items:stretch;gap:9px;margin-bottom:8px}.guided-overview.is-tared{grid-template-columns:minmax(225px,.95fr) minmax(245px,1.05fr)}.guided-overview>*{min-width:0}.guided-readouts{display:grid;grid-template-rows:repeat(2,minmax(0,1fr));gap:4px;width:100%}.guided-metric{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:0;padding:4px 9px;border-radius:7px;background:var(--soft)}.guided-metric b{font-weight:500}.guided-metric span{font-variant-numeric:tabular-nums}.guided-actions{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;margin:0}.guided-actions button{width:100%}.guided-steam-controls{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:8px}.timer-readout{margin-right:auto;font-weight:500;font-variant-numeric:tabular-nums}.calibration-timer{font:inherit}.machine-state{color:var(--muted);font-size:12px}.guided-steam-controls .calibration-actions{margin:0}.calibration-flow{max-width:220px;margin-bottom:8px}
 .getting-started{margin-bottom:9px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--soft)}.getting-started p{margin:0;color:var(--muted);font-size:12px}.getting-started strong{color:var(--text);font-weight:600}.help-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.help-section{padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--soft)}.help-section h3{margin-bottom:4px}.help-section p{margin-bottom:0;color:var(--muted);font-size:12px}.beta-channel{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:9px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--soft)}.beta-channel-copy{min-width:0}.beta-channel h3{margin-bottom:4px}.beta-channel p{margin:0;color:var(--muted);font-size:12px}.beta-channel button{flex:0 0 auto;white-space:nowrap}.glossary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px;margin:0}.glossary-term{padding:9px 0;border-bottom:1px solid var(--border)}.glossary-term dt{margin-bottom:3px;font-weight:500}.glossary-term dd{margin:0;color:var(--muted);font-size:12px}
 #status{min-height:1.5em;margin:0;color:var(--muted);font-size:12px;overflow-wrap:anywhere}.save-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;min-height:40px;margin-top:11px}footer{margin-top:11px;color:var(--muted);font-size:12px}
@@ -548,7 +557,7 @@ header{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"hea
 <div id="extension-update-dialog" class="update-dialog" hidden><section class="update-dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="extension-update-dialog-title" aria-describedby="extension-update-dialog-message"><h2 id="extension-update-dialog-title">Extension update</h2><p id="extension-update-dialog-message"></p><div class="update-dialog-actions"><button id="extension-update-dialog-close" type="button">OK</button><button id="extension-update-dialog-confirm" type="button" hidden></button></div></section></div>
 <div id="settings-toolbar"><nav id="settings-tabs" role="tablist" aria-label="Auto Steam settings"></nav><p id="configuration-summary" role="status" aria-live="polite">Loading configuration…</p></div>
 <form id="settings" novalidate></form>
-<div class="save-row"><p id="status" role="status" aria-live="polite">Loading settings…</p><button id="save" form="settings" type="submit" disabled>Save calibration</button></div>
+<div class="save-row"><p id="status" role="status" aria-live="polite">Loading settings…</p><button id="save" form="settings" type="submit" disabled>Save settings</button></div>
 <footer>Calculation and automatic pitcher detection inspired by <a href="https://github.com/Damian-AU/DSx2">Damian / Damian-AU’s DSx2</a>. Implementation for Decaid by pponce.</footer>
-<script>{const FLOW_MINIMUM=0.4,FLOW_MAXIMUM=2.5,MAX_READINGS=100;const close=(a,b)=>Math.abs(Number(a)-Number(b))<0.000001;const targetFor=settings=>Number(settings.targetTemperatureC)>0?Number(settings.targetTemperatureC):60;${temperatureToC.toString()}\n${temperatureFromC.toString()}\n${formatTemperature.toString()}\n${readFlowReadings.toString()}\n${validFlowReading.toString()}\n${calibrationKey.toString()}\n${calibrationLibrary.toString()}\n${partitionFlowReadings.toString()}\n${multipleCalibrationRequirements.toString()}\n${validateFlowCalibration.toString()}\n${configuredPitchers.toString()}\n${availablePitchers.toString()}\n${validateSettings.toString()}\n(${settingsBrowser.toString()})(${settingsReturnUrl.toString()},${mountCalibrationPage.toString()},${captureScaleWeight.toString()},availablePitchers,validateSettings,${mountFlowCalibrationPage.toString()});}</script></body></html>`;
+<script>{const FLOW_MINIMUM=0.4,FLOW_MAXIMUM=2.5,MAX_READINGS=100;const close=(a,b)=>Math.abs(Number(a)-Number(b))<0.000001;const selectedTarget=settings=>Number(settings.targetTemperatureC)>0?Number(settings.targetTemperatureC):0;${temperatureToC.toString()}\n${temperatureFromC.toString()}\n${formatTemperature.toString()}\n${readFlowReadings.toString()}\n${validFlowReading.toString()}\n${calibrationKey.toString()}\n${calibrationLibrary.toString()}\n${availableTargets.toString()}\n${partitionFlowReadings.toString()}\n${interpolationRequirements.toString()}\n${validateCalibrationLibrary.toString()}\n${validateFlowCalibration.toString()}\n${configuredPitchers.toString()}\n${availablePitchers.toString()}\n${validateSettings.toString()}\n(${settingsBrowser.toString()})(${settingsReturnUrl.toString()},${mountCalibrationPage.toString()},${captureScaleWeight.toString()},availablePitchers,validateSettings,${mountFlowCalibrationPage.toString()});}</script></body></html>`;
 }

@@ -6,93 +6,90 @@ import vm from 'node:vm';
 const asset = new URL('../', import.meta.url);
 const source = readFileSync(new URL('plugin.js', asset), 'utf8');
 const manifest = JSON.parse(readFileSync(new URL('manifest.json', asset), 'utf8'));
-const valid = { autoDetect: true, smallPitcherGrams: 150, mediumPitcherGrams: 220, largePitcherGrams: 300, singleDrinkGrams: 160,
-  singleDrinkPitcher: 'small', weightMode: 'gross', referenceMilkGrams: 150, referenceSeconds: 25,
-  referenceFlow: 1.5 };
-function plugin(settings = valid) {
-  const context = vm.createContext({});
-  vm.runInContext(source, context);
-  const instance = context.createPlugin({});
-  instance.onLoad(settings);
-  return instance;
+const reading = { flow: 1.5, targetTemperatureC: 60, milkGrams: 150, seconds: 25 };
+const key = '1.500@60.000';
+const valid = { autoDetect: true, smallPitcherGrams: 150, mediumPitcherGrams: 220, largePitcherGrams: 300,
+  singleDrinkGrams: 160, singleDrinkPitcher: 'small', weightMode: 'gross', temperatureUnit: 'F',
+  interpolate: false, targetTemperatureC: 0, referenceMilkGrams: 0, referenceSeconds: 0,
+  referenceFlow: 0.4, minimumFlow: 0.4, maximumFlow: 2.5, flowReadings: JSON.stringify([reading]) };
+function plugin(settings = valid, host = {}) {
+  const context = vm.createContext({}); vm.runInContext(source, context);
+  const instance = context.createPlugin(host); instance.onLoad(settings); return instance;
 }
 function call(instance, endpoint, method = 'GET', body = null) {
   const response = instance.__httpRequestHandler({ endpoint, method, body });
   return { ...response, json: response.headers['content-type'] === 'application/json' ? JSON.parse(response.body) : null };
 }
+const request = extra => ({
+  samples: [800, 400, 0].map(ageMs => ({ weightGrams: 330, ageMs })),
+  pitcher: 'auto', machineState: 'idle', stopAtTemperature: 0, calibrationKey: key, ...extra,
+});
 
-test('built plugin runs without DOM, timers, network or other host capabilities', () => {
+test('built plugin advertises API v5 and exact calibration choices', () => {
   const instance = plugin();
-  assert.deepEqual(manifest.permissions, ['api', 'events.machine']);
-  assert.equal(instance.id, manifest.id);
-  const status = call(instance, 'status');
-  assert.equal(status.json.ready, true);
-  assert.equal(status.json.apiVersion, 4);
-});
-
-test('fresh installs expose configuration requirements, never invented working values', () => {
-  const status = call(plugin({}), 'status');
-  assert.equal(status.json.ready, false);
-  assert.equal(status.json.settings.temperatureUnit, 'F');
-  assert.equal(status.json.settings.referenceSeconds, 0);
-  assert.ok(status.json.errors.length > 0);
-});
-
-test('calculate endpoint returns calibration flow and duration patch and calibration revision', () => {
-  const response = call(plugin(), 'calculate', 'POST', {
-    samples: [800, 400, 0].map(ageMs => ({ weightGrams: 330, ageMs })),
-    pitcher: 'auto', machineState: 'idle', steamFlow: 1.5, steamTemperature: 150, stopAtTemperature: 0,
-  });
-  assert.equal(response.status, 200);
-  assert.equal(response.json.durationSeconds, 30);
-  assert.equal(response.json.pitcher, 'small');
-  assert.equal(response.json.pitcherGrams, 150);
-  assert.equal(response.json.pitcherSource, 'heuristic');
-  assert.ok(!Object.keys(response.json).some(key => /jug/i.test(key)));
-  const status = call(plugin(), 'status').json;
-  assert.ok(!Object.keys(status.settings).some(key => /jug/i.test(key)));
-  assert.ok(!Object.keys(status.schema).some(key => /jug/i.test(key)));
-  assert.deepEqual(response.json.workflowPatch, { steamSettings: { duration: 30, flow: 1.5 } });
-  assert.equal(JSON.parse(response.json.calibrationRevision).referenceSeconds, 25);
-});
-
-test('configuration validation is read-only and reload replaces calculation settings', () => {
-  const instance = plugin();
-  assert.equal(call(instance, 'validate', 'POST', { ...valid, referenceSeconds: 0 }).status, 422);
-  assert.equal(call(instance, 'status').json.settings.referenceSeconds, 25);
-  instance.onLoad({ ...valid, referenceSeconds: 30 });
-  assert.equal(call(instance, 'status').json.settings.referenceSeconds, 30);
-});
-
-test('target temperature defaults to 140 F and notes do not change calculated time or workflow settings', () => {
-  const input = {
-    samples: [800, 400, 0].map(ageMs => ({ weightGrams: 330, ageMs })),
-    pitcher: 'small', machineState: 'idle', stopAtTemperature: 0,
-  };
-  const baseline = call(plugin(), 'calculate', 'POST', input).json;
-  for (const [targetTemperatureC, expectedTemperatureC] of [[0, 60], [55, 55], [65, 65]]) {
-    const instance = plugin({ ...valid, targetTemperatureC });
-    const saved = call(instance, 'status').json.settings;
-    assert.equal(saved.referenceMilkGrams, 150);
-    assert.equal(saved.targetTemperatureC, expectedTemperatureC);
-    instance.onLoad(JSON.parse(JSON.stringify(saved)));
-    const result = call(instance, 'calculate', 'POST', input).json;
-    assert.equal(result.durationSeconds, baseline.durationSeconds);
-    assert.deepEqual(result.workflowPatch, baseline.workflowPatch);
-  }
-});
-
-test('removed target milk is ignored without changing saved actual calibration or Auto pitcher inputs', () => {
-  const instance = plugin({ ...valid, referenceMilkGrams: 158, targetMilkGrams: 200 });
+  assert.deepEqual(manifest.permissions, ['api', 'events.machine', 'pluginStorage']);
   const status = call(instance, 'status').json;
   assert.equal(status.ready, true);
-  assert.equal(status.schema.targetMilkGrams, undefined);
-  assert.equal(status.settings.targetMilkGrams, undefined);
-  assert.equal(status.settings.referenceMilkGrams, 158);
-  assert.equal(status.settings.singleDrinkGrams, 160);
+  assert.equal(status.apiVersion, 5);
+  assert.equal(status.flowCalibration.mode, 'saved');
+  assert.deepEqual(status.flowCalibration.choices, [{ key, flow: 1.5, targetTemperatureC: 60, targetLabel: '140.0 °F' }]);
 });
 
-test('disabled, wrong-method and unknown-endpoint requests are explicit failures', () => {
+test('v2 storage starts empty instead of importing old calibration semantics', () => {
+  const calls = [];
+  const instance = plugin(valid, { storage: command => calls.push(structuredClone(command)) });
+  assert.deepEqual(calls, [{ type: 'read', key: 'calibration-library.v2' }]);
+  assert.equal(call(instance, 'status').json.settings.flowReadings, '[]');
+  instance.onEvent({ name: 'storageRead', payload: { key: 'calibration-library.v2', value: null } });
+  assert.equal(calls[1].type, 'write');
+  assert.equal(calls[1].data.flowReadings, '[]');
+  assert.equal(call(instance, 'status').json.calibrationStorage.state, 'writing');
+  instance.onEvent({ name: 'storageWrite', payload: { key: 'calibration-library.v2' } });
+  assert.equal(call(instance, 'status').json.calibrationStorage.state, 'ready');
+});
+
+test('library endpoint saves valid incomplete libraries independently of setup validation', () => {
+  const calls = [];
+  const instance = plugin({ ...valid, interpolate: true, targetTemperatureC: 60 }, { storage: command => calls.push(structuredClone(command)) });
+  const one = JSON.stringify([reading]);
+  const response = call(instance, 'library', 'POST', { flowReadings: one });
+  assert.equal(response.status, 200);
+  assert.equal(call(instance, 'status').json.settings.flowReadings, one);
+  assert.equal(call(instance, 'status').json.ready, false);
+  assert.equal(calls.at(-1).key, 'calibration-library.v2');
+  assert.equal(call(instance, 'library', 'POST', { flowReadings: '{bad' }).status, 422);
+});
+
+test('fresh installs expose configuration requirements and All targets', () => {
+  const status = call(plugin({}), 'status').json;
+  assert.equal(status.ready, false);
+  assert.equal(status.settings.temperatureUnit, 'F');
+  assert.equal(status.settings.targetTemperatureC, 0);
+  assert.equal(status.settings.interpolate, false);
+  assert.ok(status.errors.length > 0);
+});
+
+test('calculate returns the chosen calibration flow, target and duration', () => {
+  const response = call(plugin(), 'calculate', 'POST', request());
+  assert.equal(response.status, 200);
+  assert.equal(response.json.apiVersion, 5);
+  assert.equal(response.json.durationSeconds, 30);
+  assert.equal(response.json.pitcher, 'small');
+  assert.equal(response.json.targetTemperatureC, 60);
+  assert.equal(response.json.targetLabel, '140.0 °F');
+  assert.equal(response.json.calibrationKey, key);
+  assert.deepEqual(response.json.workflowPatch, { steamSettings: { duration: 30, flow: 1.5 } });
+});
+
+test('configuration validation is read-only and reload replaces setup settings', () => {
+  const instance = plugin();
+  assert.equal(call(instance, 'validate', 'POST', { ...valid, flowReadings: '[]' }).status, 422);
+  assert.equal(call(instance, 'status').json.settings.flowReadings, valid.flowReadings);
+  instance.onLoad({ ...valid, targetTemperatureC: 60 });
+  assert.equal(call(instance, 'status').json.settings.targetTemperatureC, 60);
+});
+
+test('disabled, wrong-method and unknown endpoints are explicit failures', () => {
   const instance = plugin();
   assert.equal(call(instance, 'calculate', 'GET').status, 405);
   assert.equal(call(instance, 'missing').status, 404);
@@ -106,57 +103,38 @@ test('settings UI is self-contained and credits Damian', () => {
   assert.equal(response.status, 200);
   assert.match(response.body, /github.com\/Damian-AU\/DSx2/);
   assert.match(response.body, /form="settings"/);
-  assert.match(response.body, /<header>[\s\S]*check-extension-update[^>]*hidden[^>]*>Update<[\s\S]*approve-extension-update[^>]*hidden[^>]*>Approve &amp; Update<[\s\S]*<\/header>/);
   assert.match(response.body, /role="alertdialog"/);
+  assert.match(response.body, /Interpolate/);
+  assert.match(response.body, /All targets/);
   const script = response.body.match(/<script>([\s\S]*)<\/script>/)[1];
   assert.doesNotThrow(() => new vm.Script(script));
 });
-
 
 test('status advertises only configured pitcher choices and Auto is opt-in', () => {
   const fresh = call(plugin({}), 'status').json;
   assert.deepEqual(fresh.availablePitchers, []);
   assert.equal(fresh.settings.autoDetect, false);
-  assert.equal(fresh.settings.singleDrinkGrams, 0);
   const partial = call(plugin({ ...valid, autoDetect: false, smallPitcherGrams: 0, largePitcherGrams: 0, singleDrinkGrams: 0 }), 'status').json;
   assert.equal(partial.ready, true);
   assert.deepEqual(partial.availablePitchers, ['medium']);
 });
 
-
-test('fresh and previously unset calibration flow default to 0.4 ml/s', () => {
-  for (const values of [{}, { referenceFlow: 0 }]) assert.equal(call(plugin(values), 'status').json.settings.referenceFlow, 0.4);
-});
-
-
-test('removed settings are absent from schema and ignored on upgrade', () => {
-  const status = call(plugin({ ...valid, maxSeconds: 20, referenceSteamTemperature: 0, defaultPitcher: 'medium' }), 'status').json;
-  assert.equal(status.ready, true);
-  for (const key of ['maxSeconds', 'referenceSteamTemperature', 'defaultPitcher']) {
-    assert.equal(Object.hasOwn(status.schema, key), false);
-    assert.equal(Object.hasOwn(status.settings, key), false);
-  }
-});
-
-test('multiple-flow status and calculations survive settings serialization and plugin reload', () => {
-  const settings = { ...valid, calibrationMode: 'multiple', referenceFlow: 1.45, flowReadings: JSON.stringify([
+test('interpolation status and calculations survive serialization and reload', () => {
+  const readings = [
     { flow: 0.4, targetTemperatureC: 60, milkGrams: 200, seconds: 40 },
     { flow: 1.45, targetTemperatureC: 60, milkGrams: 200, seconds: 25 },
     { flow: 2.5, targetTemperatureC: 60, milkGrams: 200, seconds: 10 },
-  ]), targetTemperatureC: 60, minimumFlow: 0.4, maximumFlow: 2.5 };
+  ];
+  const settings = { ...valid, interpolate: true, targetTemperatureC: 60,
+    flowReadings: JSON.stringify(readings), minimumFlow: 0.4, maximumFlow: 2.5 };
   const instance = plugin(JSON.parse(JSON.stringify(settings)));
   const status = call(instance, 'status').json;
   assert.equal(status.ready, true);
-  assert.equal(status.apiVersion, 4);
-  assert.equal(status.flowCalibration.adjustable, true);
-  assert.equal(status.flowCalibration.minimum, 0.4);
-  assert.equal(status.flowCalibration.maximum, 2.5);
-  const input = { samples: [800, 400, 0].map(ageMs => ({ weightGrams: 350, ageMs })), pitcher: 'small', machineState: 'idle', stopAtTemperature: 0, flow: 1.45 };
+  assert.equal(status.flowCalibration.mode, 'interpolate');
+  assert.equal(status.flowCalibration.step, 0.1);
+  const input = request({ pitcher: 'small', flow: 1.45, calibrationKey: undefined, samples: [800, 400, 0].map(ageMs => ({ weightGrams: 350, ageMs })) });
   assert.equal(call(instance, 'calculate', 'POST', input).json.durationSeconds, 25);
   assert.equal(call(instance, 'calculate', 'POST', { ...input, flow: 2.6 }).json.code, 'flow_out_of_range');
   instance.onLoad(status.settings);
   assert.equal(call(instance, 'calculate', 'POST', input).json.durationSeconds, 25);
-  instance.onLoad({ ...settings, flowReadings: '[]' });
-  assert.equal(call(instance, 'status').json.flowCalibration, null);
-  assert.equal(call(instance, 'status').json.ready, false);
 });

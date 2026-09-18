@@ -3,7 +3,7 @@ const FLOW_MAXIMUM = 2.5;
 const MAX_READINGS = 100;
 
 const close = (a, b) => Math.abs(Number(a) - Number(b)) < 0.000001;
-const targetFor = settings => Number(settings.targetTemperatureC) > 0 ? Number(settings.targetTemperatureC) : 60;
+const selectedTarget = settings => Number(settings.targetTemperatureC) > 0 ? Number(settings.targetTemperatureC) : 0;
 
 export function temperatureToC(value, unit = 'F') {
   const number = Number(value);
@@ -45,78 +45,96 @@ export function calibrationKey(reading) {
 }
 
 export function calibrationLibrary(settings) {
-  const sharedTarget = targetFor(settings);
   const parsed = readFlowReadings(settings);
   if (!parsed) return null;
-  const readings = parsed.map(reading => ({
-    ...reading,
-    targetTemperatureC: Number.isFinite(Number(reading?.targetTemperatureC)) && Number(reading.targetTemperatureC) > 0
-      ? Number(reading.targetTemperatureC) : sharedTarget,
-  }));
-  if (!readings.length && Number.isFinite(settings.referenceFlow) && Number.isFinite(settings.referenceMilkGrams) &&
-      Number.isFinite(settings.referenceSeconds) && settings.referenceMilkGrams >= 10 && settings.referenceSeconds >= 1 && sharedTarget > 0) {
-    readings.push({ flow: settings.referenceFlow, targetTemperatureC: sharedTarget,
-      milkGrams: settings.referenceMilkGrams, seconds: settings.referenceSeconds });
-  }
-  return readings.sort((a, b) => a.targetTemperatureC - b.targetTemperatureC || a.flow - b.flow);
+  return parsed.map(reading => ({ ...reading })).sort((a, b) => a.targetTemperatureC - b.targetTemperatureC || a.flow - b.flow);
+}
+
+export function availableTargets(settings) {
+  const readings = calibrationLibrary(settings);
+  if (!readings) return [];
+  return [...new Set(readings.filter(validFlowReading).map(reading => Number(reading.targetTemperatureC)))].sort((a, b) => a - b);
 }
 
 export function partitionFlowReadings(settings) {
   const readings = calibrationLibrary(settings);
   if (!readings) return { active: [], other: [], invalid: true };
-  const target = targetFor(settings), minimum = Number(settings.minimumFlow ?? 0.4), maximum = Number(settings.maximumFlow ?? 2.5);
+  const target = selectedTarget(settings), interpolate = settings.interpolate === true;
+  const minimum = Number(settings.minimumFlow ?? FLOW_MINIMUM), maximum = Number(settings.maximumFlow ?? FLOW_MAXIMUM);
   const active = [], other = [];
   for (const reading of readings) {
-    if (validFlowReading(reading) && close(reading.targetTemperatureC, target) && reading.flow >= minimum && reading.flow <= maximum) active.push(reading);
+    const targetMatches = target === 0 || close(reading.targetTemperatureC, target);
+    const rangeMatches = !interpolate || reading.flow >= minimum && reading.flow <= maximum;
+    if (validFlowReading(reading) && targetMatches && rangeMatches) active.push(reading);
     else other.push(reading);
   }
-  return { active: active.sort((a, b) => a.flow - b.flow), other, invalid: false };
+  return { active: active.sort((a, b) => a.targetTemperatureC - b.targetTemperatureC || a.flow - b.flow), other, invalid: false };
 }
 
-export function multipleCalibrationRequirements(settings) {
-  const minimum = Number(settings.minimumFlow ?? 0.4), maximum = Number(settings.maximumFlow ?? 2.5);
-  const { active } = partitionFlowReadings(settings);
+export function interpolationRequirements(settings) {
+  const minimum = Number(settings.minimumFlow ?? FLOW_MINIMUM), maximum = Number(settings.maximumFlow ?? FLOW_MAXIMUM);
+  const { active } = partitionFlowReadings({ ...settings, interpolate: true });
   return { active,
     hasMinimum: active.some(reading => close(reading.flow, minimum)),
     hasMaximum: active.some(reading => close(reading.flow, maximum)),
     hasInterior: active.some(reading => reading.flow > minimum && reading.flow < maximum) };
 }
 
-export function validateFlowCalibration(settings) {
-  const mode = settings.calibrationMode ?? 'single';
-  if (!['single', 'multiple'].includes(mode)) return [{ field: 'calibrationMode', message: 'Choose Single or Multiple flow support.' }];
-  const target = targetFor(settings);
-  if (!Number.isFinite(target) || target <= 0 || target > 100) return [{ field: 'targetTemperatureC', message: 'Enter a required target milk temperature between 0 and 100 °C.' }];
+export function validateCalibrationLibrary(settings) {
   const readings = calibrationLibrary(settings);
-  if (!readings || readings.some(reading => !validFlowReading(reading))) return [{ field: 'flowReadings', message: 'Every saved calibration needs a flow, target temperature, milk weight and steaming time.' }];
+  if (!readings || readings.some(reading => !validFlowReading(reading))) return [{ field: 'flowReadings', message: 'Every saved calibration needs a flow, milk target, milk weight and steaming time.' }];
   const keys = readings.map(calibrationKey);
-  if (new Set(keys).size !== keys.length) return [{ field: 'flowReadings', message: 'Only one saved calibration may use the same flow and target temperature.' }];
-  if (mode === 'single') {
-    const selected = readings.find(reading => close(reading.flow, settings.referenceFlow) && close(reading.targetTemperatureC, target));
-    return selected ? [] : [{ field: 'referenceFlow', message: 'Choose a saved calibration as the Single-flow default.' }];
+  if (new Set(keys).size !== keys.length) return [{ field: 'flowReadings', message: 'Only one saved calibration may use the same flow and milk target.' }];
+  return [];
+}
+
+export function validateFlowCalibration(settings) {
+  const libraryErrors = validateCalibrationLibrary(settings);
+  if (libraryErrors.length) return libraryErrors;
+  const target = selectedTarget(settings);
+  if (settings.interpolate !== true) {
+    return partitionFlowReadings(settings).active.length
+      ? []
+      : [{ field: 'flowReadings', message: 'Create at least one calibration for the selected milk target, or choose All targets.' }];
   }
-  const minimum = Number(settings.minimumFlow ?? 0.4), maximum = Number(settings.maximumFlow ?? 2.5);
+  if (!Number.isFinite(target) || target <= 0 || target > 100) return [{ field: 'targetTemperatureC', message: 'Choose a milk target with saved calibration readings before using Interpolate.' }];
+  const minimum = Number(settings.minimumFlow ?? FLOW_MINIMUM), maximum = Number(settings.maximumFlow ?? FLOW_MAXIMUM);
   if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum < FLOW_MINIMUM || maximum > FLOW_MAXIMUM || maximum - minimum < 0.1) return [{ field: 'minimumFlow', message: 'Choose a flow range of at least 0.1 ml/s between 0.4 and 2.5 ml/s.' }];
-  const required = multipleCalibrationRequirements(settings);
-  if (required.active.length < 3 || !required.hasMinimum || !required.hasMaximum || !required.hasInterior) return [{ field: 'flowReadings', message: 'Multiple flow needs the selected minimum, maximum, and at least one interior calibration at the target temperature.' }];
-  if (!required.active.some(reading => close(reading.flow, settings.referenceFlow))) return [{ field: 'referenceFlow', message: 'Choose one of the active calibrations as the default flow.' }];
+  const required = interpolationRequirements(settings);
+  if (required.active.length < 3 || !required.hasMinimum || !required.hasMaximum || !required.hasInterior) return [{ field: 'flowReadings', message: 'Interpolate needs at least three calibrations at this milk target: the exact minimum, exact maximum, and one interior flow.' }];
   return [];
 }
 
 export function flowCalibration(settings) {
   if (validateFlowCalibration(settings).length) return null;
-  const multiple = settings.calibrationMode === 'multiple';
-  const library = calibrationLibrary(settings);
-  const readings = multiple ? partitionFlowReadings(settings).active : library.filter(reading => close(reading.flow, settings.referenceFlow) && close(reading.targetTemperatureC, targetFor(settings)));
-  return { mode: multiple ? 'multiple' : 'single', adjustable: multiple, minimum: readings[0].flow,
-    maximum: readings[readings.length - 1].flow, defaultFlow: settings.referenceFlow, readings };
+  const readings = partitionFlowReadings(settings).active;
+  if (settings.interpolate === true) {
+    const minimum = Number(settings.minimumFlow), maximum = Number(settings.maximumFlow);
+    return { mode: 'interpolate', adjustable: true, minimum, maximum, step: 0.1, defaultFlow: minimum, readings };
+  }
+  return {
+    mode: 'saved', adjustable: readings.length > 1,
+    defaultCalibrationKey: calibrationKey(readings[0]),
+    choices: readings.map(reading => ({ key: calibrationKey(reading), flow: reading.flow,
+      targetTemperatureC: reading.targetTemperatureC, targetLabel: formatTemperature(reading.targetTemperatureC, settings.temperatureUnit || 'F') })),
+    readings,
+  };
 }
 
-export function secondsPerGram(settings, flow) {
+export function selectedCalibration(settings, key) {
+  const calibration = flowCalibration(settings);
+  if (!calibration || calibration.mode !== 'saved') return null;
+  return calibration.readings.find(reading => calibrationKey(reading) === key) || null;
+}
+
+export function secondsPerGram(settings, flow, key) {
   const calibration = flowCalibration(settings);
   if (!calibration) return NaN;
+  if (calibration.mode === 'saved') {
+    const reading = selectedCalibration(settings, key);
+    return reading ? reading.seconds / reading.milkGrams : NaN;
+  }
   const readings = calibration.readings;
-  if (!calibration.adjustable) return readings[0].seconds / readings[0].milkGrams;
   if (flow < calibration.minimum || flow > calibration.maximum) return NaN;
   const exact = readings.find(reading => close(reading.flow, flow));
   if (exact) return exact.seconds / exact.milkGrams;
