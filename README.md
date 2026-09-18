@@ -172,6 +172,8 @@ the plugin ID stable.
 
 ### Release-channel promotion
 
+See [`RELEASE.md`](RELEASE.md) for the maintainer checklist and the required beta-to-stable branch synchronization rule.
+
 Develop prereleases on `beta` with versions such as `0.13.4-beta.1`. When a beta
 is ready for stable, promote the tested work to `main`, remove the prerelease
 suffix, and wait for the stable `main` CI run to pass. After that stable run is

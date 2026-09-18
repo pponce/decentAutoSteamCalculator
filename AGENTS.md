@@ -12,3 +12,4 @@ Read README.md for installation and docs/CalibratedSteam.md for the API contract
 - Update user and skin-developer documentation when behavior changes.
 - Preserve Damian's attribution and the GPL-3.0-only license.
 - Do not publish releases or modify unrelated repositories unless requested.
+- Before any beta/stable release work, read `RELEASE.md` and follow its branch-promotion procedure. After a stable `main` build is green, advance `beta` to that exact stable commit before starting the next beta series.
