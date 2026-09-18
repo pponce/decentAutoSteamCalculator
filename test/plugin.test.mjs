@@ -52,12 +52,15 @@ test('library endpoint saves valid incomplete libraries independently of setup v
   const calls = [];
   const instance = plugin({ ...valid, interpolate: true, targetTemperatureC: 60 }, { storage: command => calls.push(structuredClone(command)) });
   const one = JSON.stringify([reading]);
-  const response = call(instance, 'library', 'POST', { flowReadings: one });
+  const response = call(instance, 'library', 'POST', { flowReadings: one, curveFitTargets: [60] });
   assert.equal(response.status, 200);
   assert.equal(call(instance, 'status').json.settings.flowReadings, one);
+  assert.deepEqual(call(instance, 'status').json.settings.curveFitTargets, [60]);
   assert.equal(call(instance, 'status').json.ready, false);
   assert.equal(calls.at(-1).key, 'calibration-library.v2');
+  assert.deepEqual(calls.at(-1).data.curveFitTargets, [60]);
   assert.equal(call(instance, 'library', 'POST', { flowReadings: '{bad' }).status, 422);
+  assert.equal(call(instance, 'library', 'POST', { flowReadings: one, curveFitTargets: [0] }).status, 422);
 });
 
 test('fresh installs expose configuration requirements and All targets', () => {
@@ -98,10 +101,11 @@ test('disabled, wrong-method and unknown endpoints are explicit failures', () =>
   assert.equal(call(instance, 'calculate', 'POST', {}).status, 503);
 });
 
-test('settings UI is self-contained and credits Damian', () => {
+test('settings UI is self-contained and credits Damian in Instructions', () => {
   const response = call(plugin(), 'ui');
   assert.equal(response.status, 200);
-  assert.match(response.body, /github.com\/Damian-AU\/DSx2/);
+  assert.match(response.body, /Damian \/ Damian-AU’s DSx2/);
+  assert.doesNotMatch(response.body, /<footer>Calculation and automatic pitcher detection inspired by/);
   assert.match(response.body, /form="settings"/);
   assert.match(response.body, /role="alertdialog"/);
   assert.match(response.body, /Interpolate/);

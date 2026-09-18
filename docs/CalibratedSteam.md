@@ -135,6 +135,21 @@ Additional matching readings are all used. Readings outside the range or at a
 different target temperature remain under collapsed **Other saved calibrations**.
 Changing range or target therefore does not erase prior work.
 
+When the selected target has a complete set, **Preview interpolation** opens a
+flow-versus-calculated-time graph with separate lines for 100, 150, 200 and 250 g
+of milk plus the actual measured readings. The dialog clearly names the milk
+target. Arrow controls browse other complete targets without changing settings;
+**Use this milk target** explicitly changes the main Milk target selection.
+
+**Smooth curve fit** is remembered separately for each milk target. When enabled,
+the plugin compares safe inverse, exponential and power-law fits; a quadratic is
+also eligible when at least five distinct flow readings exist. It uses prediction
+error from held-out interior readings to select a curve only when it improves on
+straight-line interpolation. A candidate is rejected if it becomes non-positive,
+turns upward, strays too far from the measured readings or leaves the measured
+rate envelope. If no candidate passes, the calculation and graph use straight
+lines. No model name or mathematical choice is exposed in normal settings.
+
 Record the **actual milk-only weight for every reading**. New manual readings
 start blank and require the measured weight; guided calibration fills it from
 the scale after subtracting the selected pitcher. Each reading stores and uses
@@ -221,15 +236,18 @@ DSx2's Tcl UI or artwork. Damian is credited in the manifest and settings UI.
 An exact saved calibration uses
 `seconds = round(readingSeconds × milkGrams / readingMilkGrams)`.
 
-Interpolate normalizes each reading to `rate = seconds / milkGrams`. For a
-requested flow between adjacent measured flows `f0` and `f1`, let
+Interpolate normalizes each reading to `rate = seconds / milkGrams`. With Smooth
+curve fit off—or when its automatic safety checks fall back—for a requested flow
+between adjacent measured flows `f0` and `f1`, let
 `p = (flow - f0) / (f1 - f0)`. Every active reading participates through its
 adjacent segment. Then
 `seconds = round(milkGrams × ((1-p) × rate0 + p × rate1))`.
-Measured endpoints retain their measured rate. There is no curve fitting or
-extrapolation beyond the measured range. This extension to the original ratio
-is an empirical estimate; it still assumes time scales approximately with milk
-mass. Heater-temperature compensation and pitcher inference are unchanged.
+Measured endpoints retain their measured rate in straight-line mode. When a
+safe smooth model wins automatic selection, its fitted normalized rate is used
+throughout the same measured range. Neither method extrapolates beyond the
+minimum and maximum. This extension to the original ratio is an empirical
+estimate; it still assumes time scales approximately with milk mass.
+Heater-temperature compensation and pitcher inference are unchanged.
 
 For gross weight `W`, empty small/medium pitcher weights `S`/`M`, and usual
 single-drink milk mass `D`:
@@ -304,8 +322,10 @@ for an invalid setup or one of these capability-driven shapes:
   to the skin. Cycle this ordered list, remember the key device-locally, and fall
   back to `defaultCalibrationKey` when the remembered key is absent.
 - Interpolate on: `{mode: "interpolate", adjustable: true, minimum, maximum,
-  step: 0.1, defaultFlow, readings}`. Keep the existing 0.1 ml/s controls and
-  never extrapolate beyond the returned range.
+  step: 0.1, defaultFlow, interpolationMethod, readings}`. The method is only
+  `linear` or `smooth`; the selected curve model remains internal and skins do
+  not need to interpret it. Keep the existing 0.1 ml/s
+  controls and never extrapolate beyond the returned range.
 
 Each full reading is `{flow, targetTemperatureC, milkGrams, seconds}`. Also
 require `ready`; valid calibration data alone does not establish valid pitcher
@@ -320,6 +340,9 @@ The v5 beta intentionally starts a new Decaid plugin-storage record at
 Beta testers recreate their readings. The `library` endpoint validates and
 stores individual library changes even when an interpolation set is incomplete;
 the complete extension setup remains unready until normal validation succeeds.
+The same namespaced record stores `curveFitTargets`, an array of Celsius milk
+targets whose Smooth curve fit preference is enabled. Existing v2 records without
+that optional property remain valid and default to straight lines.
 
 Generic manifest-driven settings pages expose the serialized compatibility field
 as text; skins should direct calibration edits to the plugin's **Open** page.

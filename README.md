@@ -71,7 +71,11 @@ Select **Open settings**:
   or filter the exact saved calibrations offered on the shot page.
 - Turn on **Interpolate** only when you want adjustable flow. It requires one
   specific milk target plus the exact minimum, exact maximum, and at least one
-  interior reading. More matching readings improve interpolation.
+  interior reading. More matching readings improve interpolation. When that set
+  is complete, **Preview** graphs calculated time by flow for
+  several milk weights. The preview can browse other complete milk targets,
+  choose **Use this milk target**, and enable **Smooth curve fit** separately for
+  each target.
 - Record the **actual milk-only weight for every reading**, manually or with
   guided calibration. Guided capture arms timing; start and stop steam using the
   physical machine controls.
@@ -125,6 +129,12 @@ Calculator only. Decaid, skins and other plugins remain on their current update
 sources. Beta builds use prerelease versions and each beta update advances that
 version so the calculator's normal update check can offer it.
 
+Stable `0.13.2` adds the interpolation graph and per-target **Smooth curve
+fit** preference. The extension chooses among safe simple curve candidates from
+the saved readings and retains straight-line interpolation when no curve predicts
+better. Calculations never extrapolate beyond the measured flow range.
+This release also prevents Android keyboard **Go** / implicit form submission from closing an open calibration editor or disturbing the saved calibration library; use **Update saved calibration** to commit that reading. The preview centers milk-target navigation, keeps the interpolation method and actions on one bottom row, hides Smooth curve fit when no safe smooth model is available, wraps the measured-reading legend, and lets **Use this milk target** close the preview even when that target is already selected. The preview is modal: tapping outside no longer closes it, and background settings scrolling is locked until **Close** or **Use this milk target** is pressed. **+ New calibration** remains available while Interpolate is enabled, so additional readings can be added without switching modes. If the new reading uses a different milk target, that target becomes active immediately; previous-target readings stay saved under the collapsed **Other saved calibrations** group until the user selects that target again. This automatic target switch happens only while Interpolate is on; with Interpolate off, the Milk target filter stays exactly where the user left it (All targets or a specific target).
+
 Stable version `0.13.0` introduces the saved-calibration selector and interpolation
 model tested in the 0.13.0 betas. It deliberately starts a new
 `calibration-library.v2` record instead of importing older calibration semantics,
@@ -152,7 +162,7 @@ npm run build
 Edit `src/` and `manifest.src.json`. Commit the generated root `manifest.json`
 and `plugin.js` with the source. Their root placement is required by Decaid's
 GitHub branch installer. Keep the package and manifest versions equal and keep
-the plugin ID stable. Calculator API version is 4; the Decaid host manifest API
+the plugin ID stable. Calculator API version is 5; the Decaid host manifest API
 is 1.
 
 CI runs the tests, checks generated-file consistency, and uploads an installable

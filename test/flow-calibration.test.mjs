@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { calculate, validateSettings } from '../src/core.mjs';
 import { availableTargets, calibrationKey, calibrationLibrary, flowCalibration, formatTemperature,
-  interpolationRequirements, partitionFlowReadings, secondsPerGram, temperatureFromC, temperatureToC
+  interpolationModel, interpolationRequirements, normalizeCurveFitTargets, partitionFlowReadings, secondsPerGram,
+  smoothCurveModel, temperatureFromC, temperatureToC
 } from '../src/flow-calibration.mjs';
 
 const reading = (flow, seconds, targetTemperatureC = 60) => ({ flow, targetTemperatureC, milkGrams: 200, seconds });
@@ -89,6 +90,30 @@ test('all matching readings are used for adjacent piecewise interpolation', () =
   assert.equal(calculate(settings, input({ flow: 1.35 })).durationSeconds, 46);
 });
 
+test('Smooth curve fit automatically selects a safe inverse curve when it predicts better', () => {
+  const readings = [reading(0.5, 80), reading(1.5, 40), reading(2.5, 32)];
+  const settings = { ...interpolated(readings), minimumFlow: 0.5, maximumFlow: 2.5, curveFitTargets: [60] };
+  const model = interpolationModel(settings);
+  assert.equal(model.requested, true);
+  assert.equal(model.kind, 'inverse');
+  assert.ok(Math.abs(model.predict(1) - 0.25) < 1e-12);
+  assert.ok(Math.abs(secondsPerGram(settings, 1) - 0.25) < 1e-12);
+  assert.equal(flowCalibration(settings).interpolationMethod, 'smooth');
+});
+
+test('Smooth curve fit falls back to straight lines when a curve is not better', () => {
+  const readings = [reading(0.5, 60), reading(1.5, 40), reading(2.5, 20)];
+  const settings = { ...interpolated(readings), minimumFlow: 0.5, maximumFlow: 2.5, curveFitTargets: [60] };
+  assert.equal(smoothCurveModel(readings).kind, 'linear');
+  assert.equal(interpolationModel(settings).kind, 'linear');
+  assert.equal(secondsPerGram(settings, 1), 50 / 200);
+});
+
+test('Smooth curve preferences are normalized per milk target', () => {
+  assert.deepEqual(normalizeCurveFitTargets('[60,55,60,0,101]'), [55, 60]);
+  assert.deepEqual(normalizeCurveFitTargets('bad'), []);
+});
+
 test('library can retain more than nine readings while interpolation never extrapolates', () => {
   const readings = Array.from({ length: 22 }, (_, index) => reading(Number((0.4 + index * 0.1).toFixed(1)), 80 - index * 2));
   const settings = interpolated(readings);
@@ -104,4 +129,3 @@ test('duplicate flow and target pairs and malformed saved readings are rejected'
     '{bad',
   ]) assert.ok(validateSettings({ ...interpolated([]), flowReadings }).length);
 });
-

@@ -31,7 +31,7 @@ async function page(settings = partial, {
   class FakeDate extends Date { static now() { return time; } }
   class FakeWebSocket { constructor() { socket = this; } close() {} }
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.value = ''; }
+    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.style = { overflow: '' }; this.value = ''; }
     set value(value) { this._value = String(value); } get value() { return this._value; }
     set name(value) { this.fieldName = value; fields[value] = this; } get name() { return this.fieldName; }
     set id(value) { this.elementId = value; ids[value] = this; } get id() { return this.elementId; }
@@ -100,7 +100,7 @@ async function page(settings = partial, {
     }
     if (endpoint === 'tare') return { ok: true, text: async () => '' };
     if (endpoint === 'library') {
-      persistedLibraries.push(JSON.parse(options.body).flowReadings);
+      persistedLibraries.push(JSON.parse(options.body));
       return { ok: true, text: async () => JSON.stringify({ saved: true }) };
     }
     if (endpoint === 'settings') { savedSettings.push(JSON.parse(options.body)); return { ok: true, text: async () => '{}' }; }
@@ -108,7 +108,8 @@ async function page(settings = partial, {
     return { ok: response.status === 200, text: async () => response.body };
   };
   const body = plugin.__httpRequestHandler({ endpoint: 'ui', method: 'GET' }).body;
-  const document = { referrer: '', getElementById: id => ids[id], createElement: tag => new Element(tag) };
+  const documentBody = new Element('body');
+  const document = { referrer: '', body: documentBody, getElementById: id => ids[id], createElement: tag => new Element(tag) };
   const navigations = [];
   const context = vm.createContext({ document, fetch, URL, Date: FakeDate, WebSocket: FakeWebSocket,
     setTimeout: callback => { timers.push(callback); return timers.length; }, clearTimeout() {},
@@ -116,7 +117,7 @@ async function page(settings = partial, {
   vm.runInContext(body.match(/<script>([\s\S]*)<\/script>/)[1], context);
   await new Promise(resolve => setImmediate(resolve));
   const all = element => [element, ...element.children.flatMap(all)];
-  return { fields, ids, calls, savedSettings, calibrationCalls, persistedLibraries, navigations,
+  return { fields, ids, documentBody, calls, savedSettings, calibrationCalls, persistedLibraries, navigations,
     buttons: text => all(ids.settings).filter(item => item.tag === 'button' && item.textContent === text),
     elements: () => all(ids.settings),
     scale(weight) { time += 300; socket.onmessage({ data: JSON.stringify({ weight }) }); },
@@ -189,6 +190,34 @@ test('saved calibrations edit inline and persist independently', async () => {
   assert.equal(p.ids['calibration-editor'].hidden, true);
 });
 
+test('implicit form submit while editing keeps existing calibrations and the editor open', async () => {
+  const readings = [saved(1.0, 31, 60), saved(1.5, 25, 60)];
+  const p = await page({ ...partial, targetTemperatureC: 0, flowReadings: JSON.stringify(readings) });
+  await p.buttons('Edit')[0].handlers.click();
+  p.fields.referenceSeconds.value = '33';
+  await p.ids.settings.handlers.input({ target: p.fields.referenceSeconds });
+  await p.submit();
+  assert.equal(p.ids['calibration-editor'].hidden, false);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.equal(p.persistedLibraries.length, 0);
+  assert.equal(p.savedSettings.length, 0);
+  assert.equal(p.navigations.length, 0);
+  assert.equal(p.ids.status.textContent, 'Update or close the open calibration before saving.');
+});
+
+test('implicit form submit while creating a calibration keeps the library and draft open', async () => {
+  const p = await page();
+  await p.buttons('+ New calibration')[0].handlers.click();
+  assert.equal(p.ids['calibration-editor'].hidden, false);
+  await p.submit();
+  assert.equal(p.ids['calibration-editor'].hidden, false);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.equal(p.persistedLibraries.length, 0);
+  assert.equal(p.savedSettings.length, 0);
+  assert.equal(p.navigations.length, 0);
+});
+
 test('closed calibration editor stays form-owned so initialization, tare, edit and delete work', async () => {
   const p = await page();
   assert.doesNotMatch(p.ids.status.textContent, /null/i);
@@ -223,7 +252,7 @@ test('recovered tablet layout keeps quick-reference tabs compact and two-column'
   assert.equal(helpList.children.every(child => child.className === 'help-section'), true);
   const glossary = p.ids['panel-glossary'].children.find(child => child.className === 'glossary');
   assert.ok(glossary);
-  assert.equal(glossary.children.length, 13);
+  assert.equal(glossary.children.length, 14);
   assert.equal(glossary.children.every(child => child.className === 'glossary-term'), true);
   assert.match(source, /#settings-toolbar\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/);
   assert.match(source, /\.help-list\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
@@ -297,6 +326,192 @@ test('Interpolate separates out-of-range and different-target readings', async (
   assert.equal(p.ids['other-calibrations'].open, undefined);
 });
 
+test('interpolation preview browses complete milk targets and saves Smooth curve fit per target', async () => {
+  const readings = [
+    saved(0.5, 80, 55), saved(1.5, 40, 55), saved(2.5, 32, 55),
+    saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60),
+  ];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  assert.equal(p.buttons('Preview').length, 1);
+  await p.buttons('Preview')[0].handlers.click();
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, false);
+  assert.equal(p.ids['interpolation-preview-title'].textContent, 'Preview');
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Milk target 140\.0 °F/);
+  assert.match(p.ids['interpolation-preview-graph'].innerHTML, /100 g milk/);
+  assert.match(p.ids['interpolation-preview-graph'].innerHTML, /Measured<\/tspan><tspan[^>]*>reading/);
+  await p.buttons('‹')[0].handlers.click();
+  assert.equal(p.ids['interpolation-preview-title'].textContent, 'Preview');
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Milk target 131\.0 °F/);
+  const smooth = p.elements().find(item => item.parent?.className === 'smooth-curve-option');
+  assert.equal(smooth.parent.hidden, false);
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Straight-line interpolation|Smooth curve interpolation/);
+  smooth.checked = true; await smooth.handlers.change();
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Smooth curve interpolation/);
+  await p.buttons('Use this milk target')[0].handlers.click();
+  assert.equal(p.fields.targetTemperatureC.value, '55');
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, true);
+  await p.submit();
+  assert.deepEqual(p.persistedLibraries.at(-1).curveFitTargets, [55]);
+  assert.equal(p.savedSettings.at(-1).targetTemperatureC, 55);
+});
+
+test('Preview stays modal until Close or Use this milk target and locks background scrolling', async () => {
+  const readings = [saved(0.5, 80, 55), saved(1.5, 40, 55), saved(2.5, 32, 55)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 55, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('Preview')[0].handlers.click();
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, false);
+  assert.equal(p.ids['interpolation-preview-dialog'].handlers.click, undefined);
+  assert.equal(p.documentBody.style.overflow, 'hidden');
+  await p.buttons('Close')[0].handlers.click();
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, true);
+  assert.equal(p.documentBody.style.overflow, '');
+});
+
+test('Use this milk target remains actionable for the already-selected only target', async () => {
+  const readings = [saved(0.5, 80, 55), saved(1.5, 40, 55), saved(2.5, 32, 55)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 55, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('Preview')[0].handlers.click();
+  const use = p.buttons('Use this milk target')[0];
+  assert.equal(use.disabled, false);
+  await use.handlers.click();
+  assert.equal(p.fields.targetTemperatureC.value, '55');
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, true);
+});
+
+test('Smooth curve fit is hidden when no safe smooth model is available', async () => {
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('Preview')[0].handlers.click();
+  const smooth = p.elements().find(item => item.parent?.className === 'smooth-curve-option');
+  assert.equal(smooth.parent.hidden, true);
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Straight-line interpolation/);
+});
+
+test('Preview stays hidden for an incomplete selected target', async () => {
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60), saved(1.0, 40, 55)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 55, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  assert.equal(p.buttons('Preview')[0].hidden, true);
+});
+
+test('new interpolation calibration at a different milk target becomes active and older targets move to Other', async () => {
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('+ New calibration')[0].handlers.click();
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  const targetInput = p.elements().find(item => item.parent?.className?.includes('editor-target'));
+  flowInput.value = '1.0'; await flowInput.handlers.input();
+  targetInput.value = '150'; await targetInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '35';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+
+  assert.equal(p.fields.targetTemperatureC.value, String(65.6));
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /More readings needed/);
+  assert.match(p.ids['active-calibrations'].textContent, /Minimum reading/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /Interior reading/);
+  assert.match(p.ids['active-calibrations'].textContent, /Maximum reading/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /140\.0 °F/);
+  assert.match(p.ids['other-calibrations'].textContent, /0\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /2\.5 ml\/s/);
+  assert.equal(p.ids['other-calibrations'].open, undefined);
+
+  p.fields.targetTemperatureC.value = '60';
+  await p.fields.targetTemperatureC.handlers.change();
+  assert.match(p.ids['active-calibrations'].textContent, /0\.5 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /2\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /1\.0 ml\/s/);
+});
+
+test('new interpolation calibration switches to its new milk target and filters prior targets', async () => {
+  assert.match(source, /refreshTargetChoices\(\);\s*if \(field\('interpolate'\)\.checked\) field\('targetTemperatureC'\)\.value = String\(reading\.targetTemperatureC\)/);
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('+ New calibration')[0].handlers.click();
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  const targetInput = p.elements().find(item => item.parent?.className?.includes('editor-target'));
+  flowInput.value = '1.0'; await flowInput.handlers.input();
+  targetInput.value = '145'; await targetInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '35';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+
+  assert.equal(p.fields.targetTemperatureC.value, '62.8');
+  assert.match(p.fields.targetTemperatureC.textContent, /145\.0 °F/);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /More readings needed/);
+  assert.match(p.ids['active-calibrations'].textContent, /Minimum reading/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /Interior reading/);
+  assert.match(p.ids['active-calibrations'].textContent, /Maximum reading/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /140\.0 °F/);
+  assert.match(p.ids['other-calibrations'].textContent, /0\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /2\.5 ml\/s/);
+  assert.equal(p.ids['other-calibrations'].open, undefined);
+});
+
+test('with Interpolate off, creating a different target preserves All targets filter', async () => {
+  const readings = [saved(1.0, 30, 60)];
+  const p = await page({ ...partial, interpolate: false, targetTemperatureC: 0, flowReadings: JSON.stringify(readings) });
+  assert.equal(p.fields.targetTemperatureC.value, '0');
+  await p.buttons('+ New calibration')[0].handlers.click();
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  const targetInput = p.elements().find(item => item.parent?.className?.includes('editor-target'));
+  flowInput.value = '1.5'; await flowInput.handlers.input();
+  targetInput.value = '145'; await targetInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '28';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+  assert.equal(p.fields.targetTemperatureC.value, '0');
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+});
+
+test('with Interpolate off, creating a different target preserves a specific filter', async () => {
+  const readings = [saved(1.0, 30, 60)];
+  const p = await page({ ...partial, interpolate: false, targetTemperatureC: 60, flowReadings: JSON.stringify(readings) });
+  assert.equal(p.fields.targetTemperatureC.value, '60');
+  await p.buttons('+ New calibration')[0].handlers.click();
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  const targetInput = p.elements().find(item => item.parent?.className?.includes('editor-target'));
+  flowInput.value = '1.5'; await flowInput.handlers.input();
+  targetInput.value = '145'; await targetInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '28';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+  assert.equal(p.fields.targetTemperatureC.value, '60');
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /1\.5 ml\/s/);
+});
+
+test('Interpolate still allows creating an additional saved calibration', async () => {
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  assert.equal(p.buttons('+ New calibration').length, 1);
+  await p.buttons('+ New calibration')[0].handlers.click();
+  assert.equal(p.ids['calibration-editor'].hidden, false);
+  assert.equal(p.buttons('Cancel').length >= 1, true);
+  assert.match(p.ids['calibration-editor'].textContent, /New saved calibration/);
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  flowInput.value = '2.0'; await flowInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '27';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+  assert.match(p.ids['active-calibrations'].textContent, /2\.0 ml\/s/);
+  assert.equal(p.persistedLibraries.length, 1);
+});
+
 test('missing interpolation requirements have Create reading buttons that toggle to Cancel', async () => {
   const p = await page({ ...partial, interpolate: true, targetTemperatureC: 0, flowReadings: '[]', referenceMilkGrams: 0, referenceSeconds: 0 });
   assert.equal(p.buttons('Create reading').length, 3);
@@ -339,6 +554,13 @@ test('capture arms calibration and physical machine start/stop completes timing 
   assert.equal(p.fields.referenceSeconds.value, '25');
 });
 
+test('Damian attribution appears only at the bottom of Instructions, not page-wide', async () => {
+  const p = await page();
+  assert.match(p.ids['panel-instructions'].textContent, /Damian \/ Damian-AU’s DSx2/);
+  assert.equal(p.ids['panel-instructions'].children.at(-1).className, 'instructions-attribution');
+  assert.doesNotMatch(source, /<footer>Calculation and automatic pitcher detection inspired by/);
+});
+
 test('instructions document matching, interpolation and physical calibration controls', async () => {
   const p = await page();
   assert.match(p.ids['panel-instructions'].textContent, /Leave Interpolate off and create one calibration reading/);
@@ -347,7 +569,7 @@ test('instructions document matching, interpolation and physical calibration con
   assert.match(p.ids['panel-instructions'].textContent, /More matching readings improve/);
   assert.match(p.ids['panel-instructions'].textContent, /machine controls/);
   assert.match(p.ids['panel-glossary'].textContent, /All targets/);
-  assert.match(p.ids['panel-glossary'].textContent, /piecewise interpolation/);
+  assert.match(p.ids['panel-glossary'].textContent, /Smooth curve fit/);
 });
 
 test('F is default and changing units converts every display without changing stored Celsius', async () => {
