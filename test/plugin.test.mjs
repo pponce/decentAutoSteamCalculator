@@ -52,12 +52,15 @@ test('library endpoint saves valid incomplete libraries independently of setup v
   const calls = [];
   const instance = plugin({ ...valid, interpolate: true, targetTemperatureC: 60 }, { storage: command => calls.push(structuredClone(command)) });
   const one = JSON.stringify([reading]);
-  const response = call(instance, 'library', 'POST', { flowReadings: one });
+  const response = call(instance, 'library', 'POST', { flowReadings: one, curveFitTargets: [60] });
   assert.equal(response.status, 200);
   assert.equal(call(instance, 'status').json.settings.flowReadings, one);
+  assert.deepEqual(call(instance, 'status').json.settings.curveFitTargets, [60]);
   assert.equal(call(instance, 'status').json.ready, false);
   assert.equal(calls.at(-1).key, 'calibration-library.v2');
+  assert.deepEqual(calls.at(-1).data.curveFitTargets, [60]);
   assert.equal(call(instance, 'library', 'POST', { flowReadings: '{bad' }).status, 422);
+  assert.equal(call(instance, 'library', 'POST', { flowReadings: one, curveFitTargets: [0] }).status, 422);
 });
 
 test('fresh installs expose configuration requirements and All targets', () => {

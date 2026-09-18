@@ -61,6 +61,7 @@ globalThis.createPlugin = function createPlugin(host = {}) {
     }
     pendingLegacy = { present: legacyPresent, value: settings.flowReadings };
     settings.flowReadings = '[]';
+    settings.curveFitTargets = [];
     storageState = { state: 'loading', source: 'legacy', warning: null };
     try { host.storage({ type: 'read', key: CALIBRATION_STORAGE_KEY }); }
     catch {
@@ -70,16 +71,21 @@ globalThis.createPlugin = function createPlugin(host = {}) {
 
   function saveCalibrationLibrary(body) {
     if (!body || typeof body.flowReadings !== 'string') return json(400, { code: 'invalid_request', message: 'Supply a calibration library.' });
-    const candidate = { ...settings, flowReadings: body.flowReadings };
+    const curveFitTargets = body.curveFitTargets === undefined ? normalizeCurveFitTargets(settings.curveFitTargets) : normalizeCurveFitTargets(body.curveFitTargets);
+    if (body.curveFitTargets !== undefined && (!Array.isArray(body.curveFitTargets) || curveFitTargets.length !== body.curveFitTargets.length)) {
+      return json(422, { code: 'invalid_curve_fit_targets', message: 'Smooth curve targets must be valid saved milk temperatures.' });
+    }
+    const candidate = { ...settings, flowReadings: body.flowReadings, curveFitTargets };
     const errors = validateCalibrationLibrary(candidate);
     if (errors.length) return json(422, { code: 'invalid_calibration_library', message: errors[0].message, errors });
-    const record = calibrationStorageRecord(body.flowReadings);
+    const record = calibrationStorageRecord(body.flowReadings, curveFitTargets);
     if (!record || typeof host.storage !== 'function') return json(503, { code: 'plugin_storage_unavailable', message: 'Decaid plugin storage is unavailable.' });
     settings.flowReadings = body.flowReadings;
+    settings.curveFitTargets = curveFitTargets;
     try {
       storageState = { state: 'writing', source: 'library-api', warning: null };
       host.storage({ type: 'write', key: CALIBRATION_STORAGE_KEY, data: record });
-      return json(200, { saved: true, flowReadings: settings.flowReadings });
+      return json(200, { saved: true, flowReadings: settings.flowReadings, curveFitTargets: settings.curveFitTargets });
     } catch {
       storageState = { ...storageState, state: 'write-failed', warning: 'plugin_storage_write_failed' };
       return json(503, { code: 'plugin_storage_write_failed', message: 'The calibration library could not be saved.' });
@@ -94,6 +100,7 @@ globalThis.createPlugin = function createPlugin(host = {}) {
       storedValue: payload.value,
     });
     settings.flowReadings = result.flowReadings;
+    settings.curveFitTargets = result.curveFitTargets;
     storageState = { state: result.write ? 'writing' : 'ready', source: result.source, warning: result.warning };
     if (result.write) {
       try { host.storage({ type: 'write', key: CALIBRATION_STORAGE_KEY, data: result.write }); }

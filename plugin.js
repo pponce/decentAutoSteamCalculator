@@ -1,13 +1,21 @@
 /* Calibrated Steam Timer. GPL-3.0-only. Inspired by Damian / Damian-AU, DSx2. */
 (function () {
 "use strict";
-const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.13.1","apiVersion":1,"permissions":["api","events.machine","pluginStorage"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for every calibration. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"temperatureUnit":{"type":"enum","label":"Temperature unit","description":"Display preference for calibration targets. Saved calibration temperatures remain stored internally in Celsius.","values":["F","C"],"default":"F"},"targetTemperatureC":{"type":"number","label":"Milk target","description":"Filters which saved calibrations are available. All targets is available when Interpolate is off.","default":0},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow (ml/s)","description":"Flow used while creating or editing a saved calibration (0.4–2.5 ml/s).","default":0.4},"minimumFlow":{"type":"number","label":"Minimum flow (ml/s)","description":"Lowest flow used by Interpolate. A saved reading is required at this exact flow.","default":0.4},"maximumFlow":{"type":"number","label":"Maximum flow (ml/s)","description":"Highest flow used by Interpolate. A saved reading is required at this exact flow.","default":2.5},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"interpolate":{"type":"boolean","label":"Interpolate","default":false,"description":"Use piecewise interpolation between at least three saved readings at one milk target."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Compatibility shadow managed by the Calibration page while saved readings migrate to Decaid plugin storage. Do not edit this JSON directly."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}},{"id":"library","type":"http","data":{}}]};
+const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.13.2-beta.1","apiVersion":1,"permissions":["api","events.machine","pluginStorage"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for every calibration. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"temperatureUnit":{"type":"enum","label":"Temperature unit","description":"Display preference for calibration targets. Saved calibration temperatures remain stored internally in Celsius.","values":["F","C"],"default":"F"},"targetTemperatureC":{"type":"number","label":"Milk target","description":"Filters which saved calibrations are available. All targets is available when Interpolate is off.","default":0},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow (ml/s)","description":"Flow used while creating or editing a saved calibration (0.4–2.5 ml/s).","default":0.4},"minimumFlow":{"type":"number","label":"Minimum flow (ml/s)","description":"Lowest flow used by Interpolate. A saved reading is required at this exact flow.","default":0.4},"maximumFlow":{"type":"number","label":"Maximum flow (ml/s)","description":"Highest flow used by Interpolate. A saved reading is required at this exact flow.","default":2.5},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"interpolate":{"type":"boolean","label":"Interpolate","default":false,"description":"Use piecewise interpolation between at least three saved readings at one milk target."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Compatibility shadow managed by the Calibration page while saved readings migrate to Decaid plugin storage. Do not edit this JSON directly."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}},{"id":"library","type":"http","data":{}}]};
 const FLOW_MINIMUM = 0.4;
 const FLOW_MAXIMUM = 2.5;
 const MAX_READINGS = 100;
 
 const close = (a, b) => Math.abs(Number(a) - Number(b)) < 0.000001;
 const selectedTarget = settings => Number(settings.targetTemperatureC) > 0 ? Number(settings.targetTemperatureC) : 0;
+
+function normalizeCurveFitTargets(value) {
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) return [];
+    return [...new Set(parsed.map(Number).filter(target => Number.isFinite(target) && target > 0 && target <= 100))].sort((a, b) => a - b);
+  } catch { return []; }
+}
 
 function temperatureToC(value, unit = 'F') {
   const number = Number(value);
@@ -84,6 +92,135 @@ function interpolationRequirements(settings) {
     hasInterior: active.some(reading => reading.flow > minimum && reading.flow < maximum) };
 }
 
+function piecewiseRate(readings, flow) {
+  const exact = readings.find(reading => close(reading.flow, flow));
+  if (exact) return exact.seconds / exact.milkGrams;
+  for (let index = 1; index < readings.length; index += 1) {
+    const left = readings[index - 1], right = readings[index];
+    if (flow < right.flow) {
+      const position = (flow - left.flow) / (right.flow - left.flow);
+      return (1 - position) * left.seconds / left.milkGrams + position * right.seconds / right.milkGrams;
+    }
+  }
+  return NaN;
+}
+
+function linearFit(points) {
+  const count = points.length;
+  if (count < 2) return null;
+  const sumX = points.reduce((sum, point) => sum + point.x, 0);
+  const sumY = points.reduce((sum, point) => sum + point.y, 0);
+  const sumXX = points.reduce((sum, point) => sum + point.x * point.x, 0);
+  const sumXY = points.reduce((sum, point) => sum + point.x * point.y, 0);
+  const denominator = count * sumXX - sumX * sumX;
+  if (Math.abs(denominator) < 1e-12) return null;
+  const slope = (count * sumXY - sumX * sumY) / denominator;
+  return { intercept: (sumY - slope * sumX) / count, slope };
+}
+
+function solveThree(matrix, vector) {
+  const rows = matrix.map((row, index) => [...row, vector[index]]);
+  for (let column = 0; column < 3; column += 1) {
+    let pivot = column;
+    for (let row = column + 1; row < 3; row += 1) if (Math.abs(rows[row][column]) > Math.abs(rows[pivot][column])) pivot = row;
+    if (Math.abs(rows[pivot][column]) < 1e-12) return null;
+    [rows[column], rows[pivot]] = [rows[pivot], rows[column]];
+    const divisor = rows[column][column];
+    for (let item = column; item < 4; item += 1) rows[column][item] /= divisor;
+    for (let row = 0; row < 3; row += 1) {
+      if (row === column) continue;
+      const multiplier = rows[row][column];
+      for (let item = column; item < 4; item += 1) rows[row][item] -= multiplier * rows[column][item];
+    }
+  }
+  return rows.map(row => row[3]);
+}
+
+function fitCurve(kind, readings) {
+  const points = readings.map(reading => ({ x: reading.flow, y: reading.seconds / reading.milkGrams }));
+  if (kind === 'quadratic') {
+    if (points.length < 3) return null;
+    const sums = power => points.reduce((sum, point) => sum + point.x ** power, 0);
+    const coefficients = solveThree(
+      [[sums(4), sums(3), sums(2)], [sums(3), sums(2), sums(1)], [sums(2), sums(1), points.length]],
+      [points.reduce((sum, point) => sum + point.x * point.x * point.y, 0), points.reduce((sum, point) => sum + point.x * point.y, 0), points.reduce((sum, point) => sum + point.y, 0)],
+    );
+    return coefficients && { kind, predict: flow => coefficients[0] * flow * flow + coefficients[1] * flow + coefficients[2] };
+  }
+  const transformed = points.map(point => {
+    if (kind === 'inverse') return { x: 1 / point.x, y: point.y };
+    if (kind === 'exponential') return { x: point.x, y: Math.log(point.y) };
+    return { x: Math.log(point.x), y: Math.log(point.y) };
+  });
+  const fit = linearFit(transformed);
+  if (!fit) return null;
+  if (kind === 'inverse') return { kind, predict: flow => fit.intercept + fit.slope / flow };
+  if (kind === 'exponential') return { kind, predict: flow => Math.exp(fit.intercept + fit.slope * flow) };
+  return { kind, predict: flow => Math.exp(fit.intercept + fit.slope * Math.log(flow)) };
+}
+
+function safeCurve(model, readings) {
+  if (!model || readings.length < 2) return false;
+  const minimum = readings[0].flow, maximum = readings.at(-1).flow;
+  const observed = readings.map(reading => reading.seconds / reading.milkGrams);
+  const lower = Math.min(...observed) * 0.95, upper = Math.max(...observed) * 1.05;
+  for (const reading of readings) {
+    const predicted = model.predict(reading.flow), actual = reading.seconds / reading.milkGrams;
+    if (!Number.isFinite(predicted) || predicted <= 0 || Math.abs(predicted - actual) / actual > 0.3) return false;
+  }
+  let previous = Infinity;
+  for (let index = 0; index <= 100; index += 1) {
+    const value = model.predict(minimum + (maximum - minimum) * index / 100);
+    if (!Number.isFinite(value) || value <= 0 || value < lower || value > upper || value > previous + 1e-9) return false;
+    previous = value;
+  }
+  return true;
+}
+
+function crossValidationError(kind, readings) {
+  const errors = [];
+  for (let index = 1; index < readings.length - 1; index += 1) {
+    const held = readings[index], training = readings.filter((_, item) => item !== index);
+    const model = fitCurve(kind, training);
+    if (!model || !safeCurve(model, training)) return Infinity;
+    const predicted = model.predict(held.flow), actual = held.seconds / held.milkGrams;
+    if (!Number.isFinite(predicted) || predicted <= 0) return Infinity;
+    errors.push(((predicted - actual) / actual) ** 2);
+  }
+  return errors.length ? Math.sqrt(errors.reduce((sum, error) => sum + error, 0) / errors.length) : Infinity;
+}
+
+function smoothCurveModel(readings) {
+  const sorted = readings.filter(validFlowReading).slice().sort((a, b) => a.flow - b.flow);
+  if (sorted.length < 3) return { kind: 'linear', predict: flow => piecewiseRate(sorted, flow) };
+  const baselineErrors = [];
+  for (let index = 1; index < sorted.length - 1; index += 1) {
+    const left = sorted[index - 1], held = sorted[index], right = sorted[index + 1];
+    const position = (held.flow - left.flow) / (right.flow - left.flow);
+    const predicted = (1 - position) * left.seconds / left.milkGrams + position * right.seconds / right.milkGrams;
+    baselineErrors.push(((predicted - held.seconds / held.milkGrams) / (held.seconds / held.milkGrams)) ** 2);
+  }
+  const baseline = Math.sqrt(baselineErrors.reduce((sum, error) => sum + error, 0) / baselineErrors.length);
+  const candidates = ['inverse', 'exponential', 'power', ...(sorted.length >= 5 ? ['quadratic'] : [])]
+    .map(kind => ({ kind, model: fitCurve(kind, sorted), error: crossValidationError(kind, sorted) }))
+    .filter(candidate => safeCurve(candidate.model, sorted) && Number.isFinite(candidate.error))
+    .sort((a, b) => a.error - b.error);
+  const best = candidates[0];
+  if (!best || baseline < 1e-9 || best.error >= baseline * 0.9) return { kind: 'linear', predict: flow => piecewiseRate(sorted, flow) };
+  return best.model;
+}
+
+function interpolationModel(settings, target = selectedTarget(settings)) {
+  const interpolationSettings = { ...settings, interpolate: true, targetTemperatureC: target };
+  const readings = partitionFlowReadings(interpolationSettings).active;
+  const requested = normalizeCurveFitTargets(settings.curveFitTargets).some(value => close(value, target));
+  const smooth = requested ? smoothCurveModel(readings) : null;
+  return {
+    kind: smooth?.kind || 'linear', requested,
+    predict: flow => smooth && smooth.kind !== 'linear' ? smooth.predict(flow) : piecewiseRate(readings, flow),
+  };
+}
+
 function validateCalibrationLibrary(settings) {
   const readings = calibrationLibrary(settings);
   if (!readings || readings.some(reading => !validFlowReading(reading))) return [{ field: 'flowReadings', message: 'Every saved calibration needs a flow, milk target, milk weight and steaming time.' }];
@@ -114,7 +251,8 @@ function flowCalibration(settings) {
   const readings = partitionFlowReadings(settings).active;
   if (settings.interpolate === true) {
     const minimum = Number(settings.minimumFlow), maximum = Number(settings.maximumFlow);
-    return { mode: 'interpolate', adjustable: true, minimum, maximum, step: 0.1, defaultFlow: minimum, readings };
+    return { mode: 'interpolate', adjustable: true, minimum, maximum, step: 0.1, defaultFlow: minimum,
+      interpolationMethod: interpolationModel(settings).kind === 'linear' ? 'linear' : 'smooth', readings };
   }
   return {
     mode: 'saved', adjustable: readings.length > 1,
@@ -140,19 +278,15 @@ function secondsPerGram(settings, flow, key) {
   }
   const readings = calibration.readings;
   if (flow < calibration.minimum || flow > calibration.maximum) return NaN;
-  const exact = readings.find(reading => close(reading.flow, flow));
-  if (exact) return exact.seconds / exact.milkGrams;
-  for (let i = 1; i < readings.length; i++) {
-    const a = readings[i - 1], b = readings[i];
-    if (flow < b.flow) {
-      const position = (flow - a.flow) / (b.flow - a.flow);
-      return (1 - position) * a.seconds / a.milkGrams + position * b.seconds / b.milkGrams;
-    }
-  }
-  return NaN;
+  return interpolationModel(settings).predict(flow);
 }
 
 const CALIBRATION_STORAGE_KEY = 'calibration-library.v2';
+
+function validCurveFitTargets(value) {
+  return Array.isArray(value) && value.length <= 100 && value.every(target =>
+    Number.isFinite(target) && target > 0 && target <= 100);
+}
 
 function validSerializedLibrary(value) {
   if (typeof value !== 'string' || value.length > 65536) return false;
@@ -164,19 +298,22 @@ function validSerializedLibrary(value) {
   }
 }
 
-function calibrationStorageRecord(flowReadings) {
+function calibrationStorageRecord(flowReadings, curveFitTargets = []) {
   if (!validSerializedLibrary(flowReadings)) return null;
-  return { schemaVersion: 2, flowReadings };
+  if (!validCurveFitTargets(curveFitTargets)) return null;
+  return { schemaVersion: 2, flowReadings, curveFitTargets: [...new Set(curveFitTargets)].sort((a, b) => a - b) };
 }
 
 function reconcileCalibrationStorage({ legacyPresent, legacyValue, storedValue }) {
   const storedValid = storedValue && storedValue.schemaVersion === 2 &&
-    validSerializedLibrary(storedValue.flowReadings);
+    validSerializedLibrary(storedValue.flowReadings) &&
+    (storedValue.curveFitTargets === undefined || validCurveFitTargets(storedValue.curveFitTargets));
 
   if (!storedValid) {
     const flowReadings = '[]';
     return {
       flowReadings,
+      curveFitTargets: [],
       source: 'reset',
       write: calibrationStorageRecord(flowReadings),
       warning: storedValue == null ? null : 'invalid_storage',
@@ -185,6 +322,7 @@ function reconcileCalibrationStorage({ legacyPresent, legacyValue, storedValue }
 
   return {
     flowReadings: storedValue.flowReadings,
+    curveFitTargets: storedValue.curveFitTargets || [],
     source: 'storage',
     write: null,
     warning: null,
@@ -489,17 +627,41 @@ function createCalibrationSession({ now = () => Date.now(), readWorkflow, writeS
 
 function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow, persistLibrary }, model) {
   const { calibrationLibrary, partitionFlowReadings, interpolationRequirements, availableTargets, calibrationKey, validFlowReading,
-    temperatureToC, temperatureFromC, formatTemperature } = model;
+    temperatureToC, temperatureFromC, formatTemperature, interpolationModel, normalizeCurveFitTargets, initialCurveFitTargets } = model;
   const make = (tag, text) => { const element = document.createElement(tag); if (text !== undefined) element.textContent = text; return element; };
   const panel = labels.referenceMilkGrams.closest('fieldset').parentElement;
   const manual = labels.referenceMilkGrams.closest('fieldset');
   const config = make('fieldset'); config.className = 'flow-setup settings-section';
   const configGrid = make('div'); configGrid.className = 'calibration-config-grid full-width'; config.append(configGrid);
   labels.interpolate.className = 'interpolate-switch';
-  configGrid.append(labels.interpolate, labels.weightMode, labels.temperatureUnit, labels.targetTemperatureC);
+  const interpolateControl = make('div'); interpolateControl.className = 'interpolate-control';
+  const preview = make('button', 'Preview interpolation'); preview.type = 'button'; preview.className = 'preview-interpolation'; preview.hidden = true;
+  interpolateControl.append(labels.interpolate, preview);
+  configGrid.append(interpolateControl, labels.weightMode, labels.temperatureUnit, labels.targetTemperatureC);
   const range = make('div'); range.className = 'field-grid full-width'; range.append(labels.minimumFlow, labels.maximumFlow); config.append(range);
   const note = make('p'); note.className = 'local-status full-width'; note.setAttribute('role', 'status'); config.append(note);
   panel.insertBefore(config, manual);
+
+  const previewDialog = make('div'); previewDialog.id = 'interpolation-preview-dialog'; previewDialog.className = 'interpolation-dialog'; previewDialog.hidden = true;
+  const previewCard = make('section'); previewCard.className = 'interpolation-dialog-card'; previewCard.setAttribute('role', 'dialog'); previewCard.setAttribute('aria-modal', 'true');
+  const previewHeader = make('div'); previewHeader.className = 'interpolation-dialog-header';
+  const previewHeading = make('div');
+  const previewTitle = make('h2'); previewTitle.id = 'interpolation-preview-title';
+  const previewMeta = make('p'); previewMeta.className = 'interpolation-preview-meta'; previewHeading.append(previewTitle, previewMeta);
+  const previewClose = make('button', 'Close'); previewClose.type = 'button'; previewHeader.append(previewHeading, previewClose);
+  const previewNavigation = make('div'); previewNavigation.className = 'interpolation-preview-navigation';
+  const previousTarget = make('button', '‹'); previousTarget.type = 'button'; previousTarget.setAttribute('aria-label', 'Previous milk target');
+  const previewPosition = make('span');
+  const nextTarget = make('button', '›'); nextTarget.type = 'button'; nextTarget.setAttribute('aria-label', 'Next milk target');
+  previewNavigation.append(previousTarget, previewPosition, nextTarget);
+  const graph = make('div'); graph.id = 'interpolation-preview-graph'; graph.className = 'interpolation-preview-graph';
+  const previewOptions = make('div'); previewOptions.className = 'interpolation-preview-options';
+  const smoothLabel = make('label'); smoothLabel.className = 'smooth-curve-option';
+  const smoothCurve = make('input'); smoothCurve.type = 'checkbox'; smoothLabel.append(smoothCurve, make('span', 'Smooth curve fit'));
+  const useTarget = make('button', 'Use this milk target'); useTarget.type = 'button'; useTarget.className = 'primary-action';
+  previewOptions.append(smoothLabel, useTarget);
+  const previewMethod = make('p'); previewMethod.className = 'interpolation-preview-method';
+  previewCard.append(previewHeader, previewNavigation, graph, previewOptions, previewMethod); previewDialog.append(previewCard); panel.append(previewDialog);
 
   const main = make('section'); main.id = 'active-calibrations'; main.className = 'calibration-library settings-section'; panel.insertBefore(main, manual);
   const others = make('details'); others.id = 'other-calibrations';
@@ -539,6 +701,8 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const newCalibration = make('button', '+ New calibration'); newCalibration.type = 'button'; newCalibration.className = 'new-calibration';
 
   let displayedUnit = field('temperatureUnit').value || 'F';
+  let curveFitTargets = normalizeCurveFitTargets(initialCurveFitTargets);
+  let curveFitDirty = false, previewTarget = 0;
   let readings = calibrationLibrary(settings()) || [];
   let openKey = null, draftFlow = NaN, draftTarget = NaN, guidedMode = false, locked = false;
   let guide = null, review = null, clearGuided = () => {}, measurementReady = false;
@@ -551,6 +715,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
       minimumFlow: Number(field('minimumFlow').value), maximumFlow: Number(field('maximumFlow').value),
       referenceFlow: Number(field('referenceFlow').value), referenceMilkGrams: Number(field('referenceMilkGrams').value),
       referenceSeconds: Number(field('referenceSeconds').value),
+      curveFitTargets,
     };
   }
   const same = (a, b) => Math.abs(Number(a) - Number(b)) < 0.000001;
@@ -564,6 +729,61 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     const required = interpolationRequirements({ ...settings(), interpolate: true, targetTemperatureC: target, flowReadings: JSON.stringify(readings) });
     return required.active.length >= 3 && required.hasMinimum && required.hasMaximum && required.hasInterior;
   }
+  function completeTargets() { return targetList().filter(targetComplete); }
+  function graphMarkup(target) {
+    const previewSettings = { ...settings(), targetTemperatureC: target, interpolate: true, flowReadings: JSON.stringify(readings), curveFitTargets };
+    const active = partitionFlowReadings(previewSettings).active;
+    const model = interpolationModel(previewSettings, target);
+    const minimum = Number(field('minimumFlow').value), maximum = Number(field('maximumFlow').value);
+    const weights = [100, 150, 200, 250], width = 760, height = 390, left = 58, top = 20, plotWidth = 560, plotHeight = 300;
+    const samples = Array.from({ length: 61 }, (_, index) => minimum + (maximum - minimum) * index / 60);
+    const values = weights.flatMap(weight => samples.map(flow => model.predict(flow) * weight)).concat(active.map(reading => reading.seconds));
+    const yMaximum = Math.max(10, Math.ceil(Math.max(...values) / 10) * 10);
+    const x = flow => left + (flow - minimum) / (maximum - minimum) * plotWidth;
+    const y = seconds => top + plotHeight - seconds / yMaximum * plotHeight;
+    const colors = ['#326eb9', '#1c7a45', '#c56c1b', '#9a4ab0'];
+    const parts = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Calculated steam time by flow for ${formatTemperature(target, displayedUnit)} milk target">`];
+    for (let index = 0; index <= 5; index += 1) {
+      const seconds = yMaximum * index / 5, py = y(seconds);
+      parts.push(`<line x1="${left}" y1="${py}" x2="${left + plotWidth}" y2="${py}" class="graph-grid"/><text x="${left - 9}" y="${py + 4}" text-anchor="end">${Math.round(seconds)}s</text>`);
+    }
+    for (let index = 0; index <= 4; index += 1) {
+      const flow = minimum + (maximum - minimum) * index / 4, px = x(flow);
+      parts.push(`<line x1="${px}" y1="${top}" x2="${px}" y2="${top + plotHeight}" class="graph-grid"/><text x="${px}" y="${top + plotHeight + 22}" text-anchor="middle">${flow.toFixed(1)}</text>`);
+    }
+    parts.push(`<line x1="${left}" y1="${top + plotHeight}" x2="${left + plotWidth}" y2="${top + plotHeight}" class="graph-axis"/><line x1="${left}" y1="${top}" x2="${left}" y2="${top + plotHeight}" class="graph-axis"/>`);
+    weights.forEach((weight, index) => {
+      const path = samples.map((flow, point) => `${point ? 'L' : 'M'}${x(flow).toFixed(1)},${y(model.predict(flow) * weight).toFixed(1)}`).join(' ');
+      parts.push(`<path d="${path}" fill="none" stroke="${colors[index]}" stroke-width="3"/><line x1="640" y1="${47 + index * 28}" x2="666" y2="${47 + index * 28}" stroke="${colors[index]}" stroke-width="3"/><text x="675" y="${51 + index * 28}">${weight} g milk</text>`);
+    });
+    active.forEach(reading => parts.push(`<circle cx="${x(reading.flow).toFixed(1)}" cy="${y(reading.seconds).toFixed(1)}" r="4" class="graph-reading"><title>${reading.flow.toFixed(1)} ml/s · ${reading.milkGrams} g · ${reading.seconds} s</title></circle>`));
+    parts.push(`<circle cx="648" cy="177" r="4" class="graph-reading"/><text x="675" y="181">Measured reading</text><text x="${left + plotWidth / 2}" y="${height - 12}" text-anchor="middle" class="graph-label">Steam flow (ml/s)</text><text x="16" y="${top + plotHeight / 2}" text-anchor="middle" class="graph-label" transform="rotate(-90 16 ${top + plotHeight / 2})">Calculated time</text></svg>`);
+    return { markup: parts.join(''), model, active, minimum, maximum };
+  }
+  function renderPreview() {
+    const targets = completeTargets();
+    if (!targets.length) { previewDialog.hidden = true; return; }
+    if (!targets.some(target => same(target, previewTarget))) previewTarget = targets[0];
+    const index = targets.findIndex(target => same(target, previewTarget));
+    const result = graphMarkup(previewTarget);
+    previewTitle.textContent = 'Interpolation preview — ' + formatTemperature(previewTarget, displayedUnit) + ' milk target';
+    previewMeta.textContent = result.active.length + ' calibrations · ' + result.minimum.toFixed(1) + '–' + result.maximum.toFixed(1) + ' ml/s';
+    previewPosition.textContent = (index + 1) + ' of ' + targets.length + ' · ' + formatTemperature(previewTarget, displayedUnit);
+    previousTarget.disabled = index <= 0; nextTarget.disabled = index >= targets.length - 1;
+    smoothCurve.checked = curveFitTargets.some(target => same(target, previewTarget));
+    const selected = same(Number(field('targetTemperatureC').value), previewTarget);
+    useTarget.disabled = selected; useTarget.textContent = selected ? 'Selected milk target' : 'Use this milk target';
+    graph.innerHTML = result.markup;
+    previewMethod.textContent = result.model.requested
+      ? (result.model.kind === 'linear' ? 'Straight lines are being used because no safe smooth fit improved prediction.' : 'A safe smooth curve was selected automatically from these readings.')
+      : 'Straight-line interpolation is selected.';
+  }
+  function openPreview() {
+    previewTarget = Number(field('targetTemperatureC').value || 0);
+    if (!targetComplete(previewTarget)) return;
+    renderPreview(); previewDialog.hidden = false; previewClose.focus();
+  }
+  function closePreview() { previewDialog.hidden = true; }
   function refreshTargetChoices() {
     const select = field('targetTemperatureC');
     const targets = targetList();
@@ -603,7 +823,8 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   }
   async function persistStored(successMessage) {
     try {
-      await persistLibrary(field('flowReadings').value);
+      await persistLibrary(field('flowReadings').value, curveFitTargets);
+      curveFitDirty = false;
       note.textContent = successMessage;
     } catch (error) {
       note.textContent = error.message;
@@ -743,21 +964,36 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
         else main.append(missingRow(target.key.slice(4), target.flow));
       }
       note.textContent = complete
-        ? 'All ' + required.active.length + ' matching calibrations will be used for piecewise interpolation.'
+        ? 'All ' + required.active.length + ' matching calibrations will be used for interpolation.'
         : 'Add the exact minimum, exact maximum, and at least one interior reading.';
     }
     other.forEach(reading => otherRows.append(rowFor(reading)));
     otherSummary.textContent = 'Other saved calibrations (' + other.length + ')';
     others.hidden = !other.length;
+    preview.hidden = !interpolate || !targetComplete(Number(field('targetTemperatureC').value || 0));
     paintEditor(); updateChoices();
   }
   function interpolationChanged() {
     if (locked) return;
+    closePreview();
     field('targetTemperatureC').value = field('interpolate').checked ? '' : '0';
     refreshTargetChoices();
     cancelEditor();
   }
   field('interpolate').addEventListener('change', interpolationChanged);
+  preview.addEventListener('click', openPreview); previewClose.addEventListener('click', closePreview);
+  previewDialog.addEventListener('click', event => { if (event.target === previewDialog) closePreview(); });
+  previousTarget.addEventListener('click', () => { const targets = completeTargets(), index = targets.findIndex(target => same(target, previewTarget)); if (index > 0) { previewTarget = targets[index - 1]; renderPreview(); } });
+  nextTarget.addEventListener('click', () => { const targets = completeTargets(), index = targets.findIndex(target => same(target, previewTarget)); if (index >= 0 && index < targets.length - 1) { previewTarget = targets[index + 1]; renderPreview(); } });
+  smoothCurve.addEventListener('change', () => {
+    curveFitTargets = smoothCurve.checked
+      ? normalizeCurveFitTargets([...curveFitTargets, previewTarget])
+      : curveFitTargets.filter(target => !same(target, previewTarget));
+    curveFitDirty = true; renderPreview();
+  });
+  useTarget.addEventListener('click', () => {
+    field('targetTemperatureC').value = String(previewTarget); cancelEditor(); renderPreview();
+  });
   newCalibration.addEventListener('click', () => openKey === 'new:saved' ? cancelEditor() : openEditor(null, Number(field('referenceFlow').value), 'new:saved'));
   close.addEventListener('click', cancelEditor); previousReading.addEventListener('click', () => navigateEditor(-1)); nextReading.addEventListener('click', () => navigateEditor(1));
   guidedButton.addEventListener('click', () => setMethod(true)); manualButton.addEventListener('click', () => setMethod(false)); update.addEventListener('click', saveEditor);
@@ -770,9 +1006,9 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   }
   field('temperatureUnit').addEventListener('change', () => {
     displayedUnit = field('temperatureUnit').value || 'F';
-    applyTemperaturePresentation(); render();
+    applyTemperaturePresentation(); render(); if (!previewDialog.hidden) renderPreview();
   });
-  for (const input of [field('targetTemperatureC'), field('minimumFlow'), field('maximumFlow')]) input.addEventListener('change', () => { cancelEditor(); render(); });
+  for (const input of [field('targetTemperatureC'), field('minimumFlow'), field('maximumFlow')]) input.addEventListener('change', () => { closePreview(); cancelEditor(); render(); });
   form.addEventListener('input', event => { if (event.target === field('referenceMilkGrams') || event.target === field('referenceSeconds')) { measurementReady = false; paintEditor(); } });
   applyTemperaturePresentation(); syncStored(); render();
   return {
@@ -782,7 +1018,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
       guide = guided; review = measured; clearGuided = clear;
       flowLabel.hidden = true; methodHost.append(guided, measured); paintEditor();
     },
-    lock(value) { locked = value; for (const button of [newCalibration, close, update, guidedButton, manualButton, previousReading, nextReading]) button.disabled = value; field('interpolate').disabled = value; paintEditor(); },
+    lock(value) { locked = value; for (const button of [newCalibration, close, update, guidedButton, manualButton, previousReading, nextReading, preview, previewClose, previousTarget, nextTarget, useTarget]) button.disabled = value; smoothCurve.disabled = value; field('interpolate').disabled = value; paintEditor(); },
     acceptMeasurement(result) {
       if (!same(result.flow, draftFlow)) throw new Error('The measurement flow changed. Repeat this reading.');
       field('referenceMilkGrams').value = result.milkGrams; field('referenceSeconds').value = result.seconds;
@@ -790,9 +1026,10 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     },
     flowChanged() { render(); },
     reveal() { render(); },
-    assertCanSave() {
+    async assertCanSave() {
       if (openKey) throw Object.assign(new Error('Update or close the open calibration before saving.'), { field: 'flowReadings' });
       syncStored();
+      if (curveFitDirty) await persistStored('Interpolation preference saved.');
     },
   };
 }
@@ -1477,7 +1714,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
         ['3 · Choose the milk target filter', 'Choose Fahrenheit or Celsius for display. With Interpolate off, Milk target can show All targets or one saved target. The preference is remembered, while calibration temperatures remain stored internally in Celsius.'],
         ['4 · Build a calibration library', 'Each flow and milk-target combination is saved independently until deleted. With Interpolate off, the shot page cycles through every calibration allowed by the Milk target filter.'],
         ['5 · How Interpolate chooses readings', 'Interpolate uses every saved reading at the selected milk target inside the selected range. Other targets and out-of-range flows remain under Other saved calibrations.'],
-        ['6 · Range and accuracy', 'Interpolate requires exact minimum and maximum readings plus at least one interior reading. A reading near the middle is recommended. More matching readings improve piecewise interpolation accuracy.'],
+        ['6 · Range, preview and accuracy', 'Interpolate requires exact minimum and maximum readings plus at least one interior reading. Preview interpolation graphs the selected milk target and lets you compare other complete targets. More matching readings improve accuracy.'],
         ['7 · Measure manually or with guidance', 'Manual entry uses actual milk-only weight and steaming time. Guided capture arms timing; start and stop steam with the machine controls. The counter excludes warm-up and stops when the machine stops steaming.'],
         ['8 · Review, save and make a drink', 'Edit opens a calibration beneath its row; Update saved calibration stores it immediately. Save settings activates the complete setup, then select Auto on the shot page, weigh the filled pitcher and tap S, M, L or Auto to calculate.'],
       ];
@@ -1501,7 +1738,8 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       panels.glossary.append(Object.assign(make('p', 'Definitions for the settings and calibration controls.'), { className: 'panel-intro' }));
       const glossary = make('dl'); glossary.className = 'glossary';
       for (const [term, meaning] of [
-        ['Interpolate', 'Off cycles through exact saved calibrations. On uses piecewise interpolation at one milk target and keeps 0.1 ml/s shot-page flow steps.'],
+        ['Interpolate', 'Off cycles through exact saved calibrations. On interpolates at one milk target and keeps 0.1 ml/s shot-page flow steps.'],
+        ['Smooth curve fit', 'Selected separately for each milk target in Preview interpolation. The extension automatically chooses a safe simple curve only when it predicts the readings better; otherwise it uses straight lines. It never extrapolates outside the calibrated flow range.'],
         ['Temperature unit', 'Display preference for calibration targets in Fahrenheit or Celsius. Changing it converts every displayed target without changing the calibration stored internally in Celsius.'],
         ['Milk target', 'Filters the calibrations shown here and offered on the shot page. All targets is available when Interpolate is off.'],
         ['All targets', 'Includes saved calibrations across every milk target. Each calibration still keeps its own target temperature.'],
@@ -1532,12 +1770,13 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       status.textContent = data.ready
         ? 'Auto Steam is ready to use.'
         : 'Complete the pitcher and calibration setup before using Auto Steam.';
-      const persistLibrary = flowReadings => request(base + '/library', {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ flowReadings }),
+      const persistLibrary = (flowReadings, curveFitTargets) => request(base + '/library', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ flowReadings, curveFitTargets }),
       });
       flowPlan = mountFlowPlan({ form, labels, field, updateChoices, syncFlow, persistLibrary }, {
         calibrationLibrary, partitionFlowReadings, interpolationRequirements, availableTargets, calibrationKey,
-        validFlowReading, temperatureToC, temperatureFromC, formatTemperature,
+        validFlowReading, temperatureToC, temperatureFromC, formatTemperature, interpolationModel,
+        normalizeCurveFitTargets, initialCurveFitTargets: data.settings.curveFitTargets,
       });
       guided = mountCalibration({ form, labels, save, back, status, request, base, field, updateChoices, syncFlow, flowPlan }, captureWeight);
       const plugin = await refreshUpdateState();
@@ -1549,7 +1788,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     save.disabled = true;
     try {
       guided?.assertCanSave();
-      flowPlan?.assertCanSave();
+      await flowPlan?.assertCanSave();
       const errors = validateConfiguration(values());
       if (errors.length) {
         reveal(errors[0].field);
@@ -1582,13 +1821,14 @@ header{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"hea
 #settings-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:10px 0 12px}#settings-tabs{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px}#settings-tabs button{min-height:38px;padding:6px 11px;color:var(--muted)}#settings-tabs [aria-selected=true],button[aria-pressed=true],#save{border-color:var(--accent);background:var(--accent);color:#fff}#configuration-summary{display:flex;align-items:center;justify-self:end;gap:6px;margin:0;color:var(--muted);font-size:12px;white-space:nowrap}.configured-pitcher,.unconfigured-pitcher{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;font-weight:500}.configured-pitcher{background:var(--configured-bg);color:var(--configured-text)}.unconfigured-pitcher{background:var(--unconfigured-bg);color:var(--unconfigured-text)}.configuration-flow{margin-left:5px;color:var(--text);font-weight:500}
 .settings-panel{padding:14px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 5px 17px rgba(43,62,90,.07)}.panel-intro{margin-bottom:11px;color:var(--muted);font-size:12px}.settings-section{min-width:0;margin:0 0 11px;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--soft)}.settings-section:last-child{margin-bottom:0}fieldset.settings-section{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.field{display:grid;align-content:start;gap:4px;color:var(--muted);font-size:12px}.field label{color:var(--text);font-weight:500}.field small,.section-help{color:var(--muted);font-size:12px}.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;grid-column:1/-1}.full-width{grid-column:1/-1}.local-status{margin:8px 0 0;padding:7px 9px;border-radius:7px;background:var(--notice);color:var(--muted);font-size:12px;overflow-wrap:anywhere}
 .pitcher-weights-section,.automatic-section{display:block!important}.pitcher-section-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.pitcher-section-header h3{margin:0}.scale-reading{color:var(--muted);font-size:12px}.scale-tools{display:flex;align-items:center;gap:8px}.pitcher-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.pitcher-card{display:grid;grid-template-columns:1fr;grid-template-rows:auto auto auto auto;align-content:start;gap:6px;min-width:0}.pitcher-card+.pitcher-card{padding-left:12px;border-left:1px solid var(--border)}.pitcher-card-name{display:flex;align-items:center;gap:7px;color:var(--text)!important}.pitcher-card-badge{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--configured-bg);color:var(--configured-text);font-weight:500}.pitcher-card button{width:100%}.pitcher-card .capture-result{margin:0;color:var(--muted);font-size:12px}.automatic-switch{display:flex;align-items:center;gap:10px;min-height:40px;font-weight:500}.automatic-switch>span{color:var(--text)}#setting-autoDetect{flex:0 0 30px;width:30px;height:30px;min-height:30px}.section-help{margin:4px 0 9px}.automatic-fields{margin-top:0}
-.flow-setup{display:block!important}.calibration-config-grid{display:grid;grid-template-columns:1.05fr .9fr .68fr 1.15fr;align-items:end;gap:9px}.interpolate-switch{display:flex;align-items:center;gap:10px;min-height:40px;color:var(--text);font-weight:500}.interpolate-switch input{flex:0 0 30px;width:30px;height:30px;min-height:30px}.calibration-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:8px 0}.calibration-actions button{min-height:36px;padding:5px 9px}.flow-setup>.field-grid{margin-top:10px}.flow-setup>.local-status{margin-top:9px}.calibration-library-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}.calibration-library-header h3{margin:0}.calibration-library-help{color:var(--muted);font-size:12px}.calibration-library-actions{display:flex;align-items:center;gap:8px}.calibration-validation{color:var(--green);font-size:12px}.calibration-validation.invalid{color:var(--danger)}.new-calibration{min-height:36px;padding:5px 9px}.empty-calibrations{margin:8px 0;color:var(--muted);font-size:12px}.saved-calibration{border-top:1px solid var(--border)}.calibration-library-header+.saved-calibration{border-top:0}.saved-calibration-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;align-items:center;gap:7px;padding:7px 0}.saved-calibration-details{min-width:0}.saved-calibration-flow{display:block;font-weight:500}.saved-calibration-meta{display:block;color:var(--muted);font-size:12px}.saved-calibration-row button{min-height:36px;padding:5px 9px}.missing-calibration{border-top-style:dashed}.saved-calibration-row.editing{margin:0 -7px;padding-right:7px;padding-left:7px;border-radius:8px 8px 0 0;background:var(--notice)}.calibration-editor{margin:0 -7px 8px;padding:10px;border-radius:0 0 8px 8px;background:var(--notice)}.editor-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px}.editor-heading{min-width:0}.editor-title-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.editor-title-row h3{margin:0}.editor-identity-help{color:var(--muted);font-size:12px}.reading-navigation{display:flex;gap:5px}.reading-navigation button{min-width:40px;min-height:36px;padding:4px 9px;font-size:17px}.entry-methods{margin:0;flex-wrap:nowrap}.editor-identity-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:8px}.editor-flow{width:auto}.inline-editor-flow{display:flex;align-items:center;grid-template-columns:none;flex-wrap:wrap;gap:7px;color:var(--text);font-weight:500}.inline-editor-flow input{width:92px;height:36px;min-height:36px}.inline-editor-flow small{font-weight:400}.manual-workspace,.guided-workspace{display:block}.manual-fields,.calibration-workspace-block{margin:0 0 8px!important;padding:10px!important;border:1px solid var(--border)!important;border-radius:8px!important;background:var(--surface)!important}.manual-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important}.editor-save-row{justify-content:space-between;margin:8px 0 0}.primary-action,#save{border-color:var(--accent);background:var(--accent);color:#fff}#other-calibrations{margin:10px 0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}#other-calibrations summary{min-height:40px;padding:9px 11px;cursor:pointer;font-weight:500}#other-calibrations[open]{padding-bottom:7px}#other-calibrations[open] summary{border-bottom:1px solid var(--border)}#other-calibrations>div,#other-calibrations>.other-calibrations-help{margin-right:11px;margin-left:11px}.other-calibrations-help{margin-top:7px;margin-bottom:4px;color:var(--muted);font-size:12px}
+.flow-setup{display:block!important}.calibration-config-grid{display:grid;grid-template-columns:1.05fr .9fr .68fr 1.15fr;align-items:end;gap:9px}.interpolate-control{display:flex;align-items:center;gap:8px;min-width:0}.interpolate-switch{display:flex;align-items:center;gap:10px;min-height:40px;color:var(--text);font-weight:500}.interpolate-switch input{flex:0 0 30px;width:30px;height:30px;min-height:30px}.preview-interpolation{min-height:36px;padding:5px 9px;white-space:nowrap}.calibration-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:8px 0}.calibration-actions button{min-height:36px;padding:5px 9px}.flow-setup>.field-grid{margin-top:10px}.flow-setup>.local-status{margin-top:9px}.calibration-library-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}.calibration-library-header h3{margin:0}.calibration-library-help{color:var(--muted);font-size:12px}.calibration-library-actions{display:flex;align-items:center;gap:8px}.calibration-validation{color:var(--green);font-size:12px}.calibration-validation.invalid{color:var(--danger)}.new-calibration{min-height:36px;padding:5px 9px}.empty-calibrations{margin:8px 0;color:var(--muted);font-size:12px}.saved-calibration{border-top:1px solid var(--border)}.calibration-library-header+.saved-calibration{border-top:0}.saved-calibration-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;align-items:center;gap:7px;padding:7px 0}.saved-calibration-details{min-width:0}.saved-calibration-flow{display:block;font-weight:500}.saved-calibration-meta{display:block;color:var(--muted);font-size:12px}.saved-calibration-row button{min-height:36px;padding:5px 9px}.missing-calibration{border-top-style:dashed}.saved-calibration-row.editing{margin:0 -7px;padding-right:7px;padding-left:7px;border-radius:8px 8px 0 0;background:var(--notice)}.calibration-editor{margin:0 -7px 8px;padding:10px;border-radius:0 0 8px 8px;background:var(--notice)}.editor-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px}.editor-heading{min-width:0}.editor-title-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.editor-title-row h3{margin:0}.editor-identity-help{color:var(--muted);font-size:12px}.reading-navigation{display:flex;gap:5px}.reading-navigation button{min-width:40px;min-height:36px;padding:4px 9px;font-size:17px}.entry-methods{margin:0;flex-wrap:nowrap}.editor-identity-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:8px}.editor-flow{width:auto}.inline-editor-flow{display:flex;align-items:center;grid-template-columns:none;flex-wrap:wrap;gap:7px;color:var(--text);font-weight:500}.inline-editor-flow input{width:92px;height:36px;min-height:36px}.inline-editor-flow small{font-weight:400}.manual-workspace,.guided-workspace{display:block}.manual-fields,.calibration-workspace-block{margin:0 0 8px!important;padding:10px!important;border:1px solid var(--border)!important;border-radius:8px!important;background:var(--surface)!important}.manual-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important}.editor-save-row{justify-content:space-between;margin:8px 0 0}.primary-action,#save{border-color:var(--accent);background:var(--accent);color:#fff}#other-calibrations{margin:10px 0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}#other-calibrations summary{min-height:40px;padding:9px 11px;cursor:pointer;font-weight:500}#other-calibrations[open]{padding-bottom:7px}#other-calibrations[open] summary{border-bottom:1px solid var(--border)}#other-calibrations>div,#other-calibrations>.other-calibrations-help{margin-right:11px;margin-left:11px}.other-calibrations-help{margin-top:7px;margin-bottom:4px;color:var(--muted);font-size:12px}
+.interpolation-dialog{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;padding:18px;background:rgba(0,0,0,.58)}.interpolation-dialog-card{width:min(860px,100%);max-height:calc(100vh - 36px);overflow:auto;padding:15px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 18px 45px rgba(0,0,0,.35)}.interpolation-dialog-header,.interpolation-preview-options,.interpolation-preview-navigation{display:flex;align-items:center;justify-content:space-between;gap:10px}.interpolation-dialog-header h2{margin-bottom:2px}.interpolation-preview-meta,.interpolation-preview-method{margin:0;color:var(--muted);font-size:12px}.interpolation-preview-navigation{justify-content:center;margin:8px 0}.interpolation-preview-navigation button{min-width:44px;font-size:20px}.interpolation-preview-navigation span{min-width:150px;text-align:center;font-weight:500}.interpolation-preview-graph{width:100%;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--soft)}.interpolation-preview-graph svg{display:block;width:100%;min-width:600px;height:auto}.interpolation-preview-graph text{fill:var(--muted);font:12px Inter,ui-sans-serif,system-ui,sans-serif}.interpolation-preview-graph .graph-grid{stroke:var(--border);stroke-width:1}.interpolation-preview-graph .graph-axis{stroke:var(--text);stroke-width:1.5}.interpolation-preview-graph .graph-reading{fill:var(--text);stroke:var(--surface);stroke-width:1.5}.interpolation-preview-graph .graph-label{fill:var(--text);font-weight:500}.interpolation-preview-options{margin-top:10px}.smooth-curve-option{display:flex;align-items:center;gap:9px;font-weight:500}.smooth-curve-option input{flex:0 0 24px;width:24px;height:24px;min-height:24px}.interpolation-preview-method{margin-top:7px}
 .guided-overview{display:grid;grid-template-columns:minmax(130px,.58fr) minmax(205px,.92fr) minmax(245px,1.1fr);align-items:stretch;gap:9px;margin-bottom:8px}.guided-overview.is-tared{grid-template-columns:minmax(225px,.95fr) minmax(245px,1.05fr)}.guided-overview>*{min-width:0}.guided-readouts{display:grid;grid-template-rows:repeat(2,minmax(0,1fr));gap:4px;width:100%}.guided-metric{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:0;padding:4px 9px;border-radius:7px;background:var(--soft)}.guided-metric b{font-weight:500}.guided-metric span{font-variant-numeric:tabular-nums}.guided-actions{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;margin:0}.guided-actions button{width:100%}.guided-steam-controls{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:8px}.timer-readout{margin-right:auto;font-weight:500;font-variant-numeric:tabular-nums}.calibration-timer{font:inherit}.machine-state{color:var(--muted);font-size:12px}.guided-steam-controls .calibration-actions{margin:0}.calibration-flow{max-width:220px;margin-bottom:8px}
 .getting-started{margin-bottom:9px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--soft)}.getting-started p{margin:0;color:var(--muted);font-size:12px}.getting-started strong{color:var(--text);font-weight:600}.help-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.help-section{padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--soft)}.help-section h3{margin-bottom:4px}.help-section p{margin-bottom:0;color:var(--muted);font-size:12px}.beta-channel{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:9px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--soft)}.beta-channel-copy{min-width:0}.beta-channel h3{margin-bottom:4px}.beta-channel p{margin:0;color:var(--muted);font-size:12px}.beta-channel button{flex:0 0 auto;white-space:nowrap}.glossary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px;margin:0}.glossary-term{padding:9px 0;border-bottom:1px solid var(--border)}.glossary-term dt{margin-bottom:3px;font-weight:500}.glossary-term dd{margin:0;color:var(--muted);font-size:12px}
 #status{min-height:1.5em;margin:0;color:var(--muted);font-size:12px;overflow-wrap:anywhere}.save-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;min-height:40px;margin-top:11px}footer{margin-top:11px;color:var(--muted);font-size:12px}
 @media(pointer:coarse){button,input,select{min-height:44px}input,select{height:44px}#settings-tabs button{min-height:44px}.calibration-actions button,.saved-calibration-row button{min-height:44px}#setting-autoDetect{width:32px;height:32px;min-height:32px;flex-basis:32px}}
 @media(max-width:790px){.calibration-config-grid{grid-template-columns:1fr .9fr .7fr 1.1fr}}
-@media(max-width:680px){#settings-toolbar{grid-template-columns:1fr}#configuration-summary{justify-self:end}.calibration-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){#settings-toolbar{grid-template-columns:1fr}#configuration-summary{justify-self:end}.calibration-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.interpolate-control{align-items:flex-start;flex-direction:column}}
 @media(max-width:560px){body{padding:12px}.extension-title h1{font-size:18px}.extension-actions{gap:5px}#extension-version{font-size:11px}.extension-actions button{padding:6px 8px}#configuration-summary{justify-self:stretch;flex-wrap:wrap}.field-grid,.calibration-config-grid,.pitcher-grid,.help-list,.glossary,.editor-identity-fields,.guided-overview,.guided-overview.is-tared{grid-template-columns:1fr}.beta-channel{align-items:stretch;flex-direction:column}.beta-channel button{align-self:flex-end}.pitcher-card+.pitcher-card{padding-top:10px;padding-left:0;border-top:1px solid var(--border);border-left:0}.calibration-library-header{align-items:stretch;flex-direction:column}.calibration-library-actions{justify-content:space-between}.saved-calibration-row{grid-template-columns:minmax(0,1fr) auto auto}.saved-calibration-details{grid-column:1/-1}.default-choice{grid-column:1/-1;justify-self:end}.editor-header{align-items:stretch}.entry-methods{justify-content:flex-start}.editor-save-row{align-items:stretch}.editor-save-row button{flex:1}}
 </style></head><body>
 <header><a id="return-settings" href="/api/v1/plugins/settings.reaplugin/ui">← Settings</a><div class="extension-title"><h1>Auto Steam Calculator</h1></div><div class="extension-actions"><span id="extension-version">Version …</span><button id="check-extension-update" type="button" hidden>Update</button><button id="approve-extension-update" type="button" hidden>Approve &amp; Update</button></div></header>
@@ -1598,7 +1838,7 @@ header{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"hea
 <form id="settings" novalidate></form>
 <div class="save-row"><p id="status" role="status" aria-live="polite">Loading settings…</p><button id="save" form="settings" type="submit" disabled>Save settings</button></div>
 <footer>Calculation and automatic pitcher detection inspired by <a href="https://github.com/Damian-AU/DSx2">Damian / Damian-AU’s DSx2</a>. Implementation for Decaid by pponce.</footer>
-<script>{const FLOW_MINIMUM=0.4,FLOW_MAXIMUM=2.5,MAX_READINGS=100;const close=(a,b)=>Math.abs(Number(a)-Number(b))<0.000001;const selectedTarget=settings=>Number(settings.targetTemperatureC)>0?Number(settings.targetTemperatureC):0;${temperatureToC.toString()}\n${temperatureFromC.toString()}\n${formatTemperature.toString()}\n${readFlowReadings.toString()}\n${validFlowReading.toString()}\n${calibrationKey.toString()}\n${calibrationLibrary.toString()}\n${availableTargets.toString()}\n${partitionFlowReadings.toString()}\n${interpolationRequirements.toString()}\n${validateCalibrationLibrary.toString()}\n${validateFlowCalibration.toString()}\n${configuredPitchers.toString()}\n${availablePitchers.toString()}\n${validateSettings.toString()}\n(${settingsBrowser.toString()})(${settingsReturnUrl.toString()},${mountCalibrationPage.toString()},${captureScaleWeight.toString()},availablePitchers,validateSettings,${mountFlowCalibrationPage.toString()});}</script></body></html>`;
+<script>{const FLOW_MINIMUM=0.4,FLOW_MAXIMUM=2.5,MAX_READINGS=100;const close=(a,b)=>Math.abs(Number(a)-Number(b))<0.000001;const selectedTarget=settings=>Number(settings.targetTemperatureC)>0?Number(settings.targetTemperatureC):0;${normalizeCurveFitTargets.toString()}\n${temperatureToC.toString()}\n${temperatureFromC.toString()}\n${formatTemperature.toString()}\n${readFlowReadings.toString()}\n${validFlowReading.toString()}\n${calibrationKey.toString()}\n${calibrationLibrary.toString()}\n${availableTargets.toString()}\n${partitionFlowReadings.toString()}\n${interpolationRequirements.toString()}\n${piecewiseRate.toString()}\n${linearFit.toString()}\n${solveThree.toString()}\n${fitCurve.toString()}\n${safeCurve.toString()}\n${crossValidationError.toString()}\n${smoothCurveModel.toString()}\n${interpolationModel.toString()}\n${validateCalibrationLibrary.toString()}\n${validateFlowCalibration.toString()}\n${configuredPitchers.toString()}\n${availablePitchers.toString()}\n${validateSettings.toString()}\n(${settingsBrowser.toString()})(${settingsReturnUrl.toString()},${mountCalibrationPage.toString()},${captureScaleWeight.toString()},availablePitchers,validateSettings,${mountFlowCalibrationPage.toString()});}</script></body></html>`;
 }
 
 globalThis.createPlugin = function createPlugin(host = {}) {
@@ -1664,6 +1904,7 @@ globalThis.createPlugin = function createPlugin(host = {}) {
     }
     pendingLegacy = { present: legacyPresent, value: settings.flowReadings };
     settings.flowReadings = '[]';
+    settings.curveFitTargets = [];
     storageState = { state: 'loading', source: 'legacy', warning: null };
     try { host.storage({ type: 'read', key: CALIBRATION_STORAGE_KEY }); }
     catch {
@@ -1673,16 +1914,21 @@ globalThis.createPlugin = function createPlugin(host = {}) {
 
   function saveCalibrationLibrary(body) {
     if (!body || typeof body.flowReadings !== 'string') return json(400, { code: 'invalid_request', message: 'Supply a calibration library.' });
-    const candidate = { ...settings, flowReadings: body.flowReadings };
+    const curveFitTargets = body.curveFitTargets === undefined ? normalizeCurveFitTargets(settings.curveFitTargets) : normalizeCurveFitTargets(body.curveFitTargets);
+    if (body.curveFitTargets !== undefined && (!Array.isArray(body.curveFitTargets) || curveFitTargets.length !== body.curveFitTargets.length)) {
+      return json(422, { code: 'invalid_curve_fit_targets', message: 'Smooth curve targets must be valid saved milk temperatures.' });
+    }
+    const candidate = { ...settings, flowReadings: body.flowReadings, curveFitTargets };
     const errors = validateCalibrationLibrary(candidate);
     if (errors.length) return json(422, { code: 'invalid_calibration_library', message: errors[0].message, errors });
-    const record = calibrationStorageRecord(body.flowReadings);
+    const record = calibrationStorageRecord(body.flowReadings, curveFitTargets);
     if (!record || typeof host.storage !== 'function') return json(503, { code: 'plugin_storage_unavailable', message: 'Decaid plugin storage is unavailable.' });
     settings.flowReadings = body.flowReadings;
+    settings.curveFitTargets = curveFitTargets;
     try {
       storageState = { state: 'writing', source: 'library-api', warning: null };
       host.storage({ type: 'write', key: CALIBRATION_STORAGE_KEY, data: record });
-      return json(200, { saved: true, flowReadings: settings.flowReadings });
+      return json(200, { saved: true, flowReadings: settings.flowReadings, curveFitTargets: settings.curveFitTargets });
     } catch {
       storageState = { ...storageState, state: 'write-failed', warning: 'plugin_storage_write_failed' };
       return json(503, { code: 'plugin_storage_write_failed', message: 'The calibration library could not be saved.' });
@@ -1697,6 +1943,7 @@ globalThis.createPlugin = function createPlugin(host = {}) {
       storedValue: payload.value,
     });
     settings.flowReadings = result.flowReadings;
+    settings.curveFitTargets = result.curveFitTargets;
     storageState = { state: result.write ? 'writing' : 'ready', source: result.source, warning: result.warning };
     if (result.write) {
       try { host.storage({ type: 'write', key: CALIBRATION_STORAGE_KEY, data: result.write }); }

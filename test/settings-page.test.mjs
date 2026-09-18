@@ -100,7 +100,7 @@ async function page(settings = partial, {
     }
     if (endpoint === 'tare') return { ok: true, text: async () => '' };
     if (endpoint === 'library') {
-      persistedLibraries.push(JSON.parse(options.body).flowReadings);
+      persistedLibraries.push(JSON.parse(options.body));
       return { ok: true, text: async () => JSON.stringify({ saved: true }) };
     }
     if (endpoint === 'settings') { savedSettings.push(JSON.parse(options.body)); return { ok: true, text: async () => '{}' }; }
@@ -223,7 +223,7 @@ test('recovered tablet layout keeps quick-reference tabs compact and two-column'
   assert.equal(helpList.children.every(child => child.className === 'help-section'), true);
   const glossary = p.ids['panel-glossary'].children.find(child => child.className === 'glossary');
   assert.ok(glossary);
-  assert.equal(glossary.children.length, 13);
+  assert.equal(glossary.children.length, 14);
   assert.equal(glossary.children.every(child => child.className === 'glossary-term'), true);
   assert.match(source, /#settings-toolbar\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/);
   assert.match(source, /\.help-list\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
@@ -297,6 +297,38 @@ test('Interpolate separates out-of-range and different-target readings', async (
   assert.equal(p.ids['other-calibrations'].open, undefined);
 });
 
+test('interpolation preview browses complete milk targets and saves Smooth curve fit per target', async () => {
+  const readings = [
+    saved(0.5, 80, 55), saved(1.5, 40, 55), saved(2.5, 32, 55),
+    saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60),
+  ];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  assert.equal(p.buttons('Preview interpolation').length, 1);
+  await p.buttons('Preview interpolation')[0].handlers.click();
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, false);
+  assert.match(p.ids['interpolation-preview-title'].textContent, /140\.0 °F milk target/);
+  assert.match(p.ids['interpolation-preview-graph'].innerHTML, /100 g milk/);
+  assert.match(p.ids['interpolation-preview-graph'].innerHTML, /Measured reading/);
+  await p.buttons('‹')[0].handlers.click();
+  assert.match(p.ids['interpolation-preview-title'].textContent, /131\.0 °F milk target/);
+  await p.buttons('Use this milk target')[0].handlers.click();
+  assert.equal(p.fields.targetTemperatureC.value, '55');
+  const smooth = p.elements().find(item => item.parent?.className === 'smooth-curve-option');
+  smooth.checked = true; await smooth.handlers.change();
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /safe smooth curve was selected automatically/);
+  await p.submit();
+  assert.deepEqual(p.persistedLibraries.at(-1).curveFitTargets, [55]);
+  assert.equal(p.savedSettings.at(-1).targetTemperatureC, 55);
+});
+
+test('Preview interpolation stays hidden for an incomplete selected target', async () => {
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60), saved(1.0, 40, 55)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 55, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  assert.equal(p.buttons('Preview interpolation')[0].hidden, true);
+});
+
 test('missing interpolation requirements have Create reading buttons that toggle to Cancel', async () => {
   const p = await page({ ...partial, interpolate: true, targetTemperatureC: 0, flowReadings: '[]', referenceMilkGrams: 0, referenceSeconds: 0 });
   assert.equal(p.buttons('Create reading').length, 3);
@@ -347,7 +379,7 @@ test('instructions document matching, interpolation and physical calibration con
   assert.match(p.ids['panel-instructions'].textContent, /More matching readings improve/);
   assert.match(p.ids['panel-instructions'].textContent, /machine controls/);
   assert.match(p.ids['panel-glossary'].textContent, /All targets/);
-  assert.match(p.ids['panel-glossary'].textContent, /piecewise interpolation/);
+  assert.match(p.ids['panel-glossary'].textContent, /Smooth curve fit/);
 });
 
 test('F is default and changing units converts every display without changing stored Celsius', async () => {

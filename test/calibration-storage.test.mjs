@@ -13,11 +13,19 @@ test('first v2 load intentionally resets old settings calibrations', () => {
 });
 
 test('stored v2 library wins when the settings shadow is unchanged', () => {
-  const storedValue = calibrationStorageRecord(newLibrary);
+  const storedValue = calibrationStorageRecord(newLibrary, [60, 55]);
   const result = reconcileCalibrationStorage({ legacyPresent: true, legacyValue: oldLibrary, storedValue });
   assert.equal(result.flowReadings, newLibrary);
+  assert.deepEqual(result.curveFitTargets, [55, 60]);
   assert.equal(result.source, 'storage');
   assert.equal(result.write, null);
+});
+
+test('existing v2 records without curve preferences remain valid', () => {
+  const result = reconcileCalibrationStorage({ legacyPresent: false, legacyValue: '[]',
+    storedValue: { schemaVersion: 2, flowReadings: newLibrary } });
+  assert.equal(result.flowReadings, newLibrary);
+  assert.deepEqual(result.curveFitTargets, []);
 });
 
 test('stored v2 library remains canonical when the manifest shadow is stale', () => {
