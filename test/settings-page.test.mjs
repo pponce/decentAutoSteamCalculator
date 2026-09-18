@@ -414,7 +414,10 @@ test('new interpolation calibration at a different milk target becomes active an
   assert.equal(p.fields.targetTemperatureC.value, String(65.6));
   assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
   assert.match(p.ids['active-calibrations'].textContent, /More readings needed/);
-  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /0\.5 ml\/s|1\.5 ml\/s|2\.5 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /Minimum reading/);
+  assert.match(p.ids['active-calibrations'].textContent, /Interior reading/);
+  assert.match(p.ids['active-calibrations'].textContent, /Maximum reading/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /140\.0 °F/);
   assert.match(p.ids['other-calibrations'].textContent, /0\.5 ml\/s/);
   assert.match(p.ids['other-calibrations'].textContent, /1\.5 ml\/s/);
   assert.match(p.ids['other-calibrations'].textContent, /2\.5 ml\/s/);
@@ -446,7 +449,10 @@ test('new interpolation calibration switches to its new milk target and filters 
   assert.match(p.fields.targetTemperatureC.textContent, /145\.0 °F/);
   assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
   assert.match(p.ids['active-calibrations'].textContent, /More readings needed/);
-  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /0\.5 ml\/s|1\.5 ml\/s|2\.5 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /Minimum reading/);
+  assert.match(p.ids['active-calibrations'].textContent, /Interior reading/);
+  assert.match(p.ids['active-calibrations'].textContent, /Maximum reading/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /140\.0 °F/);
   assert.match(p.ids['other-calibrations'].textContent, /0\.5 ml\/s/);
   assert.match(p.ids['other-calibrations'].textContent, /1\.5 ml\/s/);
   assert.match(p.ids['other-calibrations'].textContent, /2\.5 ml\/s/);
