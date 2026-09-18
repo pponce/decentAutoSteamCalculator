@@ -31,7 +31,7 @@ async function page(settings = partial, {
   class FakeDate extends Date { static now() { return time; } }
   class FakeWebSocket { constructor() { socket = this; } close() {} }
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.value = ''; }
+    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.style = {}; this.value = ''; }
     set value(value) { this._value = String(value); } get value() { return this._value; }
     set name(value) { this.fieldName = value; fields[value] = this; } get name() { return this.fieldName; }
     set id(value) { this.elementId = value; ids[value] = this; } get id() { return this.elementId; }
@@ -108,7 +108,8 @@ async function page(settings = partial, {
     return { ok: response.status === 200, text: async () => response.body };
   };
   const body = plugin.__httpRequestHandler({ endpoint: 'ui', method: 'GET' }).body;
-  const document = { referrer: '', getElementById: id => ids[id], createElement: tag => new Element(tag) };
+  const documentBody = new Element('body');
+  const document = { referrer: '', body: documentBody, getElementById: id => ids[id], createElement: tag => new Element(tag) };
   const navigations = [];
   const context = vm.createContext({ document, fetch, URL, Date: FakeDate, WebSocket: FakeWebSocket,
     setTimeout: callback => { timers.push(callback); return timers.length; }, clearTimeout() {},
@@ -116,7 +117,7 @@ async function page(settings = partial, {
   vm.runInContext(body.match(/<script>([\s\S]*)<\/script>/)[1], context);
   await new Promise(resolve => setImmediate(resolve));
   const all = element => [element, ...element.children.flatMap(all)];
-  return { fields, ids, calls, savedSettings, calibrationCalls, persistedLibraries, navigations,
+  return { fields, ids, documentBody, calls, savedSettings, calibrationCalls, persistedLibraries, navigations,
     buttons: text => all(ids.settings).filter(item => item.tag === 'button' && item.textContent === text),
     elements: () => all(ids.settings),
     scale(weight) { time += 300; socket.onmessage({ data: JSON.stringify({ weight }) }); },
@@ -353,6 +354,19 @@ test('interpolation preview browses complete milk targets and saves Smooth curve
   await p.submit();
   assert.deepEqual(p.persistedLibraries.at(-1).curveFitTargets, [55]);
   assert.equal(p.savedSettings.at(-1).targetTemperatureC, 55);
+});
+
+test('Preview stays modal until Close or Use this milk target and locks background scrolling', async () => {
+  const readings = [saved(0.5, 80, 55), saved(1.5, 40, 55), saved(2.5, 32, 55)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 55, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('Preview')[0].handlers.click();
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, false);
+  assert.equal(p.ids['interpolation-preview-dialog'].handlers.click, undefined);
+  assert.equal(p.documentBody.style.overflow, 'hidden');
+  await p.buttons('Close')[0].handlers.click();
+  assert.equal(p.ids['interpolation-preview-dialog'].hidden, true);
+  assert.equal(p.documentBody.style.overflow, '');
 });
 
 test('Use this milk target remains actionable for the already-selected only target', async () => {

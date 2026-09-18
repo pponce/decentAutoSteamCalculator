@@ -75,7 +75,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
 
   let displayedUnit = field('temperatureUnit').value || 'F';
   let curveFitTargets = normalizeCurveFitTargets(initialCurveFitTargets);
-  let curveFitDirty = false, previewTarget = 0;
+  let curveFitDirty = false, previewTarget = 0, previewBodyOverflow = null;
   let readings = calibrationLibrary(settings()) || [];
   let openKey = null, draftFlow = NaN, draftTarget = NaN, guidedMode = false, locked = false;
   let guide = null, review = null, clearGuided = () => {}, measurementReady = false;
@@ -137,7 +137,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   }
   function renderPreview() {
     const targets = completeTargets();
-    if (!targets.length) { previewDialog.hidden = true; return; }
+    if (!targets.length) { closePreview(); return; }
     if (!targets.some(target => same(target, previewTarget))) previewTarget = targets[0];
     const index = targets.findIndex(target => same(target, previewTarget));
     const result = graphMarkup(previewTarget);
@@ -153,9 +153,20 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   function openPreview() {
     previewTarget = Number(field('targetTemperatureC').value || 0);
     if (!targetComplete(previewTarget)) return;
-    renderPreview(); previewDialog.hidden = false; previewClose.focus();
+    renderPreview(); previewDialog.hidden = false;
+    if (document.body) {
+      previewBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
+    previewClose.focus();
   }
-  function closePreview() { previewDialog.hidden = true; }
+  function closePreview() {
+    previewDialog.hidden = true;
+    if (document.body && previewBodyOverflow !== null) {
+      document.body.style.overflow = previewBodyOverflow;
+      previewBodyOverflow = null;
+    }
+  }
   function refreshTargetChoices() {
     const select = field('targetTemperatureC');
     const targets = targetList();
@@ -354,7 +365,6 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   }
   field('interpolate').addEventListener('change', interpolationChanged);
   preview.addEventListener('click', openPreview); previewClose.addEventListener('click', closePreview);
-  previewDialog.addEventListener('click', event => { if (event.target === previewDialog) closePreview(); });
   previousTarget.addEventListener('click', () => { const targets = completeTargets(), index = targets.findIndex(target => same(target, previewTarget)); if (index > 0) { previewTarget = targets[index - 1]; renderPreview(); } });
   nextTarget.addEventListener('click', () => { const targets = completeTargets(), index = targets.findIndex(target => same(target, previewTarget)); if (index >= 0 && index < targets.length - 1) { previewTarget = targets[index + 1]; renderPreview(); } });
   smoothCurve.addEventListener('change', () => {
