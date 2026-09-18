@@ -31,12 +31,8 @@ async function page(settings = partial, {
   class FakeDate extends Date { static now() { return time; } }
   class FakeWebSocket { constructor() { socket = this; } close() {} }
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.style = { overflow: '' }; this._value = ''; }
-    set value(value) {
-      const next = String(value);
-      if (this.tag === 'select' && this.children.length && !this.children.some(child => String(child.value) === next)) this._value = '';
-      else this._value = next;
-    } get value() { return this._value; }
+    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.style = { overflow: '' }; this.value = ''; }
+    set value(value) { this._value = String(value); } get value() { return this._value; }
     set name(value) { this.fieldName = value; fields[value] = this; } get name() { return this.fieldName; }
     set id(value) { this.elementId = value; ids[value] = this; } get id() { return this.elementId; }
     get parentElement() { return this.parent; }
@@ -433,6 +429,7 @@ test('new interpolation calibration at a different milk target becomes active an
 });
 
 test('new interpolation calibration switches to its new milk target and filters prior targets', async () => {
+  assert.match(source, /refreshTargetChoices\(\);\s*if \(field\('interpolate'\)\.checked\) field\('targetTemperatureC'\)\.value = String\(reading\.targetTemperatureC\)/);
   const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
   const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
     flowReadings: JSON.stringify(readings) });
