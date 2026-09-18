@@ -563,7 +563,8 @@ test('Damian attribution appears only at the bottom of Instructions, not page-wi
 
 test('instructions document matching, interpolation and physical calibration controls', async () => {
   const p = await page();
-  assert.match(p.ids['panel-instructions'].textContent, /Leave Interpolate off and create one calibration reading/);
+  assert.match(p.ids['panel-instructions'].textContent, /dividing line between simple exact calibrations and advanced flow modeling/);
+  assert.match(p.ids['panel-instructions'].textContent, /middle ground between a single simple calibration and Interpolate/);
   assert.match(p.ids['panel-instructions'].textContent, /at least three readings/);
   assert.match(p.ids['panel-instructions'].textContent, /every saved reading at the selected milk target inside the selected range/);
   assert.match(p.ids['panel-instructions'].textContent, /More matching readings improve/);

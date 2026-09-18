@@ -69,10 +69,14 @@ Select **Open settings**:
 - Choose **F** or **C** for temperature display. Each saved calibration keeps its
   own milk target. With **Interpolate** off, **Milk target** may be **All targets**
   or filter the exact saved calibrations offered on the shot page.
-- Turn on **Interpolate** only when you want adjustable flow. It requires one
-  specific milk target plus the exact minimum, exact maximum, and at least one
-  interior reading. More matching readings improve interpolation. When that set
-  is complete, **Preview** graphs calculated time by flow for
+- With **Interpolate** off, one exact calibration is enough. You can still save
+  multiple exact flow/milk-target combinations and choose among the calibrations
+  allowed by the **Milk target** filter. This is the middle ground between the
+  simplest one-calibration setup and interpolation.
+- Turn on **Interpolate** only when you want the advanced adjustable-flow path.
+  It requires one specific milk target plus the exact minimum, exact maximum,
+  and at least one interior reading. More matching readings improve interpolation.
+  When that set is complete, **Preview** graphs calculated time by flow for
   several milk weights. The preview can browse other complete milk targets,
   choose **Use this milk target**, and enable **Smooth curve fit** separately for
   each target.
@@ -128,6 +132,8 @@ Beta enrollment is per plugin: installing the `beta` branch changes Auto Steam
 Calculator only. Decaid, skins and other plugins remain on their current update
 sources. Beta builds use prerelease versions and each beta update advances that
 version so the calculator's normal update check can offer it.
+
+Stable `0.13.3` clarifies the intended setup levels in the built-in Instructions: Interpolate off covers both the simplest one-reading setup and multiple independent exact calibrations, while turning Interpolate on is the advanced adjustable-flow path.
 
 Stable `0.13.2` adds the interpolation graph and per-target **Smooth curve
 fit** preference. The extension chooses among safe simple curve candidates from

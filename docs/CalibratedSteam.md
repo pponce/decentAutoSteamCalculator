@@ -52,10 +52,13 @@ and first invalid setting.
    to every calibration. The supporting skin owns and
    remembers the current pitcher preset; the plugin no longer has a separate
    starting-pitcher setting.
-4. Leave **Interpolate** off for the simplest setup and create one saved
-   calibration. **Milk target** may be **All targets** or one saved target.
-   Turn on **Interpolate** only to calculate between multiple flow readings at
-   one specific milk target. For guided Gross calibration, tare the empty
+4. **Interpolate** is the dividing line between exact-calibration setups and the
+   advanced adjustable-flow setup. Leave it off for the simplest setup and create
+   one saved calibration. You can also keep Interpolate off and save several exact
+   flow/milk-target combinations; **Milk target** may be **All targets** or one
+   saved target, and the shot page cycles through the matching exact calibrations.
+   Turn on **Interpolate** only to calculate continuously between multiple flow
+   readings at one specific milk target. For guided Gross calibration, tare the empty
    scale, choose a configured pitcher, and **Capture pitcher + milk (g)**. For
    Tared calibration, put the empty pitcher on the scale, select **Tare**, add
    milk, and **Capture milk only (g)**. Capture arms the session. Start and stop
