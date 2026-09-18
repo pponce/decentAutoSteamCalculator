@@ -488,6 +488,13 @@ test('capture arms calibration and physical machine start/stop completes timing 
   assert.equal(p.fields.referenceSeconds.value, '25');
 });
 
+test('Damian attribution appears only at the bottom of Instructions, not page-wide', async () => {
+  const p = await page();
+  assert.match(p.ids['panel-instructions'].textContent, /Damian \/ Damian-AU’s DSx2/);
+  assert.equal(p.ids['panel-instructions'].children.at(-1).className, 'instructions-attribution');
+  assert.doesNotMatch(source, /<footer>Calculation and automatic pitcher detection inspired by/);
+});
+
 test('instructions document matching, interpolation and physical calibration controls', async () => {
   const p = await page();
   assert.match(p.ids['panel-instructions'].textContent, /Leave Interpolate off and create one calibration reading/);
