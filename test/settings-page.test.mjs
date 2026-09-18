@@ -31,7 +31,7 @@ async function page(settings = partial, {
   class FakeDate extends Date { static now() { return time; } }
   class FakeWebSocket { constructor() { socket = this; } close() {} }
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.style = {}; this.value = ''; }
+    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.style = { overflow: '' }; this.value = ''; }
     set value(value) { this._value = String(value); } get value() { return this._value; }
     set name(value) { this.fieldName = value; fields[value] = this; } get name() { return this.fieldName; }
     set id(value) { this.elementId = value; ids[value] = this; } get id() { return this.elementId; }

@@ -33,7 +33,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const useTarget = make('button', 'Use this milk target'); useTarget.type = 'button'; useTarget.className = 'primary-action';
   previewOptions.append(smoothLabel, useTarget);
   const previewMethod = make('span'); previewMethod.className = 'interpolation-preview-method';
-  previewOptions.prepend(previewMethod);
+  previewOptions.insertBefore(previewMethod, smoothLabel);
   previewCard.append(previewHeader, graph, previewOptions); previewDialog.append(previewCard); panel.append(previewDialog);
 
   const main = make('section'); main.id = 'active-calibrations'; main.className = 'calibration-library settings-section'; panel.insertBefore(main, manual);
