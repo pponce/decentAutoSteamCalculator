@@ -332,14 +332,16 @@ test('interpolation preview browses complete milk targets and saves Smooth curve
   ];
   const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
     flowReadings: JSON.stringify(readings) });
-  assert.equal(p.buttons('Preview interpolation').length, 1);
-  await p.buttons('Preview interpolation')[0].handlers.click();
+  assert.equal(p.buttons('Preview').length, 1);
+  await p.buttons('Preview')[0].handlers.click();
   assert.equal(p.ids['interpolation-preview-dialog'].hidden, false);
-  assert.match(p.ids['interpolation-preview-title'].textContent, /140\.0 °F milk target/);
+  assert.equal(p.ids['interpolation-preview-title'].textContent, 'Preview');
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Milk target 140\.0 °F/);
   assert.match(p.ids['interpolation-preview-graph'].innerHTML, /100 g milk/);
   assert.match(p.ids['interpolation-preview-graph'].innerHTML, /Measured reading/);
   await p.buttons('‹')[0].handlers.click();
-  assert.match(p.ids['interpolation-preview-title'].textContent, /131\.0 °F milk target/);
+  assert.equal(p.ids['interpolation-preview-title'].textContent, 'Preview');
+  assert.match(p.ids['interpolation-preview-dialog'].textContent, /Milk target 131\.0 °F/);
   await p.buttons('Use this milk target')[0].handlers.click();
   assert.equal(p.fields.targetTemperatureC.value, '55');
   const smooth = p.elements().find(item => item.parent?.className === 'smooth-curve-option');
@@ -350,11 +352,11 @@ test('interpolation preview browses complete milk targets and saves Smooth curve
   assert.equal(p.savedSettings.at(-1).targetTemperatureC, 55);
 });
 
-test('Preview interpolation stays hidden for an incomplete selected target', async () => {
+test('Preview stays hidden for an incomplete selected target', async () => {
   const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60), saved(1.0, 40, 55)];
   const p = await page({ ...partial, interpolate: true, targetTemperatureC: 55, minimumFlow: 0.5, maximumFlow: 2.5,
     flowReadings: JSON.stringify(readings) });
-  assert.equal(p.buttons('Preview interpolation')[0].hidden, true);
+  assert.equal(p.buttons('Preview')[0].hidden, true);
 });
 
 test('missing interpolation requirements have Create reading buttons that toggle to Cancel', async () => {

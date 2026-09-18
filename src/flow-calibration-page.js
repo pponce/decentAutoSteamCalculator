@@ -8,7 +8,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const configGrid = make('div'); configGrid.className = 'calibration-config-grid full-width'; config.append(configGrid);
   labels.interpolate.className = 'interpolate-switch';
   const interpolateControl = make('div'); interpolateControl.className = 'interpolate-control';
-  const preview = make('button', 'Preview interpolation'); preview.type = 'button'; preview.className = 'preview-interpolation'; preview.hidden = true;
+  const preview = make('button', 'Preview'); preview.type = 'button'; preview.className = 'preview-interpolation'; preview.hidden = true;
   interpolateControl.append(labels.interpolate, preview);
   configGrid.append(interpolateControl, labels.weightMode, labels.temperatureUnit, labels.targetTemperatureC);
   const range = make('div'); range.className = 'field-grid full-width'; range.append(labels.minimumFlow, labels.maximumFlow); config.append(range);
@@ -18,15 +18,14 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const previewDialog = make('div'); previewDialog.id = 'interpolation-preview-dialog'; previewDialog.className = 'interpolation-dialog'; previewDialog.hidden = true;
   const previewCard = make('section'); previewCard.className = 'interpolation-dialog-card'; previewCard.setAttribute('role', 'dialog'); previewCard.setAttribute('aria-modal', 'true');
   const previewHeader = make('div'); previewHeader.className = 'interpolation-dialog-header';
-  const previewHeading = make('div');
-  const previewTitle = make('h2'); previewTitle.id = 'interpolation-preview-title';
-  const previewMeta = make('p'); previewMeta.className = 'interpolation-preview-meta'; previewHeading.append(previewTitle, previewMeta);
-  const previewClose = make('button', 'Close'); previewClose.type = 'button'; previewHeader.append(previewHeading, previewClose);
+  const previewTitle = make('h2', 'Preview'); previewTitle.id = 'interpolation-preview-title';
   const previewNavigation = make('div'); previewNavigation.className = 'interpolation-preview-navigation';
   const previousTarget = make('button', '‹'); previousTarget.type = 'button'; previousTarget.setAttribute('aria-label', 'Previous milk target');
   const previewPosition = make('span');
   const nextTarget = make('button', '›'); nextTarget.type = 'button'; nextTarget.setAttribute('aria-label', 'Next milk target');
   previewNavigation.append(previousTarget, previewPosition, nextTarget);
+  const previewClose = make('button', 'Close'); previewClose.type = 'button';
+  previewHeader.append(previewTitle, previewNavigation, previewClose);
   const graph = make('div'); graph.id = 'interpolation-preview-graph'; graph.className = 'interpolation-preview-graph';
   const previewOptions = make('div'); previewOptions.className = 'interpolation-preview-options';
   const smoothLabel = make('label'); smoothLabel.className = 'smooth-curve-option';
@@ -34,7 +33,7 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
   const useTarget = make('button', 'Use this milk target'); useTarget.type = 'button'; useTarget.className = 'primary-action';
   previewOptions.append(smoothLabel, useTarget);
   const previewMethod = make('p'); previewMethod.className = 'interpolation-preview-method';
-  previewCard.append(previewHeader, previewNavigation, graph, previewOptions, previewMethod); previewDialog.append(previewCard); panel.append(previewDialog);
+  previewCard.append(previewHeader, graph, previewOptions, previewMethod); previewDialog.append(previewCard); panel.append(previewDialog);
 
   const main = make('section'); main.id = 'active-calibrations'; main.className = 'calibration-library settings-section'; panel.insertBefore(main, manual);
   const others = make('details'); others.id = 'other-calibrations';
@@ -139,13 +138,12 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     if (!targets.some(target => same(target, previewTarget))) previewTarget = targets[0];
     const index = targets.findIndex(target => same(target, previewTarget));
     const result = graphMarkup(previewTarget);
-    previewTitle.textContent = 'Interpolation preview — ' + formatTemperature(previewTarget, displayedUnit) + ' milk target';
-    previewMeta.textContent = result.active.length + ' calibrations · ' + result.minimum.toFixed(1) + '–' + result.maximum.toFixed(1) + ' ml/s';
-    previewPosition.textContent = (index + 1) + ' of ' + targets.length + ' · ' + formatTemperature(previewTarget, displayedUnit);
+    previewTitle.textContent = 'Preview';
+    previewPosition.textContent = 'Milk target ' + formatTemperature(previewTarget, displayedUnit) + (targets.length > 1 ? ' · ' + (index + 1) + ' of ' + targets.length : '');
     previousTarget.disabled = index <= 0; nextTarget.disabled = index >= targets.length - 1;
     smoothCurve.checked = curveFitTargets.some(target => same(target, previewTarget));
     const selected = same(Number(field('targetTemperatureC').value), previewTarget);
-    useTarget.disabled = selected; useTarget.textContent = selected ? 'Selected milk target' : 'Use this milk target';
+    useTarget.disabled = selected; useTarget.textContent = 'Use this milk target';
     graph.innerHTML = result.markup;
     previewMethod.textContent = result.model.requested
       ? (result.model.kind === 'linear' ? 'Straight lines are being used because no safe smooth fit improved prediction.' : 'A safe smooth curve was selected automatically from these readings.')

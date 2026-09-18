@@ -72,7 +72,7 @@ Select **Open settings**:
 - Turn on **Interpolate** only when you want adjustable flow. It requires one
   specific milk target plus the exact minimum, exact maximum, and at least one
   interior reading. More matching readings improve interpolation. When that set
-  is complete, **Preview interpolation** graphs calculated time by flow for
+  is complete, **Preview** graphs calculated time by flow for
   several milk weights. The preview can browse other complete milk targets,
   choose **Use this milk target**, and enable **Smooth curve fit** separately for
   each target.
@@ -129,7 +129,7 @@ Calculator only. Decaid, skins and other plugins remain on their current update
 sources. Beta builds use prerelease versions and each beta update advances that
 version so the calculator's normal update check can offer it.
 
-Beta `0.13.2-beta.2` adds the interpolation graph and per-target **Smooth curve
+Beta `0.13.2-beta.3` adds the interpolation graph and per-target **Smooth curve
 fit** preference. The extension chooses among safe simple curve candidates from
 the saved readings and retains straight-line interpolation when no curve predicts
 better. Calculations never extrapolate beyond the measured flow range.
