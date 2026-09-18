@@ -18,26 +18,24 @@ jobs:
           node-version: '22'
       - name: Build generated files
         run: node build.mjs
-      - name: Plugin - API choices
-        run: node --test --test-name-pattern='built plugin advertises API v5 and exact calibration choices' test/plugin.test.mjs
-      - name: Plugin - storage init
-        run: node --test --test-name-pattern='v2 storage starts empty instead of importing old calibration semantics' test/plugin.test.mjs
-      - name: Plugin - library endpoint
-        run: node --test --test-name-pattern='library endpoint saves valid incomplete libraries independently of setup validation' test/plugin.test.mjs
-      - name: Plugin - fresh install
-        run: node --test --test-name-pattern='fresh installs expose configuration requirements and All targets' test/plugin.test.mjs
-      - name: Plugin - calculate
-        run: node --test --test-name-pattern='calculate returns the chosen calibration flow, target and duration' test/plugin.test.mjs
-      - name: Plugin - validation reload
-        run: node --test --test-name-pattern='configuration validation is read-only and reload replaces setup settings' test/plugin.test.mjs
-      - name: Plugin - endpoint failures
-        run: node --test --test-name-pattern='disabled, wrong-method and unknown endpoints are explicit failures' test/plugin.test.mjs
-      - name: Plugin - settings UI
-        run: node --test --test-name-pattern='settings UI is self-contained and credits Damian in Instructions' test/plugin.test.mjs
-      - name: Plugin - pitchers
-        run: node --test --test-name-pattern='status advertises only configured pitcher choices and Auto is opt-in' test/plugin.test.mjs
-      - name: Plugin - interpolation reload
-        run: node --test --test-name-pattern='interpolation status and calculations survive serialization and reload' test/plugin.test.mjs
+      - name: Test calibration runtime
+        run: node --test test/calibration-runtime.test.mjs
+      - name: Test calibration session
+        run: node --test test/calibration-session.test.mjs
+      - name: Test calibration storage
+        run: node --test test/calibration-storage.test.mjs
+      - name: Test core
+        run: node --test test/core.test.mjs
+      - name: Test flow calibration
+        run: node --test test/flow-calibration.test.mjs
+      - name: Test navigation
+        run: node --test test/navigation.test.mjs
+      - name: Test package contract
+        run: node --test test/package-contract.test.mjs
+      - name: Test plugin
+        run: node --test test/plugin.test.mjs
+      - name: Test settings page
+        run: node --test test/settings-page.test.mjs
       - name: Check generated files
         run: git diff --exit-code -- manifest.json plugin.js
       - name: Package plugin
