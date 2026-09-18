@@ -304,8 +304,10 @@ function mountFlowCalibrationPage({ form, labels, field, updateChoices, syncFlow
     if (duplicate) { note.textContent = 'A calibration at this flow and milk target already exists.'; return; }
     const before = readings;
     readings = readings.filter(item => calibrationKey(item) !== oldKey); readings.push(reading);
-    if (field('interpolate').checked) field('targetTemperatureC').value = reading.targetTemperatureC;
-    openKey = null; editor.hidden = true; refreshTargetChoices(); syncStored(); render();
+    openKey = null; editor.hidden = true;
+    refreshTargetChoices();
+    if (field('interpolate').checked) field('targetTemperatureC').value = String(reading.targetTemperatureC);
+    syncStored(); render();
     try { await persistStored('Calibration saved.'); }
     catch { readings = before; refreshTargetChoices(); syncStored(); render(); }
   }

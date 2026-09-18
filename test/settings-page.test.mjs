@@ -31,8 +31,12 @@ async function page(settings = partial, {
   class FakeDate extends Date { static now() { return time; } }
   class FakeWebSocket { constructor() { socket = this; } close() {} }
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.style = { overflow: '' }; this.value = ''; }
-    set value(value) { this._value = String(value); } get value() { return this._value; }
+    constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.style = { overflow: '' }; this._value = ''; }
+    set value(value) {
+      const next = String(value);
+      if (this.tag === 'select' && this.children.length && !this.children.some(child => String(child.value) === next)) this._value = '';
+      else this._value = next;
+    } get value() { return this._value; }
     set name(value) { this.fieldName = value; fields[value] = this; } get name() { return this.fieldName; }
     set id(value) { this.elementId = value; ids[value] = this; } get id() { return this.elementId; }
     get parentElement() { return this.parent; }
@@ -426,6 +430,65 @@ test('new interpolation calibration at a different milk target becomes active an
   assert.match(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
   assert.match(p.ids['active-calibrations'].textContent, /2\.5 ml\/s/);
   assert.match(p.ids['other-calibrations'].textContent, /1\.0 ml\/s/);
+});
+
+test('new interpolation calibration switches to its new milk target and filters prior targets', async () => {
+  const readings = [saved(0.5, 60, 60), saved(1.5, 40, 60), saved(2.5, 20, 60)];
+  const p = await page({ ...partial, interpolate: true, targetTemperatureC: 60, minimumFlow: 0.5, maximumFlow: 2.5,
+    flowReadings: JSON.stringify(readings) });
+  await p.buttons('+ New calibration')[0].handlers.click();
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  const targetInput = p.elements().find(item => item.parent?.className?.includes('editor-target'));
+  flowInput.value = '1.0'; await flowInput.handlers.input();
+  targetInput.value = '145'; await targetInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '35';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+
+  assert.equal(p.fields.targetTemperatureC.value, '62.8');
+  assert.match(p.fields.targetTemperatureC.textContent, /145\.0 °F/);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /More readings needed/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /0\.5 ml\/s|1\.5 ml\/s|2\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /0\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /2\.5 ml\/s/);
+  assert.equal(p.ids['other-calibrations'].open, undefined);
+});
+
+test('with Interpolate off, creating a different target preserves All targets filter', async () => {
+  const readings = [saved(1.0, 30, 60)];
+  const p = await page({ ...partial, interpolate: false, targetTemperatureC: 0, flowReadings: JSON.stringify(readings) });
+  assert.equal(p.fields.targetTemperatureC.value, '0');
+  await p.buttons('+ New calibration')[0].handlers.click();
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  const targetInput = p.elements().find(item => item.parent?.className?.includes('editor-target'));
+  flowInput.value = '1.5'; await flowInput.handlers.input();
+  targetInput.value = '145'; await targetInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '28';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+  assert.equal(p.fields.targetTemperatureC.value, '0');
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.match(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+});
+
+test('with Interpolate off, creating a different target preserves a specific filter', async () => {
+  const readings = [saved(1.0, 30, 60)];
+  const p = await page({ ...partial, interpolate: false, targetTemperatureC: 60, flowReadings: JSON.stringify(readings) });
+  assert.equal(p.fields.targetTemperatureC.value, '60');
+  await p.buttons('+ New calibration')[0].handlers.click();
+  const flowInput = p.elements().find(item => item.parent?.className?.includes('editor-flow'));
+  const targetInput = p.elements().find(item => item.parent?.className?.includes('editor-target'));
+  flowInput.value = '1.5'; await flowInput.handlers.input();
+  targetInput.value = '145'; await targetInput.handlers.input();
+  p.fields.referenceMilkGrams.value = '160';
+  p.fields.referenceSeconds.value = '28';
+  await p.buttons('Create saved calibration')[0].handlers.click();
+  assert.equal(p.fields.targetTemperatureC.value, '60');
+  assert.match(p.ids['active-calibrations'].textContent, /1\.0 ml\/s/);
+  assert.doesNotMatch(p.ids['active-calibrations'].textContent, /1\.5 ml\/s/);
+  assert.match(p.ids['other-calibrations'].textContent, /1\.5 ml\/s/);
 });
 
 test('Interpolate still allows creating an additional saved calibration', async () => {
