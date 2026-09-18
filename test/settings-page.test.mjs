@@ -145,6 +145,13 @@ test('tabs and compact S M L Auto summary react to draft settings', async () => 
   assert.match(p.fields.targetTemperatureC.textContent, /All targets/);
 });
 
+test('the page-wide status describes Auto Steam readiness', async () => {
+  const ready = await page();
+  assert.equal(ready.ids.status.textContent, 'Auto Steam is ready to use.');
+  const incomplete = await page({ ...partial, smallPitcherGrams: 0, mediumPitcherGrams: 0, flowReadings: '[]' });
+  assert.equal(incomplete.ids.status.textContent, 'Complete the pitcher and calibration setup before using Auto Steam.');
+});
+
 test('All targets and a specific Milk target filter exact saved calibrations', async () => {
   const readings = [saved(0.8, 35, 55), saved(1.5, 25, 60)];
   const p = await page({ ...partial, targetTemperatureC: 0, flowReadings: JSON.stringify(readings) });

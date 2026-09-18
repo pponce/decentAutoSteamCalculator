@@ -492,7 +492,9 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       });
       form.addEventListener('change', updateChoices);
       updateChoices(); showTab('pitchers'); loaded = true; save.disabled = false;
-      status.textContent = data.ready ? 'Calibration is ready.' : 'Configure a pitcher and calibration before using Auto steam.';
+      status.textContent = data.ready
+        ? 'Auto Steam is ready to use.'
+        : 'Complete the pitcher and calibration setup before using Auto Steam.';
       const persistLibrary = flowReadings => request(base + '/library', {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ flowReadings }),
       });
