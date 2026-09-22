@@ -12,8 +12,6 @@ through time; it does not measure milk temperature.
 
 Use the official Android Decaid v0.8.6 or newer and
 [official Streamline.js v0.1.114 or newer](https://github.com/decentespresso/streamline-js/releases/tag/v0.1.114).
-No custom APK, skin fork, Java installation or application rebuild is needed.
-Internet access is needed to install and update; calculation and settings run locally.
 
 **New users must install the calculator once.** Official Streamline supports it,
 but does not bundle it or show an Auto Steam Calculator install card before it is
