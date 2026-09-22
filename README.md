@@ -151,15 +151,7 @@ so users upgrading from 0.12.x must recreate their calibration readings. Each
 reading is stored immediately; **Save settings** activates only a complete valid
 setup.
 
-Do not remove the beta merely to switch branches: removal clears manifest
-settings even though Decaid leaves namespaced plugin storage intact. Return to a
-stable build after a stable version at least as new as the beta is available, or
-make a settings backup before testing a removal/reinstall rollback.
-
-If you previously used **Streamline.js — Auto Steam**, select official
-**Streamline.js** after updating it. The experimental fork has a different skin
-ID and does not turn into the official skin through its own updater. Keep the
-calculator installed; its update channel is independent of the selected skin.
+Return to a stable build after a stable version at least as new as the beta is available.
 
 ## Development
 
