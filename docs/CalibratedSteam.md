@@ -9,8 +9,13 @@ Install the plugin and supporting skin using the [official-app setup guide](../R
 
 ## Setup and use
 
+Official Streamline.js v0.1.114 or newer supports this plugin. First install it
+through Decaid's native **Plugins > + > GitHub Branch** using
+`pponce/decentAutoSteamCalculator`, branch `main`. Streamline does not offer an
+install card for this plugin before it is installed.
+
 In Streamline, open **Settings > Extensions**, select **Auto Steam Calculator**,
-enable the extension (install it first if needed), then choose **Open**. Streamline
+turn **Enabled** on if needed, then choose **Open**. Streamline
 builds this plugin row and details page generically from `GET /api/v1/plugins` and
 the manifest; no calculator-specific settings page is required in the skin. The
 standalone page provides a return address:
@@ -74,8 +79,7 @@ remains available while the extension is enabled, but it stays Off and shows a
 setup reminder. Calibration must be valid before a preset can calculate. Manual
 Flow and Time remain available regardless of extension setup.
 
-Streamline shows **Auto | F | T**, with the active mode blue. Tap the Steam heading
-or mode label to cycle. In Auto, the usual preset row shows the configured **S / M / L** choices, plus **Auto** only when automatic detection is configured.
+Tap Streamline's Steam heading or mode control to cycle to **Auto**. In Auto, the usual preset row shows the configured **S / M / L** choices, plus **Auto** only when automatic detection is configured.
 Place the filled pitcher on the scale and tap a preset to calculate and apply. Tapping
 an already-selected preset recalculates; no preview dialog or Use time button is
 involved. Success shows pitcher, milk mass and seconds; start steam normally afterward.
@@ -94,8 +98,10 @@ Navigation never waits for this background reset. A confirmed Off state is retai
 across ordinary navigation; unchanged settings are not rewritten. Focus and merely
 opening/closing settings do not refresh steam settings. Reconnect and actual plugin
 configuration changes revalidate them. Duplicate resets share one pending operation;
-a calculation in progress is invalidated if the user leaves the main page. Off means duration 0 and heater target 0, matching Streamline's manual
-Off behavior. It is a reminder rather than a hardware start interlock: a physical
+a calculation in progress is invalidated if the user leaves the main page. In official Streamline, an Auto reset sets duration to 0 and clears probe stopping
+while preserving the existing heater target, so the heater stays ready between
+drinks. A refused calculation displays **Off**. This is a reminder rather than a
+hardware start interlock: a physical
 start may still produce a brief steam burst. Resets wait until the machine is idle.
 
 The skin saves the previous manual duration, flow, heater target and probe-stop
@@ -105,8 +111,8 @@ preferences or profile values. While Auto is active, use pitcher presets to set 
 time. Manual number editors stay inactive in Auto. With one available saved
 calibration, Auto hides only the − / + icons, keeping their gray button
 backgrounds visible and disabled. With several, the buttons cycle through exact
-calibrations. The selected milk target briefly replaces the existing 0s display,
-then that display returns to 0s; the Streamline layout does not change.
+calibrations. The selected milk target appears next to the pitcher without shifting
+the main-page layout.
 Interpolate uses the same buttons for 0.1 ml/s flow adjustment within the
 calibrated range while the machine is idle. Any selection or flow change resets
 time to Off; tap the pitcher again to calculate from the current scale weight.
@@ -493,10 +499,11 @@ when updating inside the same Decaid installation. No native application changes
 or fork-specific APK are required. The plugin is maintained independently of Decaid;
 Decaid's maintainers do not own this repository or its release lifecycle.
 
-A focused official Streamline contribution is maintained on the
-`feature/upstream-auto-steam` branch of `pponce/streamline-js` while it is reviewed
-upstream. Other skins can use the API documented here without copying the
-calculations or calibration page.
+The integration is included in
+[official Streamline.js v0.1.114](https://github.com/decentespresso/streamline-js/releases/tag/v0.1.114).
+The experimental `pponce/streamline-js` fork is no longer required. Other skins
+can use the API documented here without copying the calculations or calibration
+page.
 
 ## Runtime verification before release
 

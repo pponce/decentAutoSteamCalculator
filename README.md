@@ -10,55 +10,56 @@ through time; it does not measure milk temperature.
 
 ## Install in the official Decaid app
 
-These instructions target the official Android Decaid v0.8.6 release or newer.
-No custom APK, Java installation or application rebuild is needed. Internet
-access is needed to install and update; calculation and settings run locally.
+Use the official Android Decaid v0.8.6 or newer and
+[official Streamline.js v0.1.114 or newer](https://github.com/decentespresso/streamline-js/releases/tag/v0.1.114).
+No custom APK, skin fork, Java installation or application rebuild is needed.
+Internet access is needed to install and update; calculation and settings run locally.
 
-### 1. Open the Decaid settings dashboard
+**New users must install the calculator once.** Official Streamline supports it,
+but does not bundle it or show an Auto Steam Calculator install card before it is
+installed. After installation, it appears automatically under **Settings →
+Extensions**.
 
-Keep Decaid running and open this address in a browser:
+### 1. Update and select official Streamline.js
 
-[http://localhost:8080/api/v1/plugins/settings.reaplugin/ui](http://localhost:8080/api/v1/plugins/settings.reaplugin/ui)
+Return to Decaid's native dashboard by swiping right from the left edge of the
+skin or tapping its dashboard/home control. Use Decaid's skin management to
+install or update **Streamline.js**, then select it. The official repository is
+`decentespresso/streamline-js` and the skin ID is `streamline.js`.
 
-`localhost` works when browsing on the tablet itself. If it does not work—or
-you are using another device on the same network—replace `localhost` with the
-tablet's IP address.
+If you already use official Streamline, update it to **v0.1.114 or newer**.
+You do not need `pponce/streamline-js` or **Streamline.js — Auto Steam**.
 
-### 2. Install the supporting Streamline skin
+### 2. Install the calculator in Decaid
 
-The official Streamline skin does not yet include these Auto steam controls.
-In the dashboard's **Install Skin** field, enter:
+In Decaid's native **Plugins** settings screen:
 
-```text
-pponce/streamline-js
-```
+1. Tap **+** (**Install Plugin**).
+2. Select **GitHub Branch**.
+3. Enter repository `pponce/decentAutoSteamCalculator`.
+4. Enter branch `main` for stable updates.
+5. Tap **Install** and wait for completion.
 
-Click **Install** and wait for it to finish. This installs the latest published
-skin release; no branch selection or manual ZIP download is needed.
+Use **GitHub Branch** for this project. A GitHub Release install expects a
+separately packaged release asset. The browser settings dashboard's old
+**Install Plugin (coming soon)** placeholder is not this native installer.
 
-### 3. Select the skin inside the Decaid app
+Already installed the calculator while using the experimental skin? Skip this
+step. The plugin belongs to Decaid, and switching skins in the same Decaid
+installation retains its pitcher settings and saved calibrations. Do not remove
+or reinstall the calculator just to switch skins.
 
-Return to the Decaid app. Go to **Settings → Skin** and select
-**Streamline.js — Auto Steam**.
+### 3. Enable and open the calculator in Streamline
 
-Its ID is `pponce.streamline-auto-steam`, so it can coexist with official
-Streamline. This identity is for the test fork and should not be included in a
-future upstream Streamline contribution.
+Open official Streamline, then go to **Settings → Extensions → Auto Steam
+Calculator**. Turn **Enabled** on if needed, then select **Open**.
 
-### 4. Install and enable the calculator
+If the row is missing, confirm installation in Decaid's native Plugins screen,
+then reopen Streamline's settings. The row comes from Decaid's installed plugin
+list; updating the skin alone does not install the calculator. The shot-page
+**Auto** mode becomes available when the calculator is loaded.
 
-In the new skin, go to **Settings → Extensions → Auto Steam Calculator**.
-Select **Install Auto Steam Calculator**, wait for installation, then turn on
-**Enable Auto Steam Calculator**.
-
-Use this installation button inside the skin. The browser dashboard's separate
-**Install Plugin (coming soon)** section is not needed. The skin uses Decaid's
-existing GitHub branch installer for `pponce/decentAutoSteamCalculator`,
-branch `main`.
-
-### 5. Set it up
-
-Select **Open settings**:
+### 4. Set it up
 
 - Enter at least one empty Small, Medium or Large pitcher weight, manually or
   using **Tare empty scale** and **Set from scale**.
@@ -85,19 +86,21 @@ Select **Open settings**:
   physical machine controls.
 - Select **Save settings** to activate the complete setup.
 
-### 6. Test it
+### 5. Test it
 
 Return to the main shot page and tap the Steam heading to select **Auto**.
 Place the filled pitcher on the scale, then tap its pitcher preset to calculate
 the steaming time. Review the calculated time and start steaming normally.
 
 With Interpolate off, Auto cycles through exact saved calibrations. Their saved
-flow is fixed, and their milk target is shown briefly in the existing time
-position before it returns to 0s. With Interpolate on, Auto permits 0.1 ml/s
+flow is fixed, and the selected milk target appears next to the pitcher.
+With Interpolate on, Auto permits 0.1 ml/s
 adjustment within the measured range; after changing flow, tap the pitcher preset
 again to calculate from the current milk weight. Manual Flow and Time remain available.
-Off prompts recalculation between drinks; it is not a hard start interlock and
-a physical start may produce a brief burst.
+Auto resets the duration between drinks while keeping the existing steam heater
+target. Tap the pitcher again to calculate for each drink. A refused calculation
+shows **Off**. This is not a hard start interlock; a physical start may produce
+a brief burst.
 
 See the [full setup and skin-developer guide](docs/CalibratedSteam.md).
 
@@ -105,9 +108,9 @@ See the [full setup and skin-developer guide](docs/CalibratedSteam.md).
 
 The skin and plugin update independently:
 
-- **Skin:** use **Check for Skin Updates** in the Decaid settings dashboard.
-  Installations made using `pponce/streamline-js` follow its published releases.
-  Pushing commits alone does not update a release-installed skin.
+- **Skin:** update official **Streamline.js** through Decaid's skin update
+  controls. Its releases come from `decentespresso/streamline-js`.
+  Calculator updates do not update the skin.
 - **Calculator:** its settings page keeps the title centered and checks its
   recorded GitHub branch when the page opens. When current, the installed version
   appears alone at top right. When an update exists, the current and new version
@@ -124,7 +127,9 @@ beta branch. **Join beta** installs the newer beta for this extension only. Beta
 versions may be less stable, and Decaid does not currently allow downgrades, so
 **Return to stable** becomes available only when the stable version is equal to
 or newer than the installed beta. Saved settings are preserved when changing
-channels.
+channels. Remaining enrolled in beta also receives promoted stable builds:
+after stable CI passes, the maintainer advances `beta` to the same stable commit
+as `main`. You do not need to leave beta to receive that stable release.
 
 ### Beta testing
 
@@ -153,8 +158,10 @@ settings even though Decaid leaves namespaced plugin storage intact. Return to a
 stable build after a stable version at least as new as the beta is available, or
 make a settings backup before testing a removal/reinstall rollback.
 
-If you previously installed the skin from a branch or a ZIP URL, install it once
-using `pponce/streamline-js` in the dashboard to switch to release updates.
+If you previously used **Streamline.js — Auto Steam**, select official
+**Streamline.js** after updating it. The experimental fork has a different skin
+ID and does not turn into the official skin through its own updater. Keep the
+calculator installed; its update channel is independent of the selected skin.
 
 ## Development
 
@@ -191,8 +198,9 @@ releases automatically. A future GitHub release must have a version-matching tag
 and one plugin ZIP asset, per [Decaid's packaging contract](https://github.com/decentespresso/decaid/blob/v0.8.6/doc/Plugins.md#packaging-a-release).
 
 This project is maintained independently by pponce. It is not a Decaid bundled
-plugin or an official Streamline feature. No changes to Decaid's native code are
-required. Historical design notes are in `docs/design/`.
+plugin. Official Streamline provides the integration; the calculator and its
+release lifecycle remain independently maintained. No changes to Decaid's native
+code are required. Historical design notes are in `docs/design/`.
 
 ## License and attribution
 
