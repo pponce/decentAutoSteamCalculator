@@ -6,11 +6,21 @@ two installable GitHub branches:
 - `main` is the stable channel.
 - `beta` is the opt-in beta channel.
 
-Decaid records whether a user installed a release or a branch. The calculator's
-normal update check follows that recorded source. Release installs follow the latest
-published stable release. Branch installs follow their recorded branch. A user
-enrolled in beta receives a newer stable build through the normal updater only
-after `beta` is also advanced to that stable commit.
+The calculator's normal update button follows the user's channel, not their
+original stable install method:
+
+- Stable users (GitHub Release or the official `main` branch) check only published
+  stable GitHub Releases and install through the release endpoint.
+- Beta users check and install the official `beta` branch. After a stable promotion,
+  keep advancing `beta` to that tested stable commit so enrolled users receive it.
+- Custom development sources keep their own source behavior; local snapshots are
+  untracked.
+
+The first stable update through the new UI migrates a `main` installation's Decaid
+source to GitHub Release. Page loading alone does not reinstall or mutate source
+metadata. Decaid's own native/background updater follows its recorded source until
+that migration; this plugin cannot rewrite that metadata without installing.
+Unpublished main-branch pending approvals must never bypass stable release checks.
 
 ## Versioning
 
@@ -74,7 +84,9 @@ The calculator supports both source kinds for Update and permission approval.
 Join beta always installs the beta branch. Return to stable always installs the
 latest published stable release, even for a user who originally installed a
 branch. It is disabled while that release would be a downgrade. Existing main
-branch installs stay on main unless the user changes channels.
+branch installs switch to release tracking on their first stable update through
+the new calculator UI. Beta update buttons retain the beta source, even when
+installing a stable version promoted onto the beta branch.
 
 ## After promotion
 
@@ -101,4 +113,4 @@ This prevents beta subscribers from becoming stranded on an older prerelease bra
 - Keep generated root files reproducible from source.
 - Preserve saved calibration data semantics and the plugin ID.
 - Do not remove/reinstall the plugin merely to change release channels; use the built-in channel switch so saved settings are preserved.
-- Stable GitHub Releases and their ZIP assets are required for release-installed users. Branch-installed users continue following the branch state; keep both distribution paths working.
+- Stable GitHub Releases and their ZIP assets are required for normal in-plugin updates, including existing main installations. The beta opt-in uses the beta branch. Keep both installation routes working.

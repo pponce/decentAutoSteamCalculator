@@ -112,16 +112,19 @@ The skin and plugin update independently:
   controls. Its releases come from `decentespresso/streamline-js`.
   Calculator updates do not update the skin.
 - **Calculator:** its settings page keeps the title centered and checks its
-  recorded GitHub release or branch when the page opens. When current, the
-  installed version appears alone at top right. When an update exists, the current and new version
+  selected update channel when the page opens. Stable users are offered only
+  published GitHub Releases, including users who originally installed `main`.
+  Users opted into beta are offered newer versions from the `beta` branch, with
+  an **Update beta** button. When current, the installed version appears alone
+  at top right. When an update exists, the current and new version
   numbers appear immediately left of **Update**; one requesting additional
   permissions shows **Approve & Update** and lists those permissions before
   installation. A failed check shows
   **Unable to check · Retry**. Updates target only Auto Steam Calculator and
   preserve its saved settings. A GitHub 403 reports how many minutes remain
-  before the unauthenticated API limit resets. Branch installs follow new commits
-  on their recorded branch. Release installs follow published stable releases,
-  using the same **Update** and **Approve & Update** controls.
+  before the unauthenticated API limit resets. **Update** installs the published
+  stable release; **Update beta** installs the beta branch. Updates that add
+  permissions use the corresponding **Approve & Update** action.
 
 The **Instructions** tab also shows whether this extension follows stable updates or
 the beta branch. **Join beta** installs the newer beta for this extension only. Beta
@@ -132,12 +135,28 @@ Saved settings are preserved when changing channels. Remaining enrolled in beta 
 after stable CI passes, the maintainer advances `beta` to the same stable commit
 as `main`. You do not need to leave beta to receive that stable release.
 
+### Existing branch installations
+
+The calculator's stable update checks use published releases even if Decaid still
+records a `main` installation. The next stable update through this UI also changes
+Decaid's recorded source to GitHub Release, preserving settings and calibrations.
+Opening the page does not reinstall the plugin or change its source by itself.
+Decaid's separate native/background updater follows its recorded source until that
+stable update occurs; an existing `main` installation can still receive branch
+changes through Decaid in the meantime. To switch that host tracking immediately,
+install the published version through **Plugins → + → GitHub Release** over the
+existing installation, without removing the plugin first.
+
 ### Beta testing
 
 Beta enrollment is per plugin: installing the `beta` branch changes Auto Steam
 Calculator only. Decaid, skins and other plugins remain on their current update
 sources. Beta builds use prerelease versions and each beta update advances that
 version so the calculator's normal update check can offer it.
+
+Stable `0.13.5` makes normal in-plugin updates follow published stable releases
+regardless of the original stable install method. Beta opt-in continues following
+the beta branch. See the [release notes](docs/releases/0.13.5.md).
 
 Stable `0.13.4` adds GitHub Release installation and supports release-based updates
 and beta enrollment in the calculator settings. See the [release notes](docs/releases/0.13.4.md).

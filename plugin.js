@@ -1,7 +1,7 @@
 /* Calibrated Steam Timer. GPL-3.0-only. Inspired by Damian / Damian-AU, DSx2. */
 (function () {
 "use strict";
-const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.13.4","apiVersion":1,"permissions":["api","events.machine","pluginStorage"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for every calibration. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"temperatureUnit":{"type":"enum","label":"Temperature unit","description":"Display preference for calibration targets. Saved calibration temperatures remain stored internally in Celsius.","values":["F","C"],"default":"F"},"targetTemperatureC":{"type":"number","label":"Milk target","description":"Filters which saved calibrations are available. All targets is available when Interpolate is off.","default":0},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow (ml/s)","description":"Flow used while creating or editing a saved calibration (0.4–2.5 ml/s).","default":0.4},"minimumFlow":{"type":"number","label":"Minimum flow (ml/s)","description":"Lowest flow used by Interpolate. A saved reading is required at this exact flow.","default":0.4},"maximumFlow":{"type":"number","label":"Maximum flow (ml/s)","description":"Highest flow used by Interpolate. A saved reading is required at this exact flow.","default":2.5},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"interpolate":{"type":"boolean","label":"Interpolate","default":false,"description":"Use piecewise interpolation between at least three saved readings at one milk target."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Compatibility shadow managed by the Calibration page while saved readings migrate to Decaid plugin storage. Do not edit this JSON directly."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}},{"id":"library","type":"http","data":{}}]};
+const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.13.5","apiVersion":1,"permissions":["api","events.machine","pluginStorage"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for every calibration. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"temperatureUnit":{"type":"enum","label":"Temperature unit","description":"Display preference for calibration targets. Saved calibration temperatures remain stored internally in Celsius.","values":["F","C"],"default":"F"},"targetTemperatureC":{"type":"number","label":"Milk target","description":"Filters which saved calibrations are available. All targets is available when Interpolate is off.","default":0},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow (ml/s)","description":"Flow used while creating or editing a saved calibration (0.4–2.5 ml/s).","default":0.4},"minimumFlow":{"type":"number","label":"Minimum flow (ml/s)","description":"Lowest flow used by Interpolate. A saved reading is required at this exact flow.","default":0.4},"maximumFlow":{"type":"number","label":"Maximum flow (ml/s)","description":"Highest flow used by Interpolate. A saved reading is required at this exact flow.","default":2.5},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"interpolate":{"type":"boolean","label":"Interpolate","default":false,"description":"Use piecewise interpolation between at least three saved readings at one milk target."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Compatibility shadow managed by the Calibration page while saved readings migrate to Decaid plugin storage. Do not edit this JSON directly."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}},{"id":"library","type":"http","data":{}}]};
 const FLOW_MINIMUM = 0.4;
 const FLOW_MAXIMUM = 2.5;
 const MAX_READINGS = 100;
@@ -1439,8 +1439,26 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
   function isManagedSource(source) {
     return ['github_branch', 'github_release'].includes(source?.kind);
   }
-  function sourceManifest(plugin) {
+  function isBetaSource(source) {
+    return source?.repo === extensionRepo && source.kind === 'github_branch' && source.branch === betaBranch;
+  }
+  function updateSource(plugin) {
     const source = plugin?.source;
+    if (supportsBetaChannel(source) && !isBetaSource(source)) {
+      return { kind: 'github_release', repo: extensionRepo, includePrerelease: false,
+        ...(source.kind === 'github_release' && source.assetName ? { assetName: source.assetName } : {}) };
+    }
+    return source;
+  }
+  function pendingForChannel(plugin) {
+    const source = plugin?.source, target = updateSource(plugin);
+    // A main-branch pending update is not proof that a stable release exists.
+    // Only approve Decaid's recorded candidate when it belongs to this channel.
+    if (!source || source.kind !== target?.kind || Boolean(source.includePrerelease) !== Boolean(target.includePrerelease)) return null;
+    return plugin.pendingUpdate;
+  }
+  function sourceManifest(plugin) {
+    const source = updateSource(plugin);
     if (source?.kind === 'github_release') return releaseManifest(source);
     if (source?.kind === 'github_branch') return repositoryManifest(source.repo, source.branch || stableBranch);
     throw new Error('Automatic update checks require a GitHub installation.');
@@ -1472,7 +1490,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     }
     const onBeta = source.kind === 'github_branch' && source.branch === betaBranch;
     betaChannelButton.textContent = onBeta ? 'Return to stable' : 'Join beta';
-    if (plugin.pendingUpdate) {
+    if (pendingForChannel(plugin)) {
       betaChannelStatus.textContent = 'Finish the pending extension update before changing release channels.';
       return;
     }
@@ -1562,12 +1580,14 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       updateStatus.textContent = 'Install this extension from GitHub Release or GitHub Branch to enable updates.';
       return;
     }
-    if (plugin.pendingUpdate) {
-      const added = plugin.pendingUpdate.addedPermissions || [];
-      updateCandidate = { pending: true, version: plugin.pendingUpdate.version, addedPermissions: added };
-      extensionVersion.textContent = 'Current ' + version + ' → New ' + plugin.pendingUpdate.version;
-      updateStatus.textContent = 'Version ' + plugin.pendingUpdate.version + ' needs approval' + (added.length ? ' because it adds: ' + added.join(', ') : '') + '.';
-      approveUpdate.textContent = 'Approve & Update'; approveUpdate.hidden = false;
+    const beta = isBetaSource(plugin.source);
+    const pending = pendingForChannel(plugin);
+    if (pending) {
+      const added = pending.addedPermissions || [];
+      updateCandidate = { pending: true, version: pending.version, addedPermissions: added };
+      extensionVersion.textContent = 'Current ' + version + ' → New ' + pending.version;
+      updateStatus.textContent = 'Version ' + pending.version + ' needs approval' + (added.length ? ' because it adds: ' + added.join(', ') : '') + '.';
+      approveUpdate.textContent = beta ? 'Approve & Update beta' : 'Approve & Update'; approveUpdate.hidden = false;
       return;
     }
     if (checking) {
@@ -1582,11 +1602,11 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     if (manifest && compareVersions(version, manifest.version) < 0) {
       const installedPermissions = new Set(plugin.permissions || []);
       const addedPermissions = (manifest.permissions || []).filter(permission => !installedPermissions.has(permission));
-      updateCandidate = { pending: false, version: manifest.version, addedPermissions };
+      updateCandidate = { pending: false, version: manifest.version, addedPermissions, source: updateSource(plugin) };
       extensionVersion.textContent = 'Current ' + version + ' → New ' + manifest.version;
       updateStatus.textContent = 'Version ' + manifest.version + ' is available' + (addedPermissions.length ? ' and adds: ' + addedPermissions.join(', ') : '') + '.';
       const button = addedPermissions.length ? approveUpdate : checkUpdate;
-      button.textContent = addedPermissions.length ? 'Approve & Update' : 'Update';
+      button.textContent = (addedPermissions.length ? 'Approve & Update' : 'Update') + (beta ? ' beta' : '');
       button.hidden = false;
       return;
     }
@@ -1596,8 +1616,9 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     try {
       const plugin = await pluginRecord();
       if (!plugin) { paintUpdateState(null); return null; }
-      paintUpdateState(plugin, { checking: !plugin.pendingUpdate });
-      if (plugin.pendingUpdate || !isManagedSource(plugin.source)) return plugin;
+      const pending = pendingForChannel(plugin);
+      paintUpdateState(plugin, { checking: !pending });
+      if (pending || !isManagedSource(plugin.source)) return plugin;
       try { paintUpdateState(plugin, { manifest: await sourceManifest(plugin) }); }
       catch (error) {
         paintUpdateState(plugin, { error });
@@ -1619,12 +1640,13 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       if (updateCandidate.pending) {
         await request('/api/v1/plugins/calibrated-steam.reaplugin/update/approve', { method: 'POST' });
       } else {
-        await installSource(currentPlugin.source);
+        await installSource(updateCandidate.source);
       }
       const plugin = await pluginRecord();
       if (plugin?.version && plugin.version !== before) {
         installedVersion = plugin.version;
         paintUpdateState(plugin, { manifest: { id: plugin.id, version: plugin.version, permissions: plugin.permissions || [] } });
+        await refreshBetaChannel(plugin);
         showUpdateDialog('Extension updated', 'Updated to version ' + plugin.version + '. Reopen this page to load the updated interface.');
       } else {
         throw new Error('Decaid did not install the available version.');
@@ -1640,7 +1662,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
   approveUpdate.addEventListener('click', () => {
     if (!updateCandidate) return;
     const permissions = updateCandidate.addedPermissions.length ? updateCandidate.addedPermissions.join(', ') : 'permissions listed by Decaid';
-    showUpdateDialog('Approve new permissions', 'Version ' + updateCandidate.version + ' requests: ' + permissions + '. Approve only if you trust this update.', 'Approve & Update', installAvailableUpdate);
+    showUpdateDialog('Approve new permissions', 'Version ' + updateCandidate.version + ' requests: ' + permissions + '. Approve only if you trust this update.', approveUpdate.textContent, installAvailableUpdate);
   });
   function updateChoices() {
     const current = values();

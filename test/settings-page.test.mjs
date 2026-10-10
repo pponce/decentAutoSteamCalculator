@@ -89,6 +89,7 @@ async function page(settings = partial, {
       managed.source = { kind: 'github_release', ...JSON.parse(options.body), releaseTag };
       managed.version = releaseVersion;
       managed.permissions = remotePermissions;
+      managed.pendingUpdate = null;
       return { ok: true, text: async () => JSON.stringify({ id: managed.id, version: managed.version }) };
     }
     if (url === '/api/v1/plugins') return { ok: true, text: async () => JSON.stringify([managed]) };
@@ -640,13 +641,13 @@ test('the header hides its update action when the installed extension is current
   assert.equal(p.ids['approve-extension-update'].hidden, true);
 });
 
-test('a newer branch version shows Update and updates only Auto Steam Calculator', async () => {
+test('main-branch users install published stable updates through the release installer', async () => {
   const p = await page(partial, { remoteVersion: nextVersion });
   assert.equal(p.ids['extension-version'].textContent, 'Current ' + installedVersion + ' → New ' + nextVersion);
   assert.equal(p.ids['check-extension-update'].hidden, false);
   assert.equal(p.ids['check-extension-update'].textContent, 'Update');
   await p.ids['check-extension-update'].handlers.click();
-  assert.ok(p.calls.includes('github-branch'));
+  assert.ok(p.calls.includes('github-release'));
   assert.equal(p.calls.includes('update'), false);
   assert.equal(p.ids['extension-update-dialog-message'].textContent, 'Updated to version ' + nextVersion + '. Reopen this page to load the updated interface.');
 });
@@ -660,7 +661,7 @@ test('new permissions require a named approval before updating', async () => {
   assert.match(p.ids['extension-update-dialog-message'].textContent, /events\.shots/);
   assert.equal(p.calls.includes('github-branch'), false);
   await p.ids['extension-update-dialog-confirm'].handlers.click();
-  assert.ok(p.calls.includes('github-branch'));
+  assert.ok(p.calls.includes('github-release'));
 });
 
 test('a failed automatic check shows a compact Retry action', async () => {
@@ -745,11 +746,13 @@ test('release installs check the published tag, not a newer main branch', async 
   assert.equal(p.fetchUrls.some(url => url.endsWith('/main/manifest.json')), false);
 });
 
-test('release updates preserve source options and update only this plugin', async () => {
+test('stable release updates retain the asset name and exclude prereleases', async () => {
   const p = await page(partial, { sourceKind: 'github_release', releaseVersion: nextVersion, sourceAssetName: 'calibrated-steam.reaplugin.zip', includePrerelease: true });
+  assert.ok(p.fetchUrls.includes('https://api.github.com/repos/pponce/decentAutoSteamCalculator/releases/latest'));
+  assert.equal(p.fetchUrls.includes('https://api.github.com/repos/pponce/decentAutoSteamCalculator/releases'), false);
   assert.equal(p.ids['check-extension-update'].textContent, 'Update');
   await p.ids['check-extension-update'].handlers.click();
-  assert.deepEqual(p.installRequests, [{ endpoint: '/api/v1/plugins/install/github-release', body: { repo: 'pponce/decentAutoSteamCalculator', assetName: 'calibrated-steam.reaplugin.zip', includePrerelease: true } }]);
+  assert.deepEqual(p.installRequests, [{ endpoint: '/api/v1/plugins/install/github-release', body: { repo: 'pponce/decentAutoSteamCalculator', assetName: 'calibrated-steam.reaplugin.zip', includePrerelease: false } }]);
   assert.equal(p.calls.includes('github-branch'), false);
   assert.equal(p.calls.includes('update'), false);
   assert.equal(p.savedSettings.length, 0);
@@ -825,4 +828,97 @@ test('local installations do not attempt managed updates or beta checks', async 
   assert.equal(p.ids['check-extension-update'].hidden, true);
   assert.equal(p.ids['beta-channel-action'].hidden, true);
   assert.equal(p.fetchUrls.some(url => url.startsWith('https://')), false);
+});
+
+
+test('main-branch stable users do not see unpublished main changes as updates', async () => {
+  const p = await page(partial, { remoteVersion: nextVersion, releaseVersion: installedVersion });
+  assert.equal(p.ids['check-extension-update'].hidden, true);
+  assert.equal(p.ids['approve-extension-update'].hidden, true);
+  assert.equal(p.fetchUrls.some(url => url.endsWith('/main/manifest.json')), false);
+  assert.equal(p.installRequests.length, 0);
+});
+
+test('stable update migrates main provenance to releases without writing saved settings', async () => {
+  const p = await page(partial, { remoteVersion: '99.0.0', releaseVersion: nextVersion });
+  assert.equal(p.ids['extension-version'].textContent, 'Current ' + installedVersion + ' → New ' + nextVersion);
+  await p.ids['check-extension-update'].handlers.click();
+  assert.deepEqual(p.installRequests, [{ endpoint: '/api/v1/plugins/install/github-release', body: { repo: 'pponce/decentAutoSteamCalculator', includePrerelease: false } }]);
+  assert.equal(p.managed.source.kind, 'github_release');
+  assert.equal(p.managed.version, nextVersion);
+  assert.equal(p.savedSettings.length, 0);
+  assert.equal(p.persistedLibraries.length, 0);
+});
+
+test('unpublished main pending approvals do not bypass stable release checks', async () => {
+  const p = await page(partial, { remoteVersion: nextVersion, releaseVersion: installedVersion, pendingUpdate: { version: nextVersion, commit: 'unpublished', addedPermissions: ['events.shots'] } });
+  assert.equal(p.ids['check-extension-update'].hidden, true);
+  assert.equal(p.ids['approve-extension-update'].hidden, true);
+  assert.equal(p.ids['beta-channel-action'].disabled, false);
+  assert.equal(p.calls.includes('approve'), false);
+});
+
+test('published stable update replaces an unrelated main pending candidate', async () => {
+  const p = await page(partial, { releaseVersion: nextVersion, remotePermissions: ['api', 'events.machine', 'pluginStorage'], pendingUpdate: { version: '99.0.0', commit: 'unpublished', addedPermissions: ['events.shots'] } });
+  await p.ids['approve-extension-update'].handlers.click();
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /pluginStorage/);
+  assert.doesNotMatch(p.ids['extension-update-dialog-message'].textContent, /events\.shots|99\.0\.0/);
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.equal(p.calls.includes('approve'), false);
+  assert.equal(p.managed.source.kind, 'github_release');
+  assert.equal(p.managed.version, nextVersion);
+});
+
+test('stable release lookup failures never fall back to main updates', async () => {
+  const p = await page(partial, { checkError: 'failed 403', remoteVersion: nextVersion, pendingUpdate: { version: nextVersion, commit: 'unpublished', addedPermissions: ['events.shots'] } });
+  assert.equal(p.ids['check-extension-update'].textContent, 'Unable to check · Retry');
+  assert.equal(p.ids['approve-extension-update'].hidden, true);
+  assert.equal(p.fetchUrls.some(url => url.endsWith('/main/manifest.json')), false);
+  assert.equal(p.installRequests.length, 0);
+});
+
+test('beta opt-in shows Update beta and installs only the beta branch', async () => {
+  const p = await page(partial, { sourceBranch: 'beta', betaPermissions: ['api', 'events.machine'] });
+  assert.equal(p.ids['check-extension-update'].textContent, 'Update beta');
+  assert.equal(p.ids['check-extension-update'].hidden, false);
+  await p.ids['check-extension-update'].handlers.click();
+  assert.deepEqual(p.installRequests, [{ endpoint: '/api/v1/plugins/install/github-branch', body: { repo: 'pponce/decentAutoSteamCalculator', branch: 'beta' } }]);
+  assert.equal(p.managed.version, nextVersion + '-beta.1');
+  assert.equal(p.managed.source.branch, 'beta');
+});
+
+test('beta permission approval retains beta tracking', async () => {
+  const p = await page(partial, { sourceBranch: 'beta' });
+  assert.equal(p.ids['approve-extension-update'].textContent, 'Approve & Update beta');
+  await p.ids['approve-extension-update'].handlers.click();
+  assert.equal(p.installRequests.length, 0);
+  assert.equal(p.ids['extension-update-dialog-confirm'].textContent, 'Approve & Update beta');
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.equal(p.managed.source.branch, 'beta');
+});
+
+test('beta users receive promoted stable builds while remaining opted in', async () => {
+  const p = await page(partial, { sourceBranch: 'beta', managedVersion: nextVersion + '-beta.1', betaVersion: nextVersion, releaseVersion: nextVersion, betaPermissions: ['api', 'events.machine'] });
+  assert.equal(p.ids['check-extension-update'].textContent, 'Update beta');
+  await p.ids['check-extension-update'].handlers.click();
+  assert.equal(p.managed.version, nextVersion);
+  assert.equal(p.managed.source.branch, 'beta');
+});
+
+test('no newer beta means no update button even when stable is ahead', async () => {
+  const p = await page(partial, { sourceBranch: 'beta', betaVersion: installedVersion, releaseVersion: nextVersion });
+  assert.equal(p.ids['check-extension-update'].hidden, true);
+  assert.equal(p.ids['approve-extension-update'].hidden, true);
+  assert.equal(p.ids['beta-channel-action'].textContent, 'Return to stable');
+});
+
+test('a beta update held by Decaid keeps its native approval path', async () => {
+  const p = await page(partial, { sourceBranch: 'beta', pendingUpdate: { version: nextVersion + '-beta.1', commit: 'beta-commit', addedPermissions: ['events.shots'] } });
+  assert.equal(p.ids['approve-extension-update'].textContent, 'Approve & Update beta');
+  await p.ids['approve-extension-update'].handlers.click();
+  assert.equal(p.calls.includes('approve'), false);
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.ok(p.calls.includes('approve'));
+  assert.equal(p.installRequests.length, 0);
+  assert.equal(p.managed.source.branch, 'beta');
 });

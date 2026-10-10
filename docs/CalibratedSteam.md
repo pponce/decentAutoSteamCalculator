@@ -31,16 +31,24 @@ choices are green and unavailable choices are red. Calibration readings are
 stored immediately; **Save settings** activates the overall valid setup.
 
 The page keeps **Auto Steam Calculator** centered in its header and checks the
-recorded GitHub release or branch when it opens. When the installed version is current, that
-version appears alone at top right. When a newer version exists, the current and
+selected update channel when it opens. Stable users, including `main` branch
+installs, check published GitHub Releases. Beta users check the `beta` branch.
+When the installed version is current, that version appears alone at top right. When a newer version exists, the current and
 new versions appear immediately left of **Update**; one that adds permissions
 shows **Approve & Update** and names those permissions before the user approves
 installation. A failed check shows **Unable to check · Retry**.
-The action uses Decaid's matching release or branch installer for this extension
-only and preserves saved settings. Release checks read the manifest at the published
-tag, not at the tip of `main`. Join beta installs the `beta` branch; Return to
-stable installs the latest published release once its version allows the switch. Results and update failures open in a dialog. A GitHub 403
-reports the remaining minutes until the unauthenticated API limit resets.
+The action uses Decaid's release installer for stable updates and branch installer
+for beta updates, for this extension only, preserving saved settings. Beta updates
+show **Update beta** (or **Approve & Update beta** for added permissions). Release
+checks read the manifest at the published tag, not at the tip of `main`. Join beta installs the `beta` branch; Return to
+stable installs the latest published release once its version allows the switch.
+Results and update failures open in a dialog. A GitHub 403 reports the remaining minutes until the unauthenticated API limit resets.
+
+A stable update from a `main` installation changes Decaid's recorded source to
+GitHub Release. Merely opening settings does not perform an install. Until that
+stable update, Decaid's independent background updater still follows its recorded
+branch. The calculator ignores pending main-branch approvals when checking stable
+releases, so unpublished branch changes cannot appear as in-plugin stable updates.
 
 Pitchers & Auto places empty-scale tare beside the pitcher rows. Each **Set from
 scale** button fills its own field without focusing it first, and reports success
