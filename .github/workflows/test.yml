@@ -1,4 +1,4 @@
-name: Test and package
+name: Test, package and release
 
 on:
   push:
@@ -29,3 +29,27 @@ jobs:
           name: calibrated-steam-plugin
           path: dist/calibrated-steam.reaplugin.zip
           if-no-files-found: error
+
+  release:
+    name: Publish stable release
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: stable-plugin-release
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: calibrated-steam-plugin
+          path: dist
+      - name: Validate and publish tested package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/publish-release.sh

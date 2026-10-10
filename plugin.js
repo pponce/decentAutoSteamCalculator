@@ -1,7 +1,7 @@
 /* Calibrated Steam Timer. GPL-3.0-only. Inspired by Damian / Damian-AU, DSx2. */
 (function () {
 "use strict";
-const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.13.3","apiVersion":1,"permissions":["api","events.machine","pluginStorage"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for every calibration. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"temperatureUnit":{"type":"enum","label":"Temperature unit","description":"Display preference for calibration targets. Saved calibration temperatures remain stored internally in Celsius.","values":["F","C"],"default":"F"},"targetTemperatureC":{"type":"number","label":"Milk target","description":"Filters which saved calibrations are available. All targets is available when Interpolate is off.","default":0},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow (ml/s)","description":"Flow used while creating or editing a saved calibration (0.4–2.5 ml/s).","default":0.4},"minimumFlow":{"type":"number","label":"Minimum flow (ml/s)","description":"Lowest flow used by Interpolate. A saved reading is required at this exact flow.","default":0.4},"maximumFlow":{"type":"number","label":"Maximum flow (ml/s)","description":"Highest flow used by Interpolate. A saved reading is required at this exact flow.","default":2.5},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"interpolate":{"type":"boolean","label":"Interpolate","default":false,"description":"Use piecewise interpolation between at least three saved readings at one milk target."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Compatibility shadow managed by the Calibration page while saved readings migrate to Decaid plugin storage. Do not edit this JSON directly."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}},{"id":"library","type":"http","data":{}}]};
+const MANIFEST = {"id":"calibrated-steam.reaplugin","name":"Auto Steam Calculator","author":"pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)","description":"Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.","version":"0.13.4","apiVersion":1,"permissions":["api","events.machine","pluginStorage"],"settings":{"smallPitcherGrams":{"type":"number","label":"Small empty pitcher (g)","description":"Untared weight of the empty small pitcher. Leave blank or 0 if not configured.","default":0},"mediumPitcherGrams":{"type":"number","label":"Medium empty pitcher (g)","description":"Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.","default":0},"largePitcherGrams":{"type":"number","label":"Large empty pitcher (g)","description":"Untared weight of the empty large pitcher. Leave blank or 0 if not configured.","default":0},"singleDrinkGrams":{"type":"number","label":"Usual milk per drink (g)","description":"Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.","default":0},"singleDrinkPitcher":{"type":"enum","label":"Pitcher normally used for one drink","description":"Select small or medium to choose the pitcher-detection thresholds.","values":["","small","medium"],"default":""},"weightMode":{"type":"enum","label":"Scale weight mode","description":"One global choice for every calibration. Gross includes the empty pitcher. Tared is milk only: pitcher size cannot be inferred and no pitcher weight is subtracted.","values":["gross","tared"],"default":"gross"},"temperatureUnit":{"type":"enum","label":"Temperature unit","description":"Display preference for calibration targets. Saved calibration temperatures remain stored internally in Celsius.","values":["F","C"],"default":"F"},"targetTemperatureC":{"type":"number","label":"Milk target","description":"Filters which saved calibrations are available. All targets is available when Interpolate is off.","default":0},"referenceMilkGrams":{"type":"number","label":"Calibration milk weight (g)","description":"Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.","default":0},"referenceSeconds":{"type":"number","label":"Time to your desired milk temperature (s)","description":"Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.","default":0},"referenceFlow":{"type":"number","label":"Calibration flow (ml/s)","description":"Flow used while creating or editing a saved calibration (0.4–2.5 ml/s).","default":0.4},"minimumFlow":{"type":"number","label":"Minimum flow (ml/s)","description":"Lowest flow used by Interpolate. A saved reading is required at this exact flow.","default":0.4},"maximumFlow":{"type":"number","label":"Maximum flow (ml/s)","description":"Highest flow used by Interpolate. A saved reading is required at this exact flow.","default":2.5},"autoDetect":{"type":"boolean","label":"Offer Auto pitcher selection","description":"Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.","default":false},"interpolate":{"type":"boolean","label":"Interpolate","default":false,"description":"Use piecewise interpolation between at least three saved readings at one milk target."},"flowReadings":{"type":"string","label":"Measured flow calibrations","default":"[]","description":"Compatibility shadow managed by the Calibration page while saved readings migrate to Decaid plugin storage. Do not edit this JSON directly."}},"api":[{"id":"status","type":"http","data":{}},{"id":"calculate","type":"http","data":{}},{"id":"validate","type":"http","data":{}},{"id":"ui","type":"http","data":{}},{"id":"calibration","type":"http","data":{}},{"id":"library","type":"http","data":{}}]};
 const FLOW_MINIMUM = 0.4;
 const FLOW_MAXIMUM = 2.5;
 const MAX_READINGS = 100;
@@ -1412,7 +1412,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
   }
   async function repositoryManifest(repo, branch) {
     const url = branchManifestUrl(repo, branch);
-    if (!url) throw new Error('Automatic update checks require a GitHub branch installation.');
+    if (!url) throw new Error('The extension has an invalid GitHub source.');
     const response = await fetch(url, { cache: 'no-store' });
     const text = await response.text();
     let manifest;
@@ -1421,10 +1421,42 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     if (manifest.id !== 'calibrated-steam.reaplugin' || !manifest.version) throw new Error('GitHub returned an invalid Auto Steam Calculator manifest.');
     return manifest;
   }
-  function branchManifest(plugin) {
+  async function releaseManifest(source) {
+    if (!branchManifestUrl(source.repo, 'main')) throw new Error('The extension has an invalid GitHub source.');
+    const url = 'https://api.github.com/repos/' + source.repo.split('/').map(encodeURIComponent).join('/') + '/releases' + (source.includePrerelease ? '' : '/latest');
+    const response = await fetch(url, { cache: 'no-store', headers: { accept: 'application/vnd.github+json' } });
+    if (!response.ok) throw new Error('GitHub returned ' + response.status + ' ' + response.statusText + '.');
+    const data = JSON.parse(await response.text());
+    const release = source.includePrerelease ? data[0] : data;
+    if (!release || release.draft || (!source.includePrerelease && release.prerelease) || !/^v?\d+\.\d+\.\d+$/.test(release.tag_name)) throw new Error('No compatible stable release is available.');
+    const assets = Array.isArray(release.assets) ? release.assets : [];
+    const matches = source.assetName ? assets.filter(asset => asset.name === source.assetName) : assets.filter(asset => String(asset.name).endsWith('.zip'));
+    if (matches.length !== 1) throw new Error('The release must provide one matching plugin ZIP asset.');
+    const manifest = await repositoryManifest(source.repo, release.tag_name);
+    if (manifest.version !== release.tag_name.replace(/^v/, '')) throw new Error('The release tag does not match the plugin version.');
+    return manifest;
+  }
+  function isManagedSource(source) {
+    return ['github_branch', 'github_release'].includes(source?.kind);
+  }
+  function sourceManifest(plugin) {
     const source = plugin?.source;
-    if (source?.kind !== 'github_branch') throw new Error('Automatic update checks require a GitHub branch installation.');
-    return repositoryManifest(source.repo, source.branch);
+    if (source?.kind === 'github_release') return releaseManifest(source);
+    if (source?.kind === 'github_branch') return repositoryManifest(source.repo, source.branch || stableBranch);
+    throw new Error('Automatic update checks require a GitHub installation.');
+  }
+  function installSource(source) {
+    if (!isManagedSource(source)) throw new Error('The extension has no managed GitHub source.');
+    const release = source.kind === 'github_release';
+    const body = release
+      ? { repo: source.repo, ...(source.assetName ? { assetName: source.assetName } : {}), includePrerelease: Boolean(source.includePrerelease) }
+      : { repo: source.repo, branch: source.branch || stableBranch };
+    return request('/api/v1/plugins/install/' + (release ? 'github-release' : 'github-branch'), {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    });
+  }
+  function supportsBetaChannel(source) {
+    return source?.repo === extensionRepo && (source.kind === 'github_release' || (source.kind === 'github_branch' && [stableBranch, betaBranch].includes(source.branch)));
   }
   function paintBetaChannel(plugin, { manifest = null, error = null, checking = false } = {}) {
     if (!betaChannelStatus || !betaChannelButton) return;
@@ -1433,12 +1465,12 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     betaChannelButton.disabled = true;
     const source = plugin?.source;
     const version = plugin?.version || installedVersion;
-    if (!plugin || source?.kind !== 'github_branch' || source.repo !== extensionRepo || ![stableBranch, betaBranch].includes(source.branch)) {
+    if (!plugin || !supportsBetaChannel(source)) {
       betaChannelButton.hidden = true;
-      betaChannelStatus.textContent = 'Beta enrollment is available after installing this extension from its official main or beta GitHub branch.';
+      betaChannelStatus.textContent = 'Beta enrollment is available after installing this extension from its official GitHub Release or main/beta branch.';
       return;
     }
-    const onBeta = source.branch === betaBranch;
+    const onBeta = source.kind === 'github_branch' && source.branch === betaBranch;
     betaChannelButton.textContent = onBeta ? 'Return to stable' : 'Join beta';
     if (plugin.pendingUpdate) {
       betaChannelStatus.textContent = 'Finish the pending extension update before changing release channels.';
@@ -1462,7 +1494,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
         ? 'Beta channel · Version ' + version + '. Stable ' + manifest.version + ' is available.'
         : 'Beta channel · Version ' + version + '. Stable is currently ' + manifest.version + '. Decaid does not allow downgrades, so you can return when a stable release is equal to or newer than this beta.';
       betaChannelButton.disabled = !canReturn;
-      if (canReturn) betaChannelAction = { branch: stableBranch, manifest, addedPermissions: [] };
+      if (canReturn) betaChannelAction = { source: { kind: 'github_release', repo: extensionRepo }, manifest, addedPermissions: (manifest.permissions || []).filter(permission => !(plugin.permissions || []).includes(permission)) };
       return;
     }
     const betaAvailable = compareVersions(version, manifest.version) < 0;
@@ -1473,15 +1505,15 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
     if (betaAvailable) {
       const installedPermissions = new Set(plugin.permissions || []);
       const addedPermissions = (manifest.permissions || []).filter(permission => !installedPermissions.has(permission));
-      betaChannelAction = { branch: betaBranch, manifest, addedPermissions };
+      betaChannelAction = { source: { kind: 'github_branch', repo: extensionRepo, branch: betaBranch }, manifest, addedPermissions };
     }
   }
   async function refreshBetaChannel(plugin = currentPlugin, showFailure = false) {
-    if (!plugin) { paintBetaChannel(null); return; }
-    const onBeta = plugin.source?.branch === betaBranch;
+    if (!plugin || !supportsBetaChannel(plugin.source)) { paintBetaChannel(plugin); return; }
+    const onBeta = plugin.source.kind === 'github_branch' && plugin.source.branch === betaBranch;
     paintBetaChannel(plugin, { checking: true });
     try {
-      const manifest = await repositoryManifest(extensionRepo, onBeta ? stableBranch : betaBranch);
+      const manifest = onBeta ? await releaseManifest({ repo: extensionRepo }) : await repositoryManifest(extensionRepo, betaBranch);
       paintBetaChannel(plugin, { manifest });
     } catch (error) {
       paintBetaChannel(plugin, { error });
@@ -1490,19 +1522,17 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
   }
   async function installReleaseChannel(action) {
     betaChannelButton.disabled = true;
-    betaChannelStatus.textContent = 'Installing the ' + (action.branch === betaBranch ? 'beta' : 'stable') + ' version…';
+    const onBeta = action.source.kind === 'github_branch';
+    betaChannelStatus.textContent = 'Installing the ' + (onBeta ? 'beta' : 'stable') + ' version…';
     try {
-      await request('/api/v1/plugins/install/github-branch', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ repo: extensionRepo, branch: action.branch })
-      });
+      await installSource(action.source);
       const plugin = await pluginRecord();
-      if (!plugin || plugin.source?.repo !== extensionRepo || plugin.source?.branch !== action.branch) throw new Error('Decaid did not switch the extension release channel.');
+      if (!plugin || plugin.source?.repo !== extensionRepo || plugin.source?.kind !== action.source.kind || (onBeta && plugin.source.branch !== betaBranch)) throw new Error('Decaid did not switch the extension release channel.');
       installedVersion = plugin.version;
       currentPlugin = plugin;
       await refreshUpdateState();
       await refreshBetaChannel(plugin);
-      showUpdateDialog(action.branch === betaBranch ? 'Beta installed' : 'Stable installed', 'Installed version ' + plugin.version + ' from the ' + (action.branch === betaBranch ? 'beta' : 'stable') + ' channel. Reopen this page to load the updated interface.');
+      showUpdateDialog(onBeta ? 'Beta installed' : 'Stable installed', 'Installed version ' + plugin.version + ' from the ' + (onBeta ? 'beta' : 'stable') + ' channel. Reopen this page to load the updated interface.');
     } catch (error) {
       showUpdateDialog('Channel change failed', await updateFailureMessage(error));
       await refreshBetaChannel(currentPlugin);
@@ -1510,10 +1540,10 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
   }
   function confirmReleaseChannel(action) {
     const added = action.addedPermissions.length ? ' It also requests: ' + action.addedPermissions.join(', ') + '.' : '';
-    if (action.branch === betaBranch) {
+    if (action.source.kind === 'github_branch') {
       showUpdateDialog('Join the beta?', 'Install beta version ' + action.manifest.version + '? Beta versions may be less stable.' + added + ' Decaid does not currently allow downgrades, so you can return to stable only after a stable release is equal to or newer than this beta. Saved settings are preserved.', 'Join beta', () => installReleaseChannel(action));
     } else {
-      showUpdateDialog('Return to stable?', 'Install stable version ' + action.manifest.version + ' and leave the beta channel? Saved settings are preserved.', 'Return to stable', () => installReleaseChannel(action));
+      showUpdateDialog('Return to stable?', 'Install stable version ' + action.manifest.version + ' and leave the beta channel?' + added + ' Saved settings are preserved.', 'Return to stable', () => installReleaseChannel(action));
     }
   }
   function paintUpdateState(plugin, { manifest = null, error = null, checking = false } = {}) {
@@ -1528,8 +1558,8 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       updateStatus.textContent = 'Unable to check for extension updates. Select Retry.';
       return;
     }
-    if (plugin.source?.kind !== 'github_branch') {
-      updateStatus.textContent = 'Install this extension from its GitHub branch to enable updates.';
+    if (!isManagedSource(plugin.source)) {
+      updateStatus.textContent = 'Install this extension from GitHub Release or GitHub Branch to enable updates.';
       return;
     }
     if (plugin.pendingUpdate) {
@@ -1567,8 +1597,8 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       const plugin = await pluginRecord();
       if (!plugin) { paintUpdateState(null); return null; }
       paintUpdateState(plugin, { checking: !plugin.pendingUpdate });
-      if (plugin.pendingUpdate) return plugin;
-      try { paintUpdateState(plugin, { manifest: await branchManifest(plugin) }); }
+      if (plugin.pendingUpdate || !isManagedSource(plugin.source)) return plugin;
+      try { paintUpdateState(plugin, { manifest: await sourceManifest(plugin) }); }
       catch (error) {
         paintUpdateState(plugin, { error });
         if (showFailure) showUpdateDialog('Unable to check for updates', await updateFailureMessage(error));
@@ -1589,10 +1619,7 @@ function settingsBrowser(resolveReturnUrl, mountCalibration, captureWeight, pitc
       if (updateCandidate.pending) {
         await request('/api/v1/plugins/calibrated-steam.reaplugin/update/approve', { method: 'POST' });
       } else {
-        await request('/api/v1/plugins/install/github-branch', {
-          method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ repo: currentPlugin.source.repo, branch: currentPlugin.source.branch || 'main' })
-        });
+        await installSource(currentPlugin.source);
       }
       const plugin = await pluginRecord();
       if (plugin?.version && plugin.version !== before) {

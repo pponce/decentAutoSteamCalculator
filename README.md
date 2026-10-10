@@ -33,14 +33,16 @@ You do not need `pponce/streamline-js` or **Streamline.js — Auto Steam**.
 In Decaid's native **Plugins** settings screen:
 
 1. Tap **+** (**Install Plugin**).
-2. Select **GitHub Branch**.
+2. Select **GitHub Release**.
 3. Enter repository `pponce/decentAutoSteamCalculator`.
-4. Enter branch `main` for stable updates.
+4. Leave **Asset name (optional)** blank.
 5. Tap **Install** and wait for completion.
 
-Use **GitHub Branch** for this project. A GitHub Release install expects a
-separately packaged release asset. The browser settings dashboard's old
-**Install Plugin (coming soon)** placeholder is not this native installer.
+Decaid installs the latest [stable release](https://github.com/pponce/decentAutoSteamCalculator/releases/latest).
+**GitHub Branch** remains available: use `main` for the stable branch or `beta`
+for testing. Existing branch installations can keep updating as before.
+This installer is accessed inside the tablet app; the browser settings dashboard
+is not the native Plugins installer.
 
 Already installed the calculator while using the experimental skin? Skip this
 step. The plugin belongs to Decaid, and switching skins in the same Decaid
@@ -110,22 +112,23 @@ The skin and plugin update independently:
   controls. Its releases come from `decentespresso/streamline-js`.
   Calculator updates do not update the skin.
 - **Calculator:** its settings page keeps the title centered and checks its
-  recorded GitHub branch when the page opens. When current, the installed version
-  appears alone at top right. When an update exists, the current and new version
+  recorded GitHub release or branch when the page opens. When current, the
+  installed version appears alone at top right. When an update exists, the current and new version
   numbers appear immediately left of **Update**; one requesting additional
   permissions shows **Approve & Update** and lists those permissions before
   installation. A failed check shows
   **Unable to check · Retry**. Updates target only Auto Steam Calculator and
   preserve its saved settings. A GitHub 403 reports how many minutes remain
   before the unauthenticated API limit resets. Branch installs follow new commits
-  on `pponce/decentAutoSteamCalculator`'s `main` branch.
+  on their recorded branch. Release installs follow published stable releases,
+  using the same **Update** and **Approve & Update** controls.
 
-The **Instructions** tab also shows whether this extension follows the stable or
-beta branch. **Join beta** installs the newer beta for this extension only. Beta
+The **Instructions** tab also shows whether this extension follows stable updates or
+the beta branch. **Join beta** installs the newer beta for this extension only. Beta
 versions may be less stable, and Decaid does not currently allow downgrades, so
-**Return to stable** becomes available only when the stable version is equal to
-or newer than the installed beta. Saved settings are preserved when changing
-channels. Remaining enrolled in beta also receives promoted stable builds:
+**Return to stable** installs the latest published GitHub Release and becomes
+available only when that release is equal to or newer than the installed beta.
+Saved settings are preserved when changing channels. Remaining enrolled in beta also receives promoted stable builds:
 after stable CI passes, the maintainer advances `beta` to the same stable commit
 as `main`. You do not need to leave beta to receive that stable release.
 
@@ -135,6 +138,9 @@ Beta enrollment is per plugin: installing the `beta` branch changes Auto Steam
 Calculator only. Decaid, skins and other plugins remain on their current update
 sources. Beta builds use prerelease versions and each beta update advances that
 version so the calculator's normal update check can offer it.
+
+Stable `0.13.4` adds GitHub Release installation and supports release-based updates
+and beta enrollment in the calculator settings. See the [release notes](docs/releases/0.13.4.md).
 
 Stable `0.13.3` clarifies the intended setup levels in the built-in Instructions: Interpolate off covers both the simplest one-reading setup and multiple independent exact calibrations, while turning Interpolate on is the advanced adjustable-flow path.
 
@@ -183,9 +189,11 @@ Calculator API version is 5; the Decaid host manifest API
 is 1.
 
 CI runs the tests, checks generated-file consistency, and uploads an installable
-ZIP artifact containing the runtime files and license. It does not publish
-releases automatically. A future GitHub release must have a version-matching tag
-and one plugin ZIP asset, per [Decaid's packaging contract](https://github.com/decentespresso/decaid/blob/v0.8.6/doc/Plugins.md#packaging-a-release).
+ZIP artifact containing the runtime files and license. Successful stable `main`
+builds also publish a version-matching tag and GitHub Release with one attached
+`calibrated-steam.reaplugin.zip` asset. Beta and pull-request builds never publish
+releases. A previously published version is left intact; changed runtime files
+require a new version. Packaging follows [Decaid's packaging contract](https://github.com/decentespresso/decaid/blob/v0.8.6/doc/Plugins.md#packaging-a-release).
 
 This project is maintained independently by pponce. It is not a Decaid bundled
 plugin. Official Streamline provides the integration; the calculator and its

@@ -18,6 +18,12 @@ async function page(settings = partial, {
   remoteVersion = installedVersion,
   betaVersion = nextVersion + '-beta.1',
   sourceBranch = 'main',
+  sourceKind = 'github_branch',
+  sourceAssetName = null,
+  includePrerelease = false,
+  releaseVersion = remoteVersion,
+  releaseTag = 'v' + releaseVersion,
+  releaseAssets = [{ name: 'calibrated-steam.reaplugin.zip' }],
   managedVersion = installedVersion,
   remotePermissions = ['api', 'events.machine'],
   betaPermissions = ['api', 'events.machine', 'pluginStorage'],
@@ -57,14 +63,34 @@ async function page(settings = partial, {
     }
     return null;
   } };
+  const fetchUrls = [], installRequests = [];
   const calls = [], savedSettings = [], calibrationCalls = [], persistedLibraries = [];
   const managed = {
     id: 'calibrated-steam.reaplugin', version: managedVersion, permissions: ['api', 'events.machine'],
-    source: { kind: 'github_branch', repo: 'pponce/decentAutoSteamCalculator', branch: sourceBranch, lastError: null }, pendingUpdate,
+    source: { kind: sourceKind, repo: 'pponce/decentAutoSteamCalculator', ...(sourceKind === 'github_branch' ? { branch: sourceBranch } : { releaseTag: 'v' + managedVersion, assetName: sourceAssetName, includePrerelease }), lastError: null }, pendingUpdate,
   };
   let session = null;
   const fetch = async (url, options = {}) => {
+    fetchUrls.push(url);
     const endpoint = url.split('/').at(-1);
+    if (url === 'https://api.github.com/repos/pponce/decentAutoSteamCalculator/releases/latest' || url === 'https://api.github.com/repos/pponce/decentAutoSteamCalculator/releases') {
+      const release = { tag_name: releaseTag, assets: releaseAssets, draft: false, prerelease: false };
+      return checkError
+        ? { ok: false, status: 403, statusText: 'Forbidden' }
+        : { ok: true, text: async () => JSON.stringify(url.endsWith('/latest') ? release : [release]) };
+    }
+    if (url === 'https://raw.githubusercontent.com/pponce/decentAutoSteamCalculator/' + releaseTag + '/manifest.json') {
+      return { ok: true, text: async () => JSON.stringify({ id: 'calibrated-steam.reaplugin', version: releaseVersion, permissions: remotePermissions }) };
+    }
+    if (url === '/api/v1/plugins/install/github-release') {
+      calls.push('github-release');
+      installRequests.push({ endpoint: url, body: JSON.parse(options.body) });
+      if (updateError) return { ok: false, status: 403, text: async () => JSON.stringify({ error: updateError }) };
+      managed.source = { kind: 'github_release', ...JSON.parse(options.body), releaseTag };
+      managed.version = releaseVersion;
+      managed.permissions = remotePermissions;
+      return { ok: true, text: async () => JSON.stringify({ id: managed.id, version: managed.version }) };
+    }
     if (url === '/api/v1/plugins') return { ok: true, text: async () => JSON.stringify([managed]) };
     if (url === 'https://raw.githubusercontent.com/pponce/decentAutoSteamCalculator/main/manifest.json') {
       return checkError
@@ -80,7 +106,8 @@ async function page(settings = partial, {
       calls.push('github-branch');
       if (updateError) return { ok: false, status: 403, statusText: 'Forbidden', text: async () => JSON.stringify({ error: updateError }) };
       const requested = JSON.parse(options.body);
-      managed.source.branch = requested.branch;
+      installRequests.push({ endpoint: url, body: requested });
+      managed.source = { kind: 'github_branch', ...requested };
       managed.version = requested.branch === 'beta' ? betaVersion : remoteVersion;
       managed.permissions = requested.branch === 'beta' ? betaPermissions : remotePermissions;
       return { ok: true, text: async () => JSON.stringify({ id: managed.id, version: managed.version }) };
@@ -117,7 +144,7 @@ async function page(settings = partial, {
   vm.runInContext(body.match(/<script>([\s\S]*)<\/script>/)[1], context);
   await new Promise(resolve => setImmediate(resolve));
   const all = element => [element, ...element.children.flatMap(all)];
-  return { fields, ids, documentBody, calls, savedSettings, calibrationCalls, persistedLibraries, navigations,
+  return { fields, ids, documentBody, calls, fetchUrls, installRequests, managed, savedSettings, calibrationCalls, persistedLibraries, navigations,
     buttons: text => all(ids.settings).filter(item => item.tag === 'button' && item.textContent === text),
     elements: () => all(ids.settings),
     scale(weight) { time += 300; socket.onmessage({ data: JSON.stringify({ weight }) }); },
@@ -692,6 +719,9 @@ test('beta users can return when stable is equal to or newer than beta', async (
   await p.ids['extension-update-dialog-confirm'].handlers.click();
   assert.match(p.ids['beta-channel-status'].textContent, /Stable channel/);
   assert.equal(p.ids['extension-update-dialog-title'].textContent, 'Stable installed');
+  assert.equal(p.managed.source.kind, 'github_release');
+  assert.ok(p.calls.includes('github-release'));
+  assert.equal(p.calls.includes('github-branch'), false);
 });
 
 test('legacy design mockup remains syntactically valid as a visual reference', () => {
@@ -703,4 +733,96 @@ test('legacy design mockup remains syntactically valid as a visual reference', (
   assert.match(settingsMockup, /Other saved calibrations/);
   assert.match(settingsMockup, /item\.flow < minimumFlow[\s\S]*item\.flow > maximumFlow/);
   assert.match(settingsMockup, /Steam stopped · finishing purge…/);
+});
+
+
+test('release installs check the published tag, not a newer main branch', async () => {
+  const p = await page(partial, { sourceKind: 'github_release', remoteVersion: nextVersion, releaseVersion: installedVersion });
+  assert.equal(p.ids['check-extension-update'].hidden, true);
+  assert.equal(p.ids['approve-extension-update'].hidden, true);
+  assert.match(p.ids['extension-update-status'].textContent, /up to date/);
+  assert.ok(p.fetchUrls.includes('https://raw.githubusercontent.com/pponce/decentAutoSteamCalculator/v' + installedVersion + '/manifest.json'));
+  assert.equal(p.fetchUrls.some(url => url.endsWith('/main/manifest.json')), false);
+});
+
+test('release updates preserve source options and update only this plugin', async () => {
+  const p = await page(partial, { sourceKind: 'github_release', releaseVersion: nextVersion, sourceAssetName: 'calibrated-steam.reaplugin.zip', includePrerelease: true });
+  assert.equal(p.ids['check-extension-update'].textContent, 'Update');
+  await p.ids['check-extension-update'].handlers.click();
+  assert.deepEqual(p.installRequests, [{ endpoint: '/api/v1/plugins/install/github-release', body: { repo: 'pponce/decentAutoSteamCalculator', assetName: 'calibrated-steam.reaplugin.zip', includePrerelease: true } }]);
+  assert.equal(p.calls.includes('github-branch'), false);
+  assert.equal(p.calls.includes('update'), false);
+  assert.equal(p.savedSettings.length, 0);
+  assert.equal(p.persistedLibraries.length, 0);
+  assert.equal(p.managed.version, nextVersion);
+});
+
+test('release updates require approval for added permissions', async () => {
+  const p = await page(partial, { sourceKind: 'github_release', releaseVersion: nextVersion, remotePermissions: ['api', 'events.machine', 'events.shots'] });
+  assert.equal(p.ids['approve-extension-update'].hidden, false);
+  await p.ids['approve-extension-update'].handlers.click();
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /events\.shots/);
+  assert.equal(p.installRequests.length, 0);
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.equal(p.installRequests[0].endpoint, '/api/v1/plugins/install/github-release');
+});
+
+test('release installs can approve an update held by Decaid', async () => {
+  const p = await page(partial, { sourceKind: 'github_release', pendingUpdate: { version: nextVersion, addedPermissions: ['events.shots'] } });
+  await p.ids['approve-extension-update'].handlers.click();
+  assert.equal(p.calls.includes('approve'), false);
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.ok(p.calls.includes('approve'));
+  assert.equal(p.installRequests.length, 0);
+});
+
+test('release users can join beta without writing calibration settings', async () => {
+  const p = await page(partial, { sourceKind: 'github_release' });
+  assert.equal(p.ids['beta-channel-action'].textContent, 'Join beta');
+  await p.ids['beta-channel-action'].handlers.click();
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.equal(p.managed.source.kind, 'github_branch');
+  assert.equal(p.managed.source.branch, 'beta');
+  assert.equal(p.savedSettings.length, 0);
+  assert.equal(p.persistedLibraries.length, 0);
+});
+
+test('beta return follows published stable even when main is newer', async () => {
+  const p = await page(partial, { sourceBranch: 'beta', managedVersion: nextVersion + '-beta.1', remoteVersion: nextVersion, releaseVersion: installedVersion });
+  assert.equal(p.ids['beta-channel-action'].disabled, true);
+  assert.match(p.ids['beta-channel-status'].textContent, /does not allow downgrades/);
+});
+
+test('return to stable discloses added permissions before installing', async () => {
+  const p = await page(partial, { sourceBranch: 'beta', releaseVersion: nextVersion, remotePermissions: ['api', 'events.machine', 'events.shots'] });
+  await p.ids['beta-channel-action'].handlers.click();
+  assert.match(p.ids['extension-update-dialog-message'].textContent, /events\.shots/);
+  assert.equal(p.installRequests.length, 0);
+  await p.ids['extension-update-dialog-confirm'].handlers.click();
+  assert.equal(p.managed.source.kind, 'github_release');
+});
+
+test('invalid release packages offer retry without installing', async () => {
+  for (const options of [{ releaseAssets: [] }, { releaseAssets: [{ name: 'one.zip' }, { name: 'two.zip' }] }, { releaseTag: 'v9.9.9' }, { releaseTag: 'v1.0.0-beta.1' }]) {
+    const p = await page(partial, { sourceKind: 'github_release', releaseVersion: nextVersion, ...options });
+    assert.equal(p.ids['check-extension-update'].textContent, 'Unable to check · Retry');
+    assert.equal(p.installRequests.length, 0);
+    assert.doesNotMatch(p.ids['extension-update-status'].textContent, /up to date/);
+  }
+});
+
+test('release API failures and install failures retain retry behavior', async () => {
+  for (const options of [{ checkError: 'failed 403' }, { releaseVersion: nextVersion, updateError: 'failed 403' }]) {
+    const p = await page(partial, { sourceKind: 'github_release', ...options });
+    await p.ids['check-extension-update'].handlers.click();
+    assert.match(p.ids['extension-update-dialog-message'].textContent, /Try again in 10 minutes/);
+    assert.equal(p.managed.version, installedVersion);
+  }
+});
+
+test('local installations do not attempt managed updates or beta checks', async () => {
+  const p = await page(partial, { sourceKind: 'local_zip' });
+  assert.equal(p.ids['check-extension-update'].hidden, true);
+  assert.equal(p.ids['beta-channel-action'].hidden, true);
+  assert.equal(p.fetchUrls.some(url => url.startsWith('https://')), false);
 });

@@ -10,8 +10,9 @@ Install the plugin and supporting skin using the [official-app setup guide](../R
 ## Setup and use
 
 Official Streamline.js v0.1.114 or newer supports this plugin. First install it
-through Decaid's native **Plugins > + > GitHub Branch** using
-`pponce/decentAutoSteamCalculator`, branch `main`. Streamline does not offer an
+through Decaid's native **Plugins > + > GitHub Release** using
+`pponce/decentAutoSteamCalculator`; leave Asset name blank. **GitHub Branch**
+also works with `main` or `beta`. Streamline does not offer an
 install card for this plugin before it is installed.
 
 In Streamline, open **Settings > Extensions**, select **Auto Steam Calculator**,
@@ -30,13 +31,15 @@ choices are green and unavailable choices are red. Calibration readings are
 stored immediately; **Save settings** activates the overall valid setup.
 
 The page keeps **Auto Steam Calculator** centered in its header and checks the
-recorded GitHub branch when it opens. When the installed version is current, that
+recorded GitHub release or branch when it opens. When the installed version is current, that
 version appears alone at top right. When a newer version exists, the current and
 new versions appear immediately left of **Update**; one that adds permissions
 shows **Approve & Update** and names those permissions before the user approves
 installation. A failed check shows **Unable to check · Retry**.
-The action uses Decaid's branch installer for this extension only and preserves
-saved settings. Results and update failures open in a dialog. A GitHub 403
+The action uses Decaid's matching release or branch installer for this extension
+only and preserves saved settings. Release checks read the manifest at the published
+tag, not at the tip of `main`. Join beta installs the `beta` branch; Return to
+stable installs the latest published release once its version allows the switch. Results and update failures open in a dialog. A GitHub 403
 reports the remaining minutes until the unauthenticated API limit resets.
 
 Pitchers & Auto places empty-scale tare beside the pitcher rows. Each **Set from
@@ -491,8 +494,9 @@ Handle unavailable plugins and API failures without applying a cached result. Re
 
 Commit generated output with source changes. CI checks reproducibility and uploads
 an installable ZIP artifact. Branch installation uses the committed root files;
-GitHub release publishing is optional and requires a matching version tag plus
-one ZIP asset. The manifest and package versions must match.
+successful stable `main` builds publish a matching version tag and one ZIP asset
+through the release job. Beta and pull-request builds only test and package.
+The manifest and package versions must match. See [RELEASE.md](../RELEASE.md).
 
 Keep `calibrated-steam.reaplugin` as the plugin ID so existing settings are retained
 when updating inside the same Decaid installation. No native application changes
