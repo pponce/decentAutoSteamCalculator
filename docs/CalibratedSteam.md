@@ -23,6 +23,20 @@ standalone page provides a return address:
 **Return to settings** leaves without saving, and a successful **Save settings**
 returns to the calling settings page. Validation or save errors keep the form open.
 
+Calculator v0.13.6 declares every UI-managed manifest setting with the boolean
+`hidden: true`. Streamline v0.2.13 or newer respects that hint while retaining
+the enable, version/update and Open controls. Keep every setting declaration,
+type and default: Decaid uses them to retain and validate saved settings.
+Decaid's native Plugins screen and other skins may ignore the visibility hint.
+No Decaid upgrade is needed for this Streamline feature on Decaid 0.8.8.
+
+Streamline's Open link supplies `returnTo` with its full settings address,
+including the assigned skin port, path and query parameters. The calculator
+already validates and uses that address for its Back link and after saving;
+it accepts HTTP(S) on the same tablet hostname or equivalent loopback hostnames,
+rejects embedded credentials and self-links, and falls back to Decaid's browser
+settings dashboard for a direct visit without a valid return address.
+
 The settings page uses compact **Pitchers & Auto**, **Calibration**,
 **Instructions**, and **Glossary** tabs. Each calibration stores its flow, milk
 target, actual milk weight and measured time. The compact summary shares the tab

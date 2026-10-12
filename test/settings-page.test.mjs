@@ -30,6 +30,8 @@ async function page(settings = partial, {
   checkError = null,
   updateError = null,
   pendingUpdate = null,
+  currentUrl = 'http://localhost:8080/ui',
+  referrer = '',
 } = {}) {
   const runtime = vm.createContext({}); vm.runInContext(source, runtime);
   const plugin = runtime.createPlugin(); plugin.onLoad(settings);
@@ -137,11 +139,11 @@ async function page(settings = partial, {
   };
   const body = plugin.__httpRequestHandler({ endpoint: 'ui', method: 'GET' }).body;
   const documentBody = new Element('body');
-  const document = { referrer: '', body: documentBody, getElementById: id => ids[id], createElement: tag => new Element(tag) };
+  const document = { referrer, body: documentBody, getElementById: id => ids[id], createElement: tag => new Element(tag) };
   const navigations = [];
   const context = vm.createContext({ document, fetch, URL, Date: FakeDate, WebSocket: FakeWebSocket,
     setTimeout: callback => { timers.push(callback); return timers.length; }, clearTimeout() {},
-    window: { addEventListener() {}, location: { href: 'http://localhost:8080/ui', assign: value => navigations.push(value) } } });
+    window: { addEventListener() {}, location: { href: currentUrl, assign: value => navigations.push(value) } } });
   vm.runInContext(body.match(/<script>([\s\S]*)<\/script>/)[1], context);
   await new Promise(resolve => setImmediate(resolve));
   const all = element => [element, ...element.children.flatMap(all)];
@@ -157,6 +159,28 @@ async function page(settings = partial, {
     submit: () => ids.settings.handlers.submit({ preventDefault() {} }),
   };
 }
+
+test('Open returnTo wins over a stripped referrer for Back and successful Save', async () => {
+  const target = 'http://192.168.84.22:24803/index.html?mode=dark&page=settings#extensions';
+  const p = await page(partial, {
+    currentUrl: 'http://192.168.84.22:8080/api/v1/plugins/calibrated-steam.reaplugin/ui?returnTo=' + encodeURIComponent(target),
+    referrer: 'http://192.168.84.22:24803/',
+  });
+  assert.equal(p.ids['return-settings'].href, target);
+  assert.deepEqual(p.navigations, []);
+  await p.submit();
+  assert.deepEqual(p.navigations, [target]);
+  assert.equal(p.savedSettings.length, 1);
+  assert.equal(JSON.parse(p.savedSettings[0].flowReadings)[0].milkGrams, 160);
+});
+
+test('a direct settings visit keeps the Decaid dashboard fallback', async () => {
+  const p = await page();
+  const fallback = 'http://localhost:8080/api/v1/plugins/settings.reaplugin/ui';
+  assert.equal(p.ids['return-settings'].href, fallback);
+  await p.submit();
+  assert.deepEqual(p.navigations, [fallback]);
+});
 
 test('tabs and compact S M L Auto summary react to draft settings', async () => {
   const p = await page();

@@ -3,7 +3,7 @@
   "name": "Auto Steam Calculator",
   "author": "pponce; calculation and pitcher heuristic inspired by Damian / Damian-AU (DSx2)",
   "description": "Estimate steam duration from milk weight using your calibration. Inspired by Damian's DSx2 calculator. This estimates temperature through time; it does not measure milk temperature.",
-  "version": "0.13.5",
+  "version": "0.13.6",
   "apiVersion": 1,
   "permissions": [
     "api",
@@ -15,25 +15,29 @@
       "type": "number",
       "label": "Small empty pitcher (g)",
       "description": "Untared weight of the empty small pitcher. Leave blank or 0 if not configured.",
-      "default": 0
+      "default": 0,
+      "hidden": true
     },
     "mediumPitcherGrams": {
       "type": "number",
       "label": "Medium empty pitcher (g)",
       "description": "Untared weight of the empty medium pitcher. Leave blank or 0 if not configured.",
-      "default": 0
+      "default": 0,
+      "hidden": true
     },
     "largePitcherGrams": {
       "type": "number",
       "label": "Large empty pitcher (g)",
       "description": "Untared weight of the empty large pitcher. Leave blank or 0 if not configured.",
-      "default": 0
+      "default": 0,
+      "hidden": true
     },
     "singleDrinkGrams": {
       "type": "number",
       "label": "Usual milk per drink (g)",
       "description": "Milk only for one drink; used to infer pitcher size in Auto. This can differ from your calibration milk weight.",
-      "default": 0
+      "default": 0,
+      "hidden": true
     },
     "singleDrinkPitcher": {
       "type": "enum",
@@ -44,7 +48,8 @@
         "small",
         "medium"
       ],
-      "default": ""
+      "default": "",
+      "hidden": true
     },
     "weightMode": {
       "type": "enum",
@@ -54,7 +59,8 @@
         "gross",
         "tared"
       ],
-      "default": "gross"
+      "default": "gross",
+      "hidden": true
     },
     "temperatureUnit": {
       "type": "enum",
@@ -64,61 +70,71 @@
         "F",
         "C"
       ],
-      "default": "F"
+      "default": "F",
+      "hidden": true
     },
     "targetTemperatureC": {
       "type": "number",
       "label": "Milk target",
       "description": "Filters which saved calibrations are available. All targets is available when Interpolate is off.",
-      "default": 0
+      "default": 0,
+      "hidden": true
     },
     "referenceMilkGrams": {
       "type": "number",
       "label": "Calibration milk weight (g)",
       "description": "Actual measured milk weight for this reading, excluding the pitcher. Enter it manually or capture it from the scale during guided calibration. Each reading uses its own measured weight.",
-      "default": 0
+      "default": 0,
+      "hidden": true
     },
     "referenceSeconds": {
       "type": "number",
       "label": "Time to your desired milk temperature (s)",
       "description": "Actual steaming time in the calibration run. Use similar milk, starting temperature and steaming technique for subsequent drinks.",
-      "default": 0
+      "default": 0,
+      "hidden": true
     },
     "referenceFlow": {
       "type": "number",
       "label": "Calibration flow (ml/s)",
       "description": "Flow used while creating or editing a saved calibration (0.4–2.5 ml/s).",
-      "default": 0.4
+      "default": 0.4,
+      "hidden": true
     },
     "minimumFlow": {
       "type": "number",
       "label": "Minimum flow (ml/s)",
       "description": "Lowest flow used by Interpolate. A saved reading is required at this exact flow.",
-      "default": 0.4
+      "default": 0.4,
+      "hidden": true
     },
     "maximumFlow": {
       "type": "number",
       "label": "Maximum flow (ml/s)",
       "description": "Highest flow used by Interpolate. A saved reading is required at this exact flow.",
-      "default": 2.5
+      "default": 2.5,
+      "hidden": true
     },
     "autoDetect": {
       "type": "boolean",
       "label": "Offer Auto pitcher selection",
       "description": "Enable automatic detection using Damian’s heuristic. Requires all three pitcher weights, gross scale weight, usual milk per drink and the pitcher normally used for one drink.",
-      "default": false
+      "default": false,
+      "hidden": true
     },
     "interpolate": {
       "type": "boolean",
       "label": "Interpolate",
       "default": false,
-      "description": "Use piecewise interpolation between at least three saved readings at one milk target."
+      "description": "Use piecewise interpolation between at least three saved readings at one milk target.",
+      "hidden": true
     },
     "flowReadings": {
       "type": "string",
       "label": "Measured flow calibrations",
       "default": "[]",
-      "description": "Compatibility shadow managed by the Calibration page while saved readings migrate to Decaid plugin storage. Do not edit this JSON directly."
+      "description": "Compatibility shadow managed by the Calibration page while saved readings migrate to Decaid plugin storage. Do not edit this JSON directly.",
+      "hidden": true
     }
   },
   "api": [

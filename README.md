@@ -12,6 +12,8 @@ through time; it does not measure milk temperature.
 
 Use the official Android Decaid v0.8.6 or newer and
 [official Streamline.js v0.1.114 or newer](https://github.com/decentespresso/streamline-js/releases/tag/v0.1.114).
+Use [Streamline.js v0.2.13 or newer](https://github.com/decentespresso/streamline-js/releases/tag/v0.2.13)
+to hide duplicate calculator fields and return reliably to Streamline settings.
 
 **New users must install the calculator once.** Official Streamline supports it,
 but does not bundle it or show an Auto Steam Calculator install card before it is
@@ -53,6 +55,13 @@ or reinstall the calculator just to switch skins.
 
 Open official Streamline, then go to **Settings → Extensions → Auto Steam
 Calculator**. Turn **Enabled** on if needed, then select **Open**.
+
+With calculator v0.13.6 and Streamline v0.2.13 or newer, this extension page
+keeps the enable, version/update and **Open** controls; edit calculator settings
+inside **Open**. **← Settings** and a successful **Save settings** return to
+Streamline settings using its actual address and port. Direct visits use Decaid's
+browser settings dashboard as the fallback. Older Streamline versions and
+Decaid's native Plugins screen may still display the individual fields.
 
 If the row is missing, confirm installation in Decaid's native Plugins screen,
 then reopen Streamline's settings. The row comes from Decaid's installed plugin
